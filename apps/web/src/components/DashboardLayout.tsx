@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import Footer from './Footer';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -191,12 +192,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       )}
 
       {/* Main content */}
-      <div className="lg:pl-64 flex flex-col flex-1">
+      <div className="lg:pl-64 flex flex-col min-h-screen">
         <main className="flex-1 pt-16 lg:pt-0">
           <div className="py-6 px-4 sm:px-6 lg:px-8">
             {children}
           </div>
         </main>
+        <Footer />
       </div>
     </div>
   );

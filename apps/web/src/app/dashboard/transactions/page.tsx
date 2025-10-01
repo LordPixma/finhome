@@ -5,6 +5,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Modal, Input, Select, Button } from '@/components/ui';
 import { api } from '@/lib/api';
+import { formatCurrency } from '@/lib/utils';
 
 interface Transaction {
   id: string;
@@ -205,13 +206,6 @@ export default function TransactionsPage() {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(Math.abs(amount));
-  };
 
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleDateString('en-US', {

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui';
-import { api } from '@/lib/api';
+import { formatCurrency } from '@/lib/utils';
 
 interface ImportedTransaction {
   date: string;
@@ -212,13 +212,6 @@ export default function ImportPage() {
     setPreviewData([]);
     setImportResult(null);
     setError('');
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
   };
 
   return (

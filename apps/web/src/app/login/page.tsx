@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
+import Footer from '@/components/Footer';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -26,7 +27,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex flex-col">
+      <div className="flex-1 flex">
       {/* Left Side - Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 relative overflow-hidden">
         <div className="absolute inset-0 bg-black opacity-10"></div>
@@ -97,14 +99,14 @@ export default function LoginPage() {
             <p className="text-gray-600">Family Financial Management</p>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-xl p-8">
+          <div className="bg-black rounded-2xl shadow-2xl p-8 border border-gray-800">
             <div className="mb-8">
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome back</h2>
-              <p className="text-gray-600">Please enter your credentials to continue</p>
+              <h2 className="text-3xl font-bold text-white mb-2">Welcome back</h2>
+              <p className="text-gray-400">Please enter your credentials to continue</p>
             </div>
 
             {error && (
-              <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center">
+              <div className="mb-6 bg-red-900/30 border border-red-500/50 text-red-200 px-4 py-3 rounded-lg flex items-center">
                 <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>
@@ -114,7 +116,7 @@ export default function LoginPage() {
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
                   Email address
                 </label>
                 <input
@@ -123,7 +125,7 @@ export default function LoginPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className="w-full px-4 py-3 bg-gray-900 border border-gray-700 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-500"
                   placeholder="you@example.com"
                   disabled={isLoading}
                 />
@@ -131,10 +133,10 @@ export default function LoginPage() {
 
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-300">
                     Password
                   </label>
-                  <a href="#" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                  <a href="#" className="text-sm text-blue-400 hover:text-blue-300 font-medium">
                     Forgot password?
                   </a>
                 </div>
@@ -144,7 +146,7 @@ export default function LoginPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className="w-full px-4 py-3 bg-gray-900 border border-gray-700 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-500"
                   placeholder="••••••••"
                   disabled={isLoading}
                 />
@@ -154,9 +156,9 @@ export default function LoginPage() {
                 <input
                   id="remember"
                   type="checkbox"
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 bg-gray-900 border-gray-700 rounded"
                 />
-                <label htmlFor="remember" className="ml-2 block text-sm text-gray-700">
+                <label htmlFor="remember" className="ml-2 block text-sm text-gray-300">
                   Remember me for 30 days
                 </label>
               </div>
@@ -164,7 +166,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 focus:ring-4 focus:ring-blue-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               >
                 {isLoading ? (
                   <>
@@ -180,33 +182,17 @@ export default function LoginPage() {
               </button>
             </form>
 
-            <div className="mt-6">
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">Demo Credentials</span>
-                </div>
-              </div>
-              
-              <div className="mt-4 p-3 bg-blue-50 rounded-lg text-sm">
-                <p className="text-gray-700">
-                  <strong>Admin:</strong> admin@demofamily.com / password123<br />
-                  <strong>Member:</strong> jane@demofamily.com / password123
-                </p>
-              </div>
-            </div>
-
-            <p className="mt-6 text-center text-sm text-gray-600">
+            <p className="mt-8 text-center text-sm text-gray-400">
               Don't have an account?{' '}
-              <Link href="/register" className="font-semibold text-blue-600 hover:text-blue-700">
+              <Link href="/register" className="font-semibold text-blue-400 hover:text-blue-300">
                 Sign up for free
               </Link>
             </p>
           </div>
         </div>
       </div>
+      </div>
+      <Footer />
     </div>
   );
 }

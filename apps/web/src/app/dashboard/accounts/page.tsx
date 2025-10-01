@@ -5,6 +5,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Modal, Input, Select, Button } from '@/components/ui';
 import { api } from '@/lib/api';
+import { formatCurrency } from '@/lib/utils';
 
 interface Account {
   id: string;
@@ -24,7 +25,7 @@ export default function AccountsPage() {
     name: '',
     type: 'checking',
     balance: '',
-    currency: 'USD',
+    currency: 'GBP',
   });
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -62,7 +63,7 @@ export default function AccountsPage() {
         name: '',
         type: 'checking',
         balance: '',
-        currency: 'USD',
+        currency: 'GBP',
       });
     }
     setError('');
@@ -115,13 +116,6 @@ export default function AccountsPage() {
       console.error('Failed to delete account:', error);
       alert('Failed to delete account');
     }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
   };
 
   const getAccountIcon = (type: string) => {

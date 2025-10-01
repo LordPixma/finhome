@@ -6,23 +6,20 @@ compatibility_flags = ["nodejs_compat"]
 # Cloudflare Workers Configuration
 workers_dev = true
 
-# D1 Database (local development uses .wrangler/state/v3/d1)
+# D1 Database (production)
 [[d1_databases]]
 binding = "DB"
 database_name = "finhome-db"
-database_id = "local-db"
-preview_database_id = "local-db"
+database_id = "1115b8c7-85fd-4ce8-a553-8fe85fb5b629"
 
-# KV Namespaces (for local development, these will be simulated)
+# KV Namespaces (production)
 [[kv_namespaces]]
 binding = "SESSIONS"
-id = "local-sessions"
-preview_id = "local-sessions"
+id = "17af1f0cba5940188630322248a86071"
 
 [[kv_namespaces]]
 binding = "CACHE"
-id = "local-cache"
-preview_id = "local-cache"
+id = "ec9376073fb34ebd9f1dcabbc3cc39ae"
 
 # R2 Buckets
 [[r2_buckets]]
@@ -41,9 +38,9 @@ max_batch_timeout = 30
 
 # Environment Variables
 [vars]
-ENVIRONMENT = "development"
-JWT_SECRET = "change-this-in-production"
-FRONTEND_URL = "http://localhost:3000"
+ENVIRONMENT = "production"
+JWT_SECRET = "gBk9Lm3Np2Qr5Ts8Wv1Yx4Za7Cd0Ef3Hi6Jl9Mo2Pr5Su8Vx1Za4Cd7Ff0Hi3"
+FRONTEND_URL = "https://finhome.com"
 
 # Durable Objects (for future use)
 # [[durable_objects.bindings]]

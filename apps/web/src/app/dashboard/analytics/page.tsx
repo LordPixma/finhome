@@ -5,6 +5,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui';
 import { api } from '@/lib/api';
+import { formatCurrency } from '@/lib/utils';
 
 interface Transaction {
   id: string;
@@ -53,13 +54,6 @@ export default function AnalyticsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(Math.abs(amount));
   };
 
   // Filter transactions by date range

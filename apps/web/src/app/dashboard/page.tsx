@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import DashboardLayout from '@/components/DashboardLayout';
 import { api } from '@/lib/api';
+import { formatCurrency } from '@/lib/utils';
 
 interface Account {
   id: string;
@@ -86,13 +87,6 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
   };
 
   const formatDate = (timestamp: number) => {

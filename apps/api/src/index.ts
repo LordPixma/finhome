@@ -126,4 +126,8 @@ export async function queue(batch: MessageBatch<any>, env: Env['Bindings']): Pro
   }
 }
 
-export default app;
+// Worker export with queue handler
+export default {
+  fetch: app.fetch,
+  queue,
+} as ExportedHandler<Env['Bindings']>;

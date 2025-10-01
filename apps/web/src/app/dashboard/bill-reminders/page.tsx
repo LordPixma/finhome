@@ -5,6 +5,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Modal, Input, Select, Button } from '@/components/ui';
 import { api } from '@/lib/api';
+import { formatCurrency } from '@/lib/utils';
 
 interface BillReminder {
   id: string;
@@ -159,13 +160,6 @@ export default function BillRemindersPage() {
       console.error('Failed to mark as paid:', error);
       alert('Failed to mark as paid');
     }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
   };
 
   const formatDate = (timestamp: number) => {

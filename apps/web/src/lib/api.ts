@@ -33,9 +33,9 @@ export async function apiClient<T>(
   // Get token from storage
   const token = tokenManager.getAccessToken();
   
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...options.headers,
+    ...(options.headers as Record<string, string> || {}),
   };
   
   // Add auth header if token exists and not already set

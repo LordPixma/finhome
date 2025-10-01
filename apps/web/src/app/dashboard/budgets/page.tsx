@@ -5,6 +5,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Modal, Input, Select, Button } from '@/components/ui';
 import { api } from '@/lib/api';
+import { formatCurrency } from '@/lib/utils';
 
 interface Budget {
   id: string;
@@ -188,13 +189,6 @@ export default function BudgetsPage() {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
-  };
-
   const getProgressBarColor = (percentage: number) => {
     if (percentage < 50) return 'bg-green-500';
     if (percentage < 75) return 'bg-yellow-500';
@@ -209,7 +203,7 @@ export default function BudgetsPage() {
     return 'text-red-600';
   };
 
-  const getStatusText = (percentage: number, remaining: number) => {
+  const getStatusText = (percentage: number) => {
     if (percentage >= 100) return 'Over Budget!';
     if (percentage >= 90) return 'Almost there';
     if (percentage >= 75) return 'On track';
@@ -377,7 +371,7 @@ export default function BudgetsPage() {
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Status</p>
                     <p className={`text-lg font-bold ${getStatusColor(budget.percentage)}`}>
-                      {getStatusText(budget.percentage, budget.remaining)}
+                      {getStatusText(budget.percentage)}
                     </p>
                   </div>
                 </div>

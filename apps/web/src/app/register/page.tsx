@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
+import Footer from '@/components/Footer';
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -66,7 +67,8 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex flex-col">
+      <div className="flex-1 flex">
       {/* Left Side - Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-indigo-600 via-purple-700 to-pink-800 relative overflow-hidden">
         <div className="absolute inset-0 bg-black opacity-10"></div>
@@ -136,14 +138,14 @@ export default function RegisterPage() {
             <p className="text-gray-600">Family Financial Management</p>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-xl p-8">
+          <div className="bg-black rounded-2xl shadow-2xl p-8 border border-gray-800">
             <div className="mb-8">
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">Create your account</h2>
-              <p className="text-gray-600">Start managing your family finances today</p>
+              <h2 className="text-3xl font-bold text-white mb-2">Create your account</h2>
+              <p className="text-gray-400">Start managing your family finances today</p>
             </div>
 
             {error && (
-              <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center">
+              <div className="mb-6 bg-red-900/30 border border-red-500/50 text-red-200 px-4 py-3 rounded-lg flex items-center">
                 <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>
@@ -153,7 +155,7 @@ export default function RegisterPage() {
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label htmlFor="tenantName" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="tenantName" className="block text-sm font-medium text-gray-300 mb-2">
                   Family/Organization Name
                 </label>
                 <input
@@ -163,14 +165,14 @@ export default function RegisterPage() {
                   required
                   value={formData.tenantName}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                  className="w-full px-4 py-3 bg-gray-900 border border-gray-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors placeholder-gray-500"
                   placeholder="Smith Family"
                   disabled={isLoading}
                 />
               </div>
 
               <div>
-                <label htmlFor="subdomain" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="subdomain" className="block text-sm font-medium text-gray-300 mb-2">
                   Subdomain
                 </label>
                 <div className="flex">
@@ -181,13 +183,13 @@ export default function RegisterPage() {
                     required
                     value={formData.subdomain}
                     onChange={handleChange}
-                    className="flex-1 px-4 py-3 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                    className="flex-1 px-4 py-3 bg-gray-900 border border-gray-700 text-white rounded-l-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors placeholder-gray-500"
                     placeholder="smithfamily"
                     disabled={isLoading}
                     pattern="[a-z0-9]+"
                     minLength={3}
                   />
-                  <span className="inline-flex items-center px-4 py-3 border border-l-0 border-gray-300 bg-gray-50 text-gray-500 rounded-r-lg text-sm">
+                  <span className="inline-flex items-center px-4 py-3 border border-l-0 border-gray-700 bg-gray-800 text-gray-400 rounded-r-lg text-sm">
                     .finhome.com
                   </span>
                 </div>
@@ -195,7 +197,7 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-2">
                   Your Full Name
                 </label>
                 <input
@@ -205,14 +207,14 @@ export default function RegisterPage() {
                   required
                   value={formData.name}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                  className="w-full px-4 py-3 bg-gray-900 border border-gray-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors placeholder-gray-500"
                   placeholder="John Smith"
                   disabled={isLoading}
                 />
               </div>
 
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
                   Email address
                 </label>
                 <input
@@ -222,14 +224,14 @@ export default function RegisterPage() {
                   required
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                  className="w-full px-4 py-3 bg-gray-900 border border-gray-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors placeholder-gray-500"
                   placeholder="john@example.com"
                   disabled={isLoading}
                 />
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
                   Password
                 </label>
                 <input
@@ -239,7 +241,7 @@ export default function RegisterPage() {
                   required
                   value={formData.password}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                  className="w-full px-4 py-3 bg-gray-900 border border-gray-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors placeholder-gray-500"
                   placeholder="••••••••"
                   disabled={isLoading}
                   minLength={8}
@@ -248,7 +250,7 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-2">
                   Confirm Password
                 </label>
                 <input
@@ -258,7 +260,7 @@ export default function RegisterPage() {
                   required
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                  className="w-full px-4 py-3 bg-gray-900 border border-gray-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors placeholder-gray-500"
                   placeholder="••••••••"
                   disabled={isLoading}
                 />
@@ -269,15 +271,15 @@ export default function RegisterPage() {
                   id="terms"
                   type="checkbox"
                   required
-                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded mt-1"
+                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 bg-gray-900 border-gray-700 rounded mt-1"
                 />
-                <label htmlFor="terms" className="ml-2 block text-sm text-gray-700">
+                <label htmlFor="terms" className="ml-2 block text-sm text-gray-300">
                   I agree to the{' '}
-                  <a href="#" className="text-indigo-600 hover:text-indigo-700 font-medium">
+                  <a href="#" className="text-indigo-400 hover:text-indigo-300 font-medium">
                     Terms of Service
                   </a>{' '}
                   and{' '}
-                  <a href="#" className="text-indigo-600 hover:text-indigo-700 font-medium">
+                  <a href="#" className="text-indigo-400 hover:text-indigo-300 font-medium">
                     Privacy Policy
                   </a>
                 </label>
@@ -286,7 +288,7 @@ export default function RegisterPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                className="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               >
                 {isLoading ? (
                   <>
@@ -302,15 +304,17 @@ export default function RegisterPage() {
               </button>
             </form>
 
-            <p className="mt-6 text-center text-sm text-gray-600">
+            <p className="mt-8 text-center text-sm text-gray-400">
               Already have an account?{' '}
-              <Link href="/login" className="font-semibold text-indigo-600 hover:text-indigo-700">
+              <Link href="/login" className="font-semibold text-indigo-400 hover:text-indigo-300">
                 Sign in
               </Link>
             </p>
           </div>
         </div>
       </div>
+      </div>
+      <Footer />
     </div>
   );
 }

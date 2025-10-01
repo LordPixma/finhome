@@ -173,11 +173,6 @@ export default function CategoriesPage() {
     (cat) => cat.type === formData.type && !cat.parentId && cat.id !== editingCategory?.id
   );
 
-  // Count usage
-  const getCategoryUsageCount = (categoryId: string) => {
-    return childCategories.filter((cat) => cat.parentId === categoryId).length;
-  };
-
   if (isLoading) {
     return (
       <ProtectedRoute>

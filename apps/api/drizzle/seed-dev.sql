@@ -1,13 +1,8 @@
--- Production seed data for Finhome-- Comprehensive seed data for FamilyBudget development/demo
+-- Comprehensive seed data for FamilyBudget development/demo
+-- Run this after migrations: wrangler d1 execute finhome-db --local --file=./drizzle/seed.sql
+-- Or for production: wrangler d1 execute finhome-db --file=./drizzle/seed.sql
 
--- This file is intentionally empty for production deployment-- Run this after migrations: wrangler d1 execute finhome-db --local --file=./drizzle/seed.sql
-
--- Users will create their own tenants, accounts, and data through the registration process-- Or for production: wrangler d1 execute finhome-db --file=./drizzle/seed.sql
-
-
-
--- To use demo data for local development, run: wrangler d1 execute finhome-db --local --file=./drizzle/seed-dev.sql-- ============================================
-
+-- ============================================
 -- DEMO TENANT: Demo Family
 -- ============================================
 INSERT INTO tenants (id, name, subdomain, created_at, updated_at) VALUES

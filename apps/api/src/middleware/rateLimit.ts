@@ -15,8 +15,14 @@ export function rateLimiter(options: {
   const keyPrefix = options.keyPrefix || 'ratelimit';
 
   return async (c: AppContext, next: Next): Promise<Response | void> => {
-    if (!c.env.CACHE) {
-      console.warn('Rate limiting disabled: CACHE KV namespace not available');
+    // Skip rate limiting in development mode
+    const isDevelopment = c.env.ENVIRONMENT === 'development';
+    if (isDevelopment || !c.env.CACHE) {
+      if (isDevelopment) {
+        console.log(`[Rate Limiter] Skipping in development mode`);
+      } else {
+        console.warn('Rate limiting disabled: CACHE KV namespace not available');
+      }
       return await next();
     }
 

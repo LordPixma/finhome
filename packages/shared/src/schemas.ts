@@ -32,7 +32,7 @@ export const AccountSchema = z.object({
   name: z.string().min(1).max(255),
   type: z.enum(['checking', 'savings', 'credit', 'cash', 'investment', 'other']),
   balance: z.number(),
-  currency: z.string().length(3).default('USD'),
+  currency: z.string().length(3).default('GBP'),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
