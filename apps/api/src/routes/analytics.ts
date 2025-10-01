@@ -2,10 +2,10 @@ import { Hono } from 'hono';
 import { eq, and, sql } from 'drizzle-orm';
 import { getDb, transactions, categories } from '../db';
 import { authMiddleware, tenantMiddleware } from '../middleware/auth';
-import type { AppContext } from '../types';
+import type { Env } from '../types';
 import type { SpendingAnalytics } from '@finhome/shared';
 
-const analytics = new Hono<{ Bindings: AppContext['env']; Variables: AppContext['var'] }>();
+const analytics = new Hono<Env>();
 
 // Apply middleware
 analytics.use('*', authMiddleware, tenantMiddleware);

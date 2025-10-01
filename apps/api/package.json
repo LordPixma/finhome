@@ -14,7 +14,7 @@
     "clean": "rm -rf dist .wrangler"
   },
   "dependencies": {
-    "@finhome/shared": "workspace:*",
+    "@finhome/shared": "file:../../packages/shared",
     "drizzle-orm": "^0.29.1",
     "hono": "^3.11.7",
     "zod": "^3.22.4"

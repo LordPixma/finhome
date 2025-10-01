@@ -1,7 +1,7 @@
-import { Context, Next } from 'hono';
+import { Next } from 'hono';
 import type { AppContext } from '../types';
 
-export async function corsMiddleware(c: AppContext, next: Next) {
+export async function corsMiddleware(c: AppContext, next: Next): Promise<Response | void> {
   const origin = c.req.header('Origin') || '*';
   
   c.header('Access-Control-Allow-Origin', origin);

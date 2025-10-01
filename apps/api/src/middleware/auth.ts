@@ -1,8 +1,8 @@
-import { Context, Next } from 'hono';
+import { Next } from 'hono';
 import type { AppContext } from '../types';
 
 // Simple JWT verification (in production, use a proper library)
-function decodeJWT(token: string, secret: string): any {
+function decodeJWT(token: string): any {
   try {
     const [, payloadBase64] = token.split('.');
     const payload = JSON.parse(atob(payloadBase64));
@@ -12,7 +12,7 @@ function decodeJWT(token: string, secret: string): any {
   }
 }
 
-export async function authMiddleware(c: AppContext, next: Next) {
+export async function authMiddleware(c: AppContext, next: Next): Promise<Response | void> {
   const authHeader = c.req.header('Authorization');
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -20,7 +20,7 @@ export async function authMiddleware(c: AppContext, next: Next) {
   }
 
   const token = authHeader.substring(7);
-  const payload = decodeJWT(token, c.env.JWT_SECRET);
+  const payload = decodeJWT(token);
 
   if (!payload || !payload.userId || !payload.tenantId) {
     return c.json({ success: false, error: { code: 'INVALID_TOKEN', message: 'Invalid token' } }, 401);
@@ -39,7 +39,7 @@ export async function authMiddleware(c: AppContext, next: Next) {
   await next();
 }
 
-export async function tenantMiddleware(c: AppContext, next: Next) {
+export async function tenantMiddleware(c: AppContext, next: Next): Promise<Response | void> {
   const tenantId = c.get('tenantId');
 
   if (!tenantId) {

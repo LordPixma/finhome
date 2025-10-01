@@ -1,10 +1,10 @@
 import { Hono } from 'hono';
 import { eq, and } from 'drizzle-orm';
-import { getDb, budgets, categories } from '../db';
+import { getDb, budgets } from '../db';
 import { authMiddleware, tenantMiddleware } from '../middleware/auth';
-import type { AppContext } from '../types';
+import type { Env } from '../types';
 
-const budgetsRouter = new Hono<{ Bindings: AppContext['env']; Variables: AppContext['var'] }>();
+const budgetsRouter = new Hono<Env>();
 
 // Apply middleware
 budgetsRouter.use('*', authMiddleware, tenantMiddleware);

@@ -6,7 +6,7 @@ import budgets from './routes/budgets';
 import analytics from './routes/analytics';
 import type { Env } from './types';
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<Env>();
 
 // Apply CORS middleware
 app.use('*', corsMiddleware);
@@ -43,7 +43,7 @@ app.onError((err, c) => {
 });
 
 // Queue consumer for bill reminders
-export async function queue(batch: MessageBatch<any>, env: Env): Promise<void> {
+export async function queue(batch: MessageBatch<any>): Promise<void> {
   for (const message of batch.messages) {
     try {
       const { billReminderId, tenantId } = message.body;

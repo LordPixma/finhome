@@ -2,9 +2,9 @@ import { Hono } from 'hono';
 import { eq, and, desc } from 'drizzle-orm';
 import { getDb, transactions } from '../db';
 import { authMiddleware, tenantMiddleware } from '../middleware/auth';
-import type { AppContext } from '../types';
+import type { Env } from '../types';
 
-const transactionsRouter = new Hono<{ Bindings: AppContext['env']; Variables: AppContext['var'] }>();
+const transactionsRouter = new Hono<Env>();
 
 // Apply middleware
 transactionsRouter.use('*', authMiddleware, tenantMiddleware);
