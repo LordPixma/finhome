@@ -1,0 +1,57 @@
+name = "finhome-api"
+main = "src/index.ts"
+compatibility_date = "2023-12-01"
+node_compat = true
+
+# Cloudflare Workers Configuration
+workers_dev = true
+route = ""
+account_id = ""
+
+# D1 Database
+[[d1_databases]]
+binding = "DB"
+database_name = "finhome-db"
+database_id = ""
+
+# KV Namespaces
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = ""
+
+[[kv_namespaces]]
+binding = "CACHE"
+id = ""
+
+# R2 Buckets
+[[r2_buckets]]
+binding = "FILES"
+bucket_name = "finhome-files"
+
+# Queues
+[[queues.producers]]
+binding = "BILL_REMINDERS"
+queue = "finhome-bill-reminders"
+
+[[queues.consumers]]
+queue = "finhome-bill-reminders"
+max_batch_size = 10
+max_batch_timeout = 30
+
+# Environment Variables
+[vars]
+ENVIRONMENT = "development"
+JWT_SECRET = "change-this-in-production"
+FRONTEND_URL = "http://localhost:3000"
+
+# Durable Objects (for future use)
+# [[durable_objects.bindings]]
+# name = "ANALYTICS"
+# class_name = "AnalyticsCounter"
+# script_name = "finhome-api"
+
+[build]
+command = "npm run build"
+
+[build.upload]
+format = "service-worker"
