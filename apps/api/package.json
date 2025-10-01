@@ -1,0 +1,30 @@
+{
+  "name": "@finhome/api",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "build": "tsc",
+    "lint": "tsc --noEmit",
+    "test": "vitest",
+    "db:generate": "drizzle-kit generate:sqlite",
+    "db:migrate": "wrangler d1 migrations apply finhome-db",
+    "clean": "rm -rf dist .wrangler"
+  },
+  "dependencies": {
+    "@finhome/shared": "workspace:*",
+    "drizzle-orm": "^0.29.1",
+    "hono": "^3.11.7",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20231218.0",
+    "@types/node": "^20.10.0",
+    "drizzle-kit": "^0.20.6",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.4",
+    "wrangler": "^3.22.0"
+  }
+}
