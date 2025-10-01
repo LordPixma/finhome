@@ -49,3 +49,7 @@ Thumbs.db
 # Cloudflare
 .dev.vars
 .mf/
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
