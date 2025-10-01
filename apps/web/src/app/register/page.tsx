@@ -72,8 +72,8 @@ export default function RegisterPage() {
       {/* Left Side - Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-indigo-600 via-purple-700 to-pink-800 relative overflow-hidden">
         <div className="absolute inset-0 bg-black opacity-10"></div>
-        <div className="relative z-10 flex flex-col justify-center items-center px-12 text-white">
-          <div className="max-w-md">
+        <div className="relative z-10 flex flex-col justify-center px-12 lg:px-16 xl:px-24 text-white w-full">
+          <div className="max-w-xl mx-auto">
             <h1 className="text-5xl font-bold mb-6">
               Start Your Journey
             </h1>

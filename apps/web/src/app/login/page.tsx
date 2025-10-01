@@ -32,8 +32,8 @@ export default function LoginPage() {
       {/* Left Side - Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 relative overflow-hidden">
         <div className="absolute inset-0 bg-black opacity-10"></div>
-        <div className="relative z-10 flex flex-col justify-center items-center px-12 text-white">
-          <div className="max-w-md">
+        <div className="relative z-10 flex flex-col justify-center px-12 lg:px-16 xl:px-24 text-white w-full">
+          <div className="max-w-xl mx-auto">
             <h1 className="text-5xl font-bold mb-6">
               Finhome
             </h1>
