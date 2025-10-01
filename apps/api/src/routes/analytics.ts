@@ -43,6 +43,45 @@ analytics.get('/spending', async c => {
     .groupBy(transactions.categoryId, categories.name)
     .all();
 
+  // Get trend data (last 6 months)
+  const trendData = await db
+    .select({
+      date: sql<string>`strftime('%Y-%m-%d', ${transactions.date})`,
+      type: transactions.type,
+      amount: sql<number>`sum(${transactions.amount})`,
+    })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.tenantId, tenantId),
+        sql`${transactions.date} >= date('now', '-6 months')`
+      )
+    )
+    .groupBy(sql`strftime('%Y-%m-%d', ${transactions.date})`, transactions.type)
+    .orderBy(sql`strftime('%Y-%m-%d', ${transactions.date})`)
+    .all();
+
+  // Organize trend by date
+  const trendMap = new Map<string, { income: number; expenses: number }>();
+  
+  for (const item of trendData) {
+    if (!trendMap.has(item.date)) {
+      trendMap.set(item.date, { income: 0, expenses: 0 });
+    }
+    const entry = trendMap.get(item.date)!;
+    if (item.type === 'income') {
+      entry.income += item.amount;
+    } else if (item.type === 'expense') {
+      entry.expenses += item.amount;
+    }
+  }
+
+  const trend = Array.from(trendMap.entries()).map(([date, values]) => ({
+    date,
+    income: values.income,
+    expenses: values.expenses,
+  }));
+
   const result: SpendingAnalytics = {
     totalIncome,
     totalExpenses,
@@ -53,7 +92,7 @@ analytics.get('/spending', async c => {
       amount: c.amount,
       percentage: totalExpenses > 0 ? (c.amount / totalExpenses) * 100 : 0,
     })),
-    trend: [], // TODO: Implement trend calculation
+    trend,
   };
 
   return c.json({

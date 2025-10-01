@@ -1,16 +1,6 @@
 import { Next } from 'hono';
+import * as jose from 'jose';
 import type { AppContext } from '../types';
-
-// Simple JWT verification (in production, use a proper library)
-function decodeJWT(token: string): any {
-  try {
-    const [, payloadBase64] = token.split('.');
-    const payload = JSON.parse(atob(payloadBase64));
-    return payload;
-  } catch {
-    return null;
-  }
-}
 
 export async function authMiddleware(c: AppContext, next: Next): Promise<Response | void> {
   const authHeader = c.req.header('Authorization');
@@ -20,23 +10,45 @@ export async function authMiddleware(c: AppContext, next: Next): Promise<Respons
   }
 
   const token = authHeader.substring(7);
-  const payload = decodeJWT(token);
+  const jwtSecret = c.env.JWT_SECRET;
 
-  if (!payload || !payload.userId || !payload.tenantId) {
-    return c.json({ success: false, error: { code: 'INVALID_TOKEN', message: 'Invalid token' } }, 401);
+  if (!jwtSecret) {
+    console.error('JWT_SECRET not configured');
+    return c.json(
+      { success: false, error: { code: 'SERVER_ERROR', message: 'Authentication not configured' } },
+      500
+    );
   }
 
-  // Set user context
-  c.set('user', {
-    id: payload.userId,
-    email: payload.email,
-    name: payload.name,
-    tenantId: payload.tenantId,
-    role: payload.role,
-  });
-  c.set('tenantId', payload.tenantId);
+  try {
+    // Verify JWT token
+    const secret = new TextEncoder().encode(jwtSecret);
+    const { payload } = await jose.jwtVerify(token, secret, {
+      algorithms: ['HS256'],
+    });
 
-  await next();
+    if (!payload.userId || !payload.tenantId) {
+      return c.json({ success: false, error: { code: 'INVALID_TOKEN', message: 'Invalid token payload' } }, 401);
+    }
+
+    // Set user context
+    c.set('user', {
+      id: payload.userId as string,
+      email: payload.email as string,
+      name: payload.name as string,
+      tenantId: payload.tenantId as string,
+      role: payload.role as 'admin' | 'member',
+    });
+    c.set('tenantId', payload.tenantId as string);
+
+    await next();
+  } catch (error) {
+    console.error('JWT verification failed:', error);
+    return c.json(
+      { success: false, error: { code: 'INVALID_TOKEN', message: 'Invalid or expired token' } },
+      401
+    );
+  }
 }
 
 export async function tenantMiddleware(c: AppContext, next: Next): Promise<Response | void> {

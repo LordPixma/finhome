@@ -1,27 +1,28 @@
 name = "finhome-api"
 main = "src/index.ts"
 compatibility_date = "2023-12-01"
-node_compat = true
+compatibility_flags = ["nodejs_compat"]
 
 # Cloudflare Workers Configuration
 workers_dev = true
-route = ""
-account_id = ""
 
-# D1 Database
+# D1 Database (local development uses .wrangler/state/v3/d1)
 [[d1_databases]]
 binding = "DB"
 database_name = "finhome-db"
-database_id = ""
+database_id = "local-db"
+preview_database_id = "local-db"
 
-# KV Namespaces
+# KV Namespaces (for local development, these will be simulated)
 [[kv_namespaces]]
 binding = "SESSIONS"
-id = ""
+id = "local-sessions"
+preview_id = "local-sessions"
 
 [[kv_namespaces]]
 binding = "CACHE"
-id = ""
+id = "local-cache"
+preview_id = "local-cache"
 
 # R2 Buckets
 [[r2_buckets]]
@@ -53,5 +54,3 @@ FRONTEND_URL = "http://localhost:3000"
 [build]
 command = "npm run build"
 
-[build.upload]
-format = "service-worker"

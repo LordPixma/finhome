@@ -154,3 +154,27 @@ export const FileUploadSchema = z.object({
 });
 
 export type FileUpload = z.infer<typeof FileUploadSchema>;
+
+// Auth Schemas
+export const LoginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+});
+
+export type LoginRequest = z.infer<typeof LoginSchema>;
+
+export const RegisterSchema = z.object({
+  tenantName: z.string().min(1).max(255),
+  subdomain: z.string().min(1).max(63).regex(/^[a-z0-9-]+$/),
+  email: z.string().email(),
+  name: z.string().min(1).max(255),
+  password: z.string().min(8).max(100),
+});
+
+export type RegisterRequest = z.infer<typeof RegisterSchema>;
+
+export const RefreshTokenSchema = z.object({
+  refreshToken: z.string(),
+});
+
+export type RefreshTokenRequest = z.infer<typeof RefreshTokenSchema>;
