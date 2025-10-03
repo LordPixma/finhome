@@ -1,4 +1,4 @@
-import type { ApiResponse } from '@finhome/shared';
+import type { ApiResponse } from '@finhome360/shared';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
 
