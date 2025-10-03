@@ -1,0 +1,6 @@
+name = "finhome360-marketing"
+compatibility_date = "2024-01-01"
+pages_build_output_dir = "./out"
+
+# Cloudflare Pages configuration for the marketing site
+# Custom domain (finhome360.com) will be configured in Cloudflare dashboard

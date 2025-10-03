@@ -2,7 +2,9 @@
 
 A multi-tenant SaaS application for family budgeting built on the Cloudflare stack.
 
-**Live at:** https://app.finhome360.com
+**Live at:** 
+- 🌐 **Marketing Site**: https://finhome360.com (Cloudflare Pages)
+- 📱 **Web App**: https://app.finhome360.com (Cloudflare Workers)
 
 ## 🚀 Features
 
@@ -52,15 +54,23 @@ finhome/
 │   │   │   ├── db/        # Database schema and migrations
 │   │   │   ├── middleware/ # Auth, CORS, etc.
 │   │   │   ├── routes/    # API endpoints
+│   │   │   ├── services/  # Email service, etc.
 │   │   │   └── index.ts   # Main entry point
 │   │   ├── wrangler.toml  # Cloudflare configuration
 │   │   └── package.json
 │   │
-│   └── web/               # Next.js frontend
+│   ├── web/               # Next.js web application
+│   │   ├── src/
+│   │   │   ├── app/       # Next.js App Router
+│   │   │   ├── components/ # React components
+│   │   │   └── lib/       # Utilities
+│   │   └── package.json
+│   │
+│   └── marketing/         # Marketing landing page
 │       ├── src/
 │       │   ├── app/       # Next.js App Router
-│       │   ├── components/ # React components
-│       │   └── lib/       # Utilities
+│       │   └── components/ # React components
+│       ├── out/           # Static export output
 │       └── package.json
 │
 ├── packages/

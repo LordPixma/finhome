@@ -3,8 +3,9 @@ import { eq, and, count } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import { authMiddleware } from '../middleware/auth';
 import { validateRequest } from '../middleware/validation';
-import { getDb, tenantMembers, users } from '../db';
+import { getDb, tenantMembers, users, tenants } from '../db';
 import { InviteTenantMemberSchema, UpdateTenantMemberSchema } from '@finhome360/shared';
+import { createEmailService } from '../services/email';
 import type { Env } from '../types';
 
 const router = new Hono<Env>();
@@ -147,8 +148,32 @@ router.post('/', validateRequest(InviteTenantMemberSchema), async (c) => {
 
     await db.insert(tenantMembers).values(member).run();
 
-    // TODO: Send invitation email with temporary password
-    // For now, return the temp password (in production, send via email)
+    // Send invitation email with temporary password
+    try {
+      const emailService = createEmailService('noreply@finhome360.com', c.env.FRONTEND_URL || 'https://app.finhome360.com');
+      
+      // Get tenant name
+      const tenant = await db
+        .select({ name: tenants.name })
+        .from(tenants)
+        .where(eq(tenants.id, tenantId))
+        .get();
+
+      await emailService.sendMemberInvitationEmail(body.email, {
+        inviterName: user.name,
+        tenantName: tenant?.name || 'Your Family',
+        memberName: body.name,
+        memberEmail: body.email,
+        temporaryPassword: tempPassword,
+        role: body.role,
+        loginUrl: c.env.FRONTEND_URL || 'https://app.finhome360.com',
+      });
+
+      console.log(`Invitation email sent to ${body.email}`);
+    } catch (emailError) {
+      console.error('Failed to send invitation email:', emailError);
+      // Don't fail the request if email fails
+    }
 
     return c.json({
       success: true,
@@ -156,7 +181,7 @@ router.post('/', validateRequest(InviteTenantMemberSchema), async (c) => {
         ...member,
         userName: body.name,
         userEmail: body.email,
-        tempPassword, // Remove this in production
+        tempPassword, // Include temporarily for dev/testing
       },
     }, 201);
   } catch (error: any) {

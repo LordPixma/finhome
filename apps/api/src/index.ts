@@ -13,8 +13,10 @@ import recurringTransactions from './routes/recurringTransactions';
 import goals from './routes/goals';
 import settings from './routes/settings';
 import tenantMembers from './routes/tenantMembers';
-import { getDb, billReminders } from './db';
+import { getDb, billReminders, users, userSettings } from './db';
+import { createEmailService } from './services/email';
 import type { Env } from './types';
+import type { MessageBatch } from '@cloudflare/workers-types';
 
 const app = new Hono<Env>();
 
@@ -63,6 +65,7 @@ app.onError((err, c) => {
 // Queue consumer for bill reminders
 export async function queue(batch: MessageBatch<any>, env: Env['Bindings']): Promise<void> {
   const db = getDb(env.DB);
+  const emailService = createEmailService('noreply@finhome360.com', env.FRONTEND_URL || 'https://app.finhome360.com');
 
   for (const message of batch.messages) {
     try {
@@ -92,13 +95,44 @@ export async function queue(batch: MessageBatch<any>, env: Env['Bindings']): Pro
       // Calculate days until due
       const daysUntilDue = Math.ceil((new Date(dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 
-      // Send notification logic
-      // In production, this would integrate with email service, push notifications, etc.
-      console.log(`[NOTIFICATION] Bill Reminder for tenant ${tenantId}:`);
-      console.log(`  - Name: ${billReminder.name}`);
-      console.log(`  - Amount: $${billReminder.amount}`);
-      console.log(`  - Due in: ${daysUntilDue} days`);
-      console.log(`  - Due Date: ${dueDate}`);
+      // Fetch all active users in the tenant to send emails
+      const tenantUsers = await db
+        .select({
+          id: users.id,
+          name: users.name,
+          email: users.email,
+        })
+        .from(users)
+        .where(eq(users.tenantId, tenantId))
+        .all();
+
+      // Get tenant user's currency preference
+      const userSettingsData = await db
+        .select()
+        .from(userSettings)
+        .where(eq(userSettings.userId, tenantUsers[0]?.id || ''))
+        .get();
+
+      const currencySymbol = userSettingsData?.currencySymbol || '£';
+
+      // Send email to all tenant users
+      for (const user of tenantUsers) {
+        try {
+          await emailService.sendBillReminderEmail(user.email, {
+            userName: user.name,
+            billName: billReminder.name,
+            amount: billReminder.amount,
+            currency: currencySymbol,
+            dueDate: new Date(dueDate).toLocaleDateString('en-GB'),
+            daysUntilDue,
+            loginUrl: env.FRONTEND_URL || 'https://app.finhome360.com',
+          });
+          console.log(`Email sent to ${user.email} for bill reminder ${billReminderId}`);
+        } catch (emailError) {
+          console.error(`Failed to send email to ${user.email}:`, emailError);
+          // Continue processing other users even if one email fails
+        }
+      }
 
       // Store notification in KV for retrieval (simple notification store)
       if (env.CACHE) {
