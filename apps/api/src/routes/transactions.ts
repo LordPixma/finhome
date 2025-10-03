@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { eq, and, desc } from 'drizzle-orm';
-import { getDb, transactions } from '../db';
+import { getDb, transactions, accounts, categories } from '../db';
 import { authMiddleware, tenantMiddleware } from '../middleware/auth';
 import type { Env } from '../types';
 
@@ -15,8 +15,32 @@ transactionsRouter.get('/', async c => {
   const db = getDb(c.env.DB);
 
   const allTransactions = await db
-    .select()
+    .select({
+      id: transactions.id,
+      tenantId: transactions.tenantId,
+      accountId: transactions.accountId,
+      categoryId: transactions.categoryId,
+      amount: transactions.amount,
+      description: transactions.description,
+      date: transactions.date,
+      type: transactions.type,
+      notes: transactions.notes,
+      createdAt: transactions.createdAt,
+      updatedAt: transactions.updatedAt,
+      account: {
+        name: accounts.name,
+        type: accounts.type,
+      },
+      category: {
+        name: categories.name,
+        icon: categories.icon,
+        color: categories.color,
+        type: categories.type,
+      },
+    })
     .from(transactions)
+    .leftJoin(accounts, eq(transactions.accountId, accounts.id))
+    .leftJoin(categories, eq(transactions.categoryId, categories.id))
     .where(eq(transactions.tenantId, tenantId))
     .orderBy(desc(transactions.date))
     .all();

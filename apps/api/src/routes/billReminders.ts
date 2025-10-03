@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { eq, and, desc } from 'drizzle-orm';
-import { getDb, billReminders } from '../db';
+import { getDb, billReminders, categories } from '../db';
 import { authMiddleware, tenantMiddleware } from '../middleware/auth';
 import { validateRequest } from '../middleware/validation';
 import { CreateBillReminderSchema } from '@finhome/shared';
@@ -18,8 +18,26 @@ billRemindersRouter.get('/', async c => {
     const db = getDb(c.env.DB);
 
     const allBillReminders = await db
-      .select()
+      .select({
+        id: billReminders.id,
+        tenantId: billReminders.tenantId,
+        name: billReminders.name,
+        amount: billReminders.amount,
+        categoryId: billReminders.categoryId,
+        dueDate: billReminders.dueDate,
+        frequency: billReminders.frequency,
+        reminderDays: billReminders.reminderDays,
+        status: billReminders.status,
+        createdAt: billReminders.createdAt,
+        updatedAt: billReminders.updatedAt,
+        category: {
+          name: categories.name,
+          icon: categories.icon,
+          color: categories.color,
+        },
+      })
       .from(billReminders)
+      .leftJoin(categories, eq(billReminders.categoryId, categories.id))
       .where(eq(billReminders.tenantId, tenantId))
       .orderBy(desc(billReminders.dueDate))
       .all();

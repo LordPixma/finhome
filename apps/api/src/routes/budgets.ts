@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { eq, and } from 'drizzle-orm';
-import { getDb, budgets } from '../db';
+import { getDb, budgets, categories } from '../db';
 import { authMiddleware, tenantMiddleware } from '../middleware/auth';
 import type { Env } from '../types';
 
@@ -15,8 +15,25 @@ budgetsRouter.get('/', async c => {
   const db = getDb(c.env.DB);
 
   const allBudgets = await db
-    .select()
+    .select({
+      id: budgets.id,
+      tenantId: budgets.tenantId,
+      categoryId: budgets.categoryId,
+      amount: budgets.amount,
+      period: budgets.period,
+      startDate: budgets.startDate,
+      endDate: budgets.endDate,
+      createdAt: budgets.createdAt,
+      updatedAt: budgets.updatedAt,
+      category: {
+        name: categories.name,
+        icon: categories.icon,
+        color: categories.color,
+        type: categories.type,
+      },
+    })
     .from(budgets)
+    .leftJoin(categories, eq(budgets.categoryId, categories.id))
     .where(eq(budgets.tenantId, tenantId))
     .all();
 
