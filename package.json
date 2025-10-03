@@ -1,8 +1,8 @@
 {
-  "name": "finhome",
+  "name": "finhome360",
   "version": "1.0.0",
   "private": true,
-  "description": "A multi-tenant SaaS for family budgeting",
+  "description": "Finhome360 - A multi-tenant SaaS for family budgeting",
   "workspaces": [
     "apps/*",
     "packages/*"

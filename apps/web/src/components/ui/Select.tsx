@@ -25,13 +25,13 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             ref={ref}
             className={`
               w-full px-4 py-3 border rounded-lg transition-colors appearance-none
+              text-gray-900 bg-white
               ${error 
                 ? 'border-red-300 focus:border-red-500 focus:ring-red-500' 
                 : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
               }
               focus:ring-2 focus:outline-none
               disabled:bg-gray-100 disabled:cursor-not-allowed
-              bg-white
               ${className}
             `}
             {...props}

@@ -78,7 +78,7 @@ export default function RegisterPage() {
               Start Your Journey
             </h1>
             <p className="text-2xl mb-8 text-purple-100">
-              Join thousands of families managing their finances smarter
+              Join Finhome360 Today
             </p>
             <p className="text-lg text-purple-200 mb-12">
               Create your free account in minutes and take control of your family's financial future today.
@@ -190,7 +190,7 @@ export default function RegisterPage() {
                     minLength={3}
                   />
                   <span className="inline-flex items-center px-4 py-3 border border-l-0 border-gray-700 bg-gray-800 text-gray-400 rounded-r-lg text-sm">
-                    .finhome.com
+                    .finhome360.com
                   </span>
                 </div>
                 <p className="mt-1 text-xs text-gray-500">Lowercase letters and numbers only</p>

@@ -40,7 +40,7 @@ max_batch_timeout = 30
 [vars]
 ENVIRONMENT = "production"
 JWT_SECRET = "gBk9Lm3Np2Qr5Ts8Wv1Yx4Za7Cd0Ef3Hi6Jl9Mo2Pr5Su8Vx1Za4Cd7Ff0Hi3"
-FRONTEND_URL = "https://finhome.com"
+FRONTEND_URL = "https://app.finhome360.com"
 
 # Durable Objects (for future use)
 # [[durable_objects.bindings]]

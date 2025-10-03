@@ -9,7 +9,7 @@ This is a multi-tenant SaaS budgeting app built on Cloudflare's edge stack with 
 ## Key Patterns & Conventions
 
 ### Multi-tenancy
-All database entities include `tenantId` for tenant isolation. The API expects subdomain-based tenant routing (e.g., `acme.finhome.com`).
+All database entities include `tenantId` for tenant isolation. The API expects subdomain-based tenant routing (e.g., `acme.finhome360.com`).
 
 ### Authentication & Security
 - JWT authentication using `jose` library (access tokens: 1h, refresh tokens: 7d)
@@ -62,7 +62,7 @@ The API (`apps/api/wrangler.toml`) is configured for:
 
 ### API Routes (Complete CRUD)
 - `/api/auth` - Login, register, refresh (with rate limiting)
-- `/api/accounts` - Account management
+- `/api/accounts` - Account managementS
 - `/api/categories` - Category management
 - `/api/transactions` - Transaction management
 - `/api/budgets` - Budget management

@@ -162,4 +162,29 @@ export const api = {
     }).then(res => res.json());
   },
   getUploads: () => apiClient('/api/files/uploads'),
+
+  // Recurring Transactions
+  getRecurringTransactions: () => apiClient('/api/recurring-transactions'),
+  getRecurringTransaction: (id: string) => apiClient(`/api/recurring-transactions/${id}`),
+  createRecurringTransaction: (data: any) => apiClient('/api/recurring-transactions', { method: 'POST', body: JSON.stringify(data) }),
+  updateRecurringTransaction: (id: string, data: any) => apiClient(`/api/recurring-transactions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteRecurringTransaction: (id: string) => apiClient(`/api/recurring-transactions/${id}`, { method: 'DELETE' }),
+
+  // Goals
+  getGoals: () => apiClient('/api/goals'),
+  getGoal: (id: string) => apiClient(`/api/goals/${id}`),
+  createGoal: (data: any) => apiClient('/api/goals', { method: 'POST', body: JSON.stringify(data) }),
+  updateGoal: (id: string, data: any) => apiClient(`/api/goals/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteGoal: (id: string) => apiClient(`/api/goals/${id}`, { method: 'DELETE' }),
+  addGoalContribution: (id: string, data: any) => apiClient(`/api/goals/${id}/contributions`, { method: 'POST', body: JSON.stringify(data) }),
+
+  // User Settings
+  getSettings: () => apiClient('/api/settings'),
+  updateSettings: (data: any) => apiClient('/api/settings', { method: 'PUT', body: JSON.stringify(data) }),
+
+  // Tenant Members
+  getTenantMembers: () => apiClient('/api/tenant-members'),
+  inviteTenantMember: (data: any) => apiClient('/api/tenant-members', { method: 'POST', body: JSON.stringify(data) }),
+  updateTenantMember: (id: string, data: any) => apiClient(`/api/tenant-members/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  removeTenantMember: (id: string) => apiClient(`/api/tenant-members/${id}`, { method: 'DELETE' }),
 };

@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  transpilePackages: ['@finhome/shared'],
+  transpilePackages: ['@finhome360/shared'],
   output: 'export',
   images: {
     unoptimized: true,

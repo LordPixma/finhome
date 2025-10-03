@@ -35,6 +35,7 @@ export default function BillRemindersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBill, setEditingBill] = useState<BillReminder | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
+  const [currencySymbol, setCurrencySymbol] = useState('£');
   const [formData, setFormData] = useState({
     name: '',
     amount: '',
@@ -54,9 +55,10 @@ export default function BillRemindersPage() {
   const loadData = async () => {
     try {
       setIsLoading(true);
-      const [billsRes, categoriesRes] = await Promise.all([
+      const [billsRes, categoriesRes, settingsRes] = await Promise.all([
         api.getBillReminders() as any,
         api.getCategories() as any,
+        api.getSettings() as any,
       ]);
 
       if (billsRes.success) {
@@ -64,6 +66,9 @@ export default function BillRemindersPage() {
       }
       if (categoriesRes.success) {
         setCategories(categoriesRes.data.filter((cat: Category) => cat.type === 'expense'));
+      }
+      if (settingsRes.success && settingsRes.data) {
+        setCurrencySymbol(settingsRes.data.currencySymbol || '£');
       }
     } catch (error) {
       console.error('Failed to load data:', error);
@@ -524,7 +529,7 @@ export default function BillRemindersPage() {
                 value={formData.amount}
                 onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                 placeholder="0.00"
-                icon={<span className="text-gray-400">$</span>}
+                icon={<span className="text-gray-400">{currencySymbol}</span>}
               />
             </div>
 

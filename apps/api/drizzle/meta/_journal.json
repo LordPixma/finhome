@@ -1,0 +1,13 @@
+{
+  "version": "5",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1759502836774,
+      "tag": "0000_quick_bill_hollister",
+      "breakpoints": true
+    }
+  ]
+}

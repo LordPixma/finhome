@@ -62,7 +62,7 @@ export const TransactionSchema = z.object({
   categoryId: z.string().uuid(),
   amount: z.number(),
   description: z.string().max(500),
-  date: z.date(),
+  date: z.coerce.date(),
   type: z.enum(['income', 'expense', 'transfer']),
   notes: z.string().optional(),
   createdAt: z.date(),
@@ -78,8 +78,8 @@ export const BudgetSchema = z.object({
   categoryId: z.string().uuid(),
   amount: z.number().positive(),
   period: z.enum(['weekly', 'monthly', 'yearly']),
-  startDate: z.date(),
-  endDate: z.date().optional(),
+  startDate: z.coerce.date(),
+  endDate: z.coerce.date().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
@@ -93,7 +93,7 @@ export const BillReminderSchema = z.object({
   name: z.string().min(1).max(255),
   amount: z.number().positive(),
   categoryId: z.string().uuid(),
-  dueDate: z.date(),
+  dueDate: z.coerce.date(),
   frequency: z.enum(['once', 'weekly', 'monthly', 'yearly']),
   reminderDays: z.number().int().min(0).max(30).default(3),
   status: z.enum(['pending', 'paid', 'overdue']),
@@ -102,6 +102,60 @@ export const BillReminderSchema = z.object({
 });
 
 export type BillReminder = z.infer<typeof BillReminderSchema>;
+
+// Recurring Transaction Schema
+export const RecurringTransactionSchema = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string().uuid(),
+  accountId: z.string().uuid(),
+  categoryId: z.string().uuid(),
+  description: z.string().min(1).max(500),
+  amount: z.number().positive(),
+  type: z.enum(['income', 'expense']),
+  frequency: z.enum(['daily', 'weekly', 'biweekly', 'monthly', 'quarterly', 'yearly']),
+  startDate: z.coerce.date(),
+  nextDate: z.coerce.date(),
+  endDate: z.coerce.date().optional(),
+  status: z.enum(['active', 'paused', 'completed']).default('active'),
+  autoCreate: z.boolean().default(true),
+  notes: z.string().max(1000).optional(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export type RecurringTransaction = z.infer<typeof RecurringTransactionSchema>;
+
+// Goal Schema
+export const GoalSchema = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string().uuid(),
+  name: z.string().min(1).max(255),
+  description: z.string().max(1000).optional(),
+  targetAmount: z.number().positive(),
+  currentAmount: z.number().default(0),
+  deadline: z.coerce.date().optional(),
+  accountId: z.string().uuid().optional(),
+  status: z.enum(['active', 'completed', 'abandoned']).default('active'),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+  icon: z.string().default('🎯'),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export type Goal = z.infer<typeof GoalSchema>;
+
+// Goal Contribution Schema
+export const GoalContributionSchema = z.object({
+  id: z.string().uuid(),
+  goalId: z.string().uuid(),
+  transactionId: z.string().uuid().optional(),
+  amount: z.number(),
+  date: z.coerce.date(),
+  notes: z.string().max(500).optional(),
+  createdAt: z.date(),
+});
+
+export type GoalContribution = z.infer<typeof GoalContributionSchema>;
 
 // Input Schemas (for API requests)
 export const CreateTenantSchema = TenantSchema.omit({
@@ -118,32 +172,56 @@ export const CreateUserSchema = UserSchema.omit({
 
 export const CreateAccountSchema = AccountSchema.omit({
   id: true,
+  tenantId: true,
   createdAt: true,
   updatedAt: true,
 });
 
 export const CreateCategorySchema = CategorySchema.omit({
   id: true,
+  tenantId: true,
   createdAt: true,
   updatedAt: true,
 });
 
 export const CreateTransactionSchema = TransactionSchema.omit({
   id: true,
+  tenantId: true,
   createdAt: true,
   updatedAt: true,
 });
 
 export const CreateBudgetSchema = BudgetSchema.omit({
   id: true,
+  tenantId: true,
   createdAt: true,
   updatedAt: true,
 });
 
 export const CreateBillReminderSchema = BillReminderSchema.omit({
   id: true,
+  tenantId: true,
   createdAt: true,
   updatedAt: true,
+});
+
+export const CreateRecurringTransactionSchema = RecurringTransactionSchema.omit({
+  id: true,
+  tenantId: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const CreateGoalSchema = GoalSchema.omit({
+  id: true,
+  tenantId: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const CreateGoalContributionSchema = GoalContributionSchema.omit({
+  id: true,
+  createdAt: true,
 });
 
 // File Upload Schema
@@ -178,3 +256,58 @@ export const RefreshTokenSchema = z.object({
 });
 
 export type RefreshTokenRequest = z.infer<typeof RefreshTokenSchema>;
+
+// User Settings Schema
+export const UserSettingsSchema = z.object({
+  id: z.string().uuid(),
+  userId: z.string().uuid(),
+  currency: z.string().length(3).default('GBP'),
+  currencySymbol: z.string().default('£'),
+  language: z.string().default('en'),
+  timezone: z.string().default('Europe/London'),
+  dateFormat: z.string().default('DD/MM/YYYY'),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export type UserSettings = z.infer<typeof UserSettingsSchema>;
+
+export const UpdateUserSettingsSchema = UserSettingsSchema.pick({
+  currency: true,
+  currencySymbol: true,
+  language: true,
+  timezone: true,
+  dateFormat: true,
+}).partial();
+
+export type UpdateUserSettingsRequest = z.infer<typeof UpdateUserSettingsSchema>;
+
+// Tenant Member Schema
+export const TenantMemberSchema = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string().uuid(),
+  userId: z.string().uuid(),
+  role: z.enum(['owner', 'admin', 'member']).default('member'),
+  invitedBy: z.string().uuid().nullable().optional(),
+  invitedAt: z.date(),
+  joinedAt: z.date().nullable().optional(),
+  status: z.enum(['pending', 'active', 'removed']).default('active'),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export type TenantMember = z.infer<typeof TenantMemberSchema>;
+
+export const InviteTenantMemberSchema = z.object({
+  email: z.string().email(),
+  name: z.string().min(1).max(255),
+  role: z.enum(['admin', 'member']).default('member'),
+});
+
+export type InviteTenantMemberRequest = z.infer<typeof InviteTenantMemberSchema>;
+
+export const UpdateTenantMemberSchema = z.object({
+  role: z.enum(['admin', 'member']),
+});
+
+export type UpdateTenantMemberRequest = z.infer<typeof UpdateTenantMemberSchema>;

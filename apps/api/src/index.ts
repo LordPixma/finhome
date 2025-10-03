@@ -9,6 +9,10 @@ import accounts from './routes/accounts';
 import categories from './routes/categories';
 import billRemindersRouter from './routes/billReminders';
 import filesRouter from './routes/files';
+import recurringTransactions from './routes/recurringTransactions';
+import goals from './routes/goals';
+import settings from './routes/settings';
+import tenantMembers from './routes/tenantMembers';
 import { getDb, billReminders } from './db';
 import type { Env } from './types';
 
@@ -19,7 +23,7 @@ app.use('*', corsMiddleware);
 
 // Health check
 app.get('/', c => {
-  return c.json({ status: 'ok', service: 'FamilyBudget API', version: '1.0.0' });
+  return c.json({ status: 'ok', service: 'Finhome360 API', version: '1.0.0' });
 });
 
 // Routes
@@ -31,6 +35,10 @@ app.route('/api/budgets', budgets);
 app.route('/api/bill-reminders', billRemindersRouter);
 app.route('/api/files', filesRouter);
 app.route('/api/analytics', analytics);
+app.route('/api/recurring-transactions', recurringTransactions);
+app.route('/api/goals', goals);
+app.route('/api/settings', settings);
+app.route('/api/tenant-members', tenantMembers);
 
 // 404 handler
 app.notFound(c => {

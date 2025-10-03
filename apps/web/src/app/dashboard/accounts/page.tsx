@@ -286,9 +286,9 @@ export default function AccountsPage() {
               value={formData.currency}
               onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
               options={[
-                { value: 'USD', label: 'USD - US Dollar' },
-                { value: 'EUR', label: 'EUR - Euro' },
-                { value: 'GBP', label: 'GBP - British Pound' },
+                { value: 'GBP', label: '£ GBP - British Pound' },
+                { value: 'USD', label: '$ USD - US Dollar' },
+                { value: 'EUR', label: '€ EUR - Euro' },
               ]}
             />
 

@@ -1,6 +1,8 @@
-# FamilyBudget
+# Finhome360
 
 A multi-tenant SaaS application for family budgeting built on the Cloudflare stack.
+
+**Live at:** https://app.finhome360.com
 
 ## 🚀 Features
 

@@ -20,11 +20,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Dashboard', href: '/dashboard', icon: '📊' },
     { name: 'Accounts', href: '/dashboard/accounts', icon: '🏦' },
     { name: 'Transactions', href: '/dashboard/transactions', icon: '💸' },
+    { name: 'Recurring', href: '/dashboard/recurring', icon: '🔁' },
     { name: 'Budgets', href: '/dashboard/budgets', icon: '🎯' },
+    { name: 'Goals', href: '/dashboard/goals', icon: '🎖️' },
     { name: 'Categories', href: '/dashboard/categories', icon: '🏷️' },
     { name: 'Bill Reminders', href: '/dashboard/bill-reminders', icon: '🔔' },
     { name: 'Analytics', href: '/dashboard/analytics', icon: '📈' },
     { name: 'Import', href: '/dashboard/import', icon: '📥' },
+    { name: 'Settings', href: '/dashboard/settings', icon: '⚙️' },
   ];
 
   const isActive = (href: string) => pathname === href;

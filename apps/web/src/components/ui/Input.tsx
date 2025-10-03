@@ -31,6 +31,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             className={`
               w-full px-4 py-3 border rounded-lg transition-colors
+              text-gray-900 placeholder:text-gray-400
               ${icon ? 'pl-10' : ''}
               ${error 
                 ? 'border-red-300 focus:border-red-500 focus:ring-red-500' 
@@ -84,6 +85,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           ref={ref}
           className={`
             w-full px-4 py-3 border rounded-lg transition-colors resize-none
+            text-gray-900 placeholder:text-gray-400
             ${error 
               ? 'border-red-300 focus:border-red-500 focus:ring-red-500' 
               : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'

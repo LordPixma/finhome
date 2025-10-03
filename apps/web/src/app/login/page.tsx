@@ -35,7 +35,7 @@ export default function LoginPage() {
         <div className="relative z-10 flex flex-col justify-center px-12 lg:px-16 xl:px-24 text-white w-full">
           <div className="max-w-xl mx-auto">
             <h1 className="text-5xl font-bold mb-6">
-              Finhome
+              Finhome360
             </h1>
             <p className="text-2xl mb-8 text-blue-100">
               Your Family's Financial Command Center

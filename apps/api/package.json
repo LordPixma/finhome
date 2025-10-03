@@ -1,5 +1,5 @@
 {
-  "name": "@finhome/api",
+  "name": "@finhome360/api",
   "version": "1.0.0",
   "private": true,
   "main": "./src/index.ts",
@@ -14,7 +14,7 @@
     "clean": "rm -rf dist .wrangler"
   },
   "dependencies": {
-    "@finhome/shared": "file:../../packages/shared",
+    "@finhome360/shared": "file:../../packages/shared",
     "bcryptjs": "^3.0.2",
     "drizzle-orm": "^0.29.1",
     "hono": "^3.11.7",

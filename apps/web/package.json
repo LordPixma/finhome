@@ -1,5 +1,5 @@
 {
-  "name": "@finhome/web",
+  "name": "@finhome360/web",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -10,7 +10,7 @@
     "clean": "rm -rf .next"
   },
   "dependencies": {
-    "@finhome/shared": "file:../../packages/shared",
+    "@finhome360/shared": "file:../../packages/shared",
     "next": "14.0.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
