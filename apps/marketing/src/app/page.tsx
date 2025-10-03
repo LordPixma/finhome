@@ -12,20 +12,20 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       {/* Header */}
-      <header className="absolute top-0 left-0 right-0 z-10">
+      <header className="absolute top-0 left-0 right-0 z-20 bg-gradient-to-b from-black/50 to-transparent">
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg">
                 <span className="text-white font-bold text-xl">F360</span>
               </div>
-              <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              <span className="text-2xl font-bold text-white drop-shadow-lg">
                 Finhome360
               </span>
             </div>
             <Link 
               href="https://app.finhome360.com"
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              className="px-6 py-2 bg-white text-blue-600 rounded-lg hover:bg-gray-100 transition-colors font-medium shadow-lg"
             >
               Launch App
             </Link>
@@ -33,49 +33,61 @@ export default function Home() {
         </nav>
       </header>
 
-      {/* Hero Section */}
-      <section className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
+      {/* Hero Section with Background Image */}
+      <section className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8 min-h-[90vh] flex items-center">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ 
+            backgroundImage: 'url(/hero-background.jpg), url(https://images.unsplash.com/photo-1642790595397-7047dc98fa72?w=1920&q=80)' 
+          }}
+        >
+          {/* Dark overlay for better text readability */}
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-900/90 via-indigo-900/85 to-purple-900/90"></div>
+          {/* Additional gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60"></div>
+        </div>
+
+        <div className="max-w-7xl mx-auto relative z-10">
           <div className="text-center max-w-4xl mx-auto">
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent leading-tight">
+            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold mb-6 text-white leading-tight drop-shadow-2xl">
               Your 360° View of Financial Freedom
             </h1>
-            <p className="text-xl sm:text-2xl text-gray-600 mb-8 leading-relaxed">
+            <p className="text-xl sm:text-2xl text-blue-100 mb-8 leading-relaxed drop-shadow-lg">
               Take control of your finances with detailed analytics, deep insights, and powerful tools 
               to help you save, invest, and achieve your financial goals.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link 
                 href="https://app.finhome360.com"
-                className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                className="px-8 py-4 bg-white text-blue-600 rounded-lg hover:bg-gray-100 transition-all font-semibold text-lg shadow-2xl hover:shadow-3xl transform hover:-translate-y-0.5"
               >
                 Get Started Free
               </Link>
               <a 
                 href="#features"
-                className="px-8 py-4 bg-white text-blue-600 rounded-lg hover:bg-gray-50 transition-colors font-semibold text-lg border-2 border-blue-600"
+                className="px-8 py-4 bg-blue-600/30 backdrop-blur-sm text-white rounded-lg hover:bg-blue-600/50 transition-colors font-semibold text-lg border-2 border-white/50 shadow-xl"
               >
                 Learn More
               </a>
             </div>
           </div>
 
-          {/* Hero Image/Visual */}
+          {/* Hero Stats/Visual */}
           <div className="mt-16 relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-indigo-600/20 blur-3xl rounded-full"></div>
-            <div className="relative bg-white rounded-2xl shadow-2xl p-8 border border-gray-200">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl">
+            <div className="relative bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="bg-white/90 backdrop-blur-sm p-6 rounded-xl shadow-lg">
                   <div className="text-3xl font-bold text-blue-600 mb-2">£12,450</div>
-                  <div className="text-sm text-gray-600">Total Savings</div>
+                  <div className="text-sm text-gray-700">Total Savings</div>
                 </div>
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-xl">
+                <div className="bg-white/90 backdrop-blur-sm p-6 rounded-xl shadow-lg">
                   <div className="text-3xl font-bold text-green-600 mb-2">+15.2%</div>
-                  <div className="text-sm text-gray-600">Monthly Growth</div>
+                  <div className="text-sm text-gray-700">Monthly Growth</div>
                 </div>
-                <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-xl">
+                <div className="bg-white/90 backdrop-blur-sm p-6 rounded-xl shadow-lg">
                   <div className="text-3xl font-bold text-purple-600 mb-2">8</div>
-                  <div className="text-sm text-gray-600">Active Goals</div>
+                  <div className="text-sm text-gray-700">Active Goals</div>
                 </div>
               </div>
             </div>
