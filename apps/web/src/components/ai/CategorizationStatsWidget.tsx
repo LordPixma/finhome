@@ -29,12 +29,14 @@ export function CategorizationStatsWidget() {
       console.error('Categorization stats error:', err);
       // Provide more helpful error messages
       if (err instanceof Error) {
-        if (err.message.includes('not found')) {
+        if (err.message.includes('not found') || err.message.includes('404')) {
           setError('API endpoint not available. Please ensure the latest API version is deployed.');
         } else if (err.message.includes('unauthorized') || err.message.includes('401')) {
           setError('Authentication required. Please log in again.');
+        } else if (err.message.includes('Failed to fetch')) {
+          setError('Network error. Please check your connection.');
         } else {
-          setError(err.message);
+          setError('Unable to load categorization data at this time.');
         }
       } else {
         setError('Failed to load categorization stats');

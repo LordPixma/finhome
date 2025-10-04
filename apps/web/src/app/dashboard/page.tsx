@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import DashboardLayout from '@/components/DashboardLayout';
 import { api } from '@/lib/api';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/utils';
 import { CategorizationStatsWidget } from '@/components/ai';
 
 interface Account {
@@ -90,13 +90,7 @@ export default function DashboardPage() {
     }
   };
 
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp * 1000).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  };
+
 
   if (isLoading) {
     return (
@@ -164,7 +158,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Accounts */}
           <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
             <div className="flex items-center justify-between mb-6">
@@ -232,16 +226,26 @@ export default function DashboardPage() {
                 {recentTransactions.map((transaction) => (
                   <div key={transaction.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors">
                     <div className="flex items-center flex-1">
-                      <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-xl mr-3">
-                        {transaction.category?.icon || '💰'}
+                      <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-lg mr-3 flex-shrink-0">
+                        {transaction.category?.icon || (transaction.type === 'income' ? '💰' : '💸')}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 truncate">{transaction.description}</p>
-                        <p className="text-sm text-gray-500">{formatDate(transaction.date)}</p>
+                        <p className="font-medium text-gray-900 truncate" title={transaction.description}>
+                          {transaction.description}
+                        </p>
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                          <span>{formatDate(transaction.date)}</span>
+                          {transaction.category?.name && (
+                            <>
+                              <span>•</span>
+                              <span>{transaction.category.name}</span>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    <div className="text-right ml-4">
-                      <p className={`text-lg font-semibold ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                    <div className="text-right ml-4 flex-shrink-0">
+                      <p className={`text-sm font-semibold ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
                         {transaction.type === 'income' ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount))}
                       </p>
                     </div>
@@ -251,15 +255,16 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* AI Categorization Stats */}
-          <div className="lg:col-span-2">
-            <CategorizationStatsWidget />
-          </div>
+        </div>
+
+        {/* AI Categorization Stats */}
+        <div className="mb-8">
+          <CategorizationStatsWidget />
         </div>
 
         {/* Quick Actions */}
-        <div className="mt-8 bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
+        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">Quick Actions</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <a
               href="/dashboard/transactions"
