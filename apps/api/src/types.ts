@@ -15,6 +15,8 @@ export interface Env {
   Variables: {
     user?: AuthUser;
     tenantId?: string;
+    subdomain?: string;
+    tenantName?: string;
     validatedData?: any;
   };
 }

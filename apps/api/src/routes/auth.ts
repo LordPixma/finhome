@@ -249,6 +249,11 @@ auth.post('/register', async c => {
       });
     }
 
+    // Build subdomain URL for frontend redirect
+    const frontendUrl = c.env.FRONTEND_URL || 'https://finhome360.com';
+    const baseUrl = new URL(frontendUrl);
+    const subdomainUrl = `${baseUrl.protocol}//${subdomain}.${baseUrl.host}`;
+
     return c.json(
       {
         success: true,
@@ -262,6 +267,12 @@ auth.post('/register', async c => {
             name,
             tenantId,
             role: 'admin',
+          },
+          tenant: {
+            id: tenantId,
+            name: tenantName,
+            subdomain,
+            url: subdomainUrl,
           },
         },
       },

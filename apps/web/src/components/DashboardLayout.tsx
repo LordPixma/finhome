@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import Image from 'next/image';
 import Footer from './Footer';
 
 interface DashboardLayoutProps {
@@ -46,7 +47,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <span className="ml-3 text-xl font-bold text-blue-600">Finhome</span>
+            <Image
+              src="/logo.png"
+              alt="Finhome360"
+              width={120}
+              height={40}
+              className="h-8 w-auto"
+            />
           </div>
           <button
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
@@ -64,7 +71,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="flex flex-col flex-grow bg-white border-r border-gray-200 pt-5 pb-4 overflow-y-auto">
           {/* Logo */}
           <div className="flex items-center flex-shrink-0 px-6 mb-8">
-            <span className="text-2xl font-bold text-blue-600">Finhome</span>
+            <Image
+              src="/logo.png"
+              alt="Finhome360"
+              width={150}
+              height={50}
+              className="h-10 w-auto"
+            />
           </div>
 
           {/* Navigation */}
@@ -118,7 +131,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <div className="flex flex-col h-full">
               {/* Close button */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-                <span className="text-xl font-bold text-blue-600">Finhome</span>
+                <Image
+                  src="/logo.png"
+                  alt="Finhome360"
+                  width={120}
+                  height={40}
+                  className="h-8 w-auto"
+                />
                 <button onClick={() => setIsMobileMenuOpen(false)} className="text-gray-600">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

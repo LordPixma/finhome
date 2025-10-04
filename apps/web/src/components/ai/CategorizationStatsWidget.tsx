@@ -21,9 +21,24 @@ export function CategorizationStatsWidget() {
       const response = await api.getCategorizationStats();
       if (response.success && response.data) {
         setStats(response.data as CategorizationStats);
+      } else {
+        // Handle case where API returns success but no data
+        setError('No categorization data available');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load stats');
+      console.error('Categorization stats error:', err);
+      // Provide more helpful error messages
+      if (err instanceof Error) {
+        if (err.message.includes('not found')) {
+          setError('API endpoint not available. Please ensure the latest API version is deployed.');
+        } else if (err.message.includes('unauthorized') || err.message.includes('401')) {
+          setError('Authentication required. Please log in again.');
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError('Failed to load categorization stats');
+      }
     } finally {
       setLoading(false);
     }
@@ -60,6 +75,45 @@ export function CategorizationStatsWidget() {
           >
             Try again
           </button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Show empty state if no transactions
+  if (stats.totalTransactions === 0) {
+    return (
+      <Card className="border-2 border-indigo-100 bg-gradient-to-br from-indigo-50 to-purple-50">
+        <CardHeader>
+          <CardTitle className="text-indigo-900 flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                />
+              </svg>
+            </div>
+            AI Categorization Stats
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-indigo-100 flex items-center justify-center">
+              <svg className="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                />
+              </svg>
+            </div>
+            <p className="text-gray-600 mb-2">No transactions yet</p>
+            <p className="text-sm text-gray-500">Add some transactions to see AI categorization statistics</p>
+          </div>
         </CardContent>
       </Card>
     );

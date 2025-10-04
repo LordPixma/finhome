@@ -6,7 +6,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Finhome - Family Financial Management',
+  title: 'Finhome360 - Family Financial Management',
   description: 'A multi-tenant SaaS for family budgeting and financial management',
 };
 

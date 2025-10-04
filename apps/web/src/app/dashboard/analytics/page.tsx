@@ -6,6 +6,10 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui';
 import { api } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
+import { InteractiveChart } from '@/components/InteractiveChart';
+import { InsightsWidget } from '@/components/InsightsWidget';
+import { TrendsWidget } from '@/components/TrendsWidget';
+import PredictiveAnalytics, { type ForecastResult } from '@/lib/predictiveAnalytics';
 
 interface Transaction {
   id: string;
@@ -37,6 +41,7 @@ export default function AnalyticsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dateRange, setDateRange] = useState<'3m' | '6m' | '1y' | 'all'>('6m');
+  const [forecast, setForecast] = useState<ForecastResult | null>(null);
 
   useEffect(() => {
     loadData();
@@ -47,7 +52,13 @@ export default function AnalyticsPage() {
       setIsLoading(true);
       const response = await api.getTransactions() as any;
       if (response.success) {
-        setTransactions(response.data);
+        const transactionData = response.data;
+        setTransactions(transactionData);
+        
+        // Generate predictive analytics
+        const analytics = new PredictiveAnalytics(transactionData);
+        const forecastData = analytics.generateForecast(6);
+        setForecast(forecastData);
       }
     } catch (error) {
       console.error('Failed to load transactions:', error);
@@ -151,11 +162,7 @@ export default function AnalyticsPage() {
   const netSavings = totalIncome - totalExpense;
   const savingsRate = totalIncome > 0 ? (netSavings / totalIncome) * 100 : 0;
 
-  // Calculate max values for chart scaling
-  const maxMonthlyAmount = Math.max(
-    ...monthlyData.map((m) => Math.max(m.income, m.expense)),
-    1
-  );
+  // This variable is no longer needed as we use interactive charts
 
   const handleExport = () => {
     const csvContent = [
@@ -277,181 +284,152 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        {/* Monthly Trends Chart */}
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Monthly Trends</h2>
-          {monthlyData.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              No transaction data available for the selected period
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {monthlyData.map((month, index) => (
-                <div key={index} className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-gray-700 w-24">{month.month}</span>
-                    <div className="flex gap-6 text-sm">
-                      <span className="text-green-600 font-semibold">↑ {formatCurrency(month.income)}</span>
-                      <span className="text-red-600 font-semibold">↓ {formatCurrency(month.expense)}</span>
-                      <span className={`font-semibold ${month.income - month.expense >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        = {formatCurrency(month.income - month.expense)}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 h-10">
-                    <div className="flex-1 relative">
-                      <div
-                        className="absolute bottom-0 left-0 right-0 bg-green-500 rounded-lg transition-all"
-                        style={{ height: `${(month.income / maxMonthlyAmount) * 100}%` }}
-                      />
-                    </div>
-                    <div className="flex-1 relative">
-                      <div
-                        className="absolute bottom-0 left-0 right-0 bg-red-500 rounded-lg transition-all"
-                        style={{ height: `${(month.expense / maxMonthlyAmount) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+        {/* Enhanced Analytics Widgets */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+          {/* Trends Widget */}
+          {forecast && (
+            <TrendsWidget trends={forecast.trends} />
+          )}
+
+          {/* Insights Widget */}
+          {forecast && (
+            <InsightsWidget insights={forecast.insights} className="lg:col-span-2" />
           )}
         </div>
 
-        {/* Category Breakdown */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Expense Categories */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900 mb-6">Expense Breakdown</h2>
-            {expenseCategories.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">No expense data available</div>
-            ) : (
-              <div className="space-y-4">
-                {expenseCategories.map((cat, index) => (
-                  <div key={cat.categoryId} className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-700">{cat.categoryName}</span>
-                        <span className="text-xs text-gray-500">({cat.percentage.toFixed(1)}%)</span>
-                      </div>
-                      <span className="font-semibold text-gray-900">{formatCurrency(cat.amount)}</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all"
-                        style={{
-                          width: `${cat.percentage}%`,
-                          backgroundColor: cat.color || `hsl(${(index * 360) / expenseCategories.length}, 70%, 60%)`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+        {/* Interactive Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          {/* Monthly Cashflow Chart with Predictions */}
+          {forecast && (
+            <InteractiveChart
+              data={forecast.predictions.map(p => ({
+                name: p.month,
+                income: p.income,
+                expense: p.expense,
+                net: p.net,
+                predicted: p.predicted
+              }))}
+              type="line"
+              title="📈 Cashflow Forecast"
+              subtitle={`Including ${forecast.predictions.filter(p => p.predicted).length} months prediction (${(forecast.confidence * 100).toFixed(0)}% confidence)`}
+              height={350}
+              showPrediction={true}
+            />
+          )}
 
-          {/* Income Categories */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900 mb-6">Income Breakdown</h2>
-            {incomeCategories.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">No income data available</div>
-            ) : (
-              <div className="space-y-4">
-                {incomeCategories.map((cat, index) => (
-                  <div key={cat.categoryId} className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-700">{cat.categoryName}</span>
-                        <span className="text-xs text-gray-500">({cat.percentage.toFixed(1)}%)</span>
-                      </div>
-                      <span className="font-semibold text-gray-900">{formatCurrency(cat.amount)}</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all"
-                        style={{
-                          width: `${cat.percentage}%`,
-                          backgroundColor: cat.color || `hsl(${120 + (index * 360) / incomeCategories.length}, 70%, 60%)`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* Area Chart for Income vs Expenses */}
+          <InteractiveChart
+            data={monthlyData.map(m => ({
+              name: m.month,
+              income: m.income,
+              expense: m.expense
+            }))}
+            type="area"
+            title="💰 Income vs Expenses"
+            subtitle="Historical cashflow comparison"
+            height={350}
+          />
         </div>
 
-        {/* Insights */}
-        <div className="mt-8 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-lg p-6 border border-blue-200">
-          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <span className="text-2xl">💡</span> Financial Insights
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white rounded-lg p-4 border border-blue-100">
-              <h3 className="font-semibold text-gray-900 mb-2">Top Expense Category</h3>
-              {expenseCategories.length > 0 ? (
-                <p className="text-gray-700">
-                  <span className="font-bold text-red-600">{expenseCategories[0].categoryName}</span> accounts for{' '}
-                  <span className="font-bold">{expenseCategories[0].percentage.toFixed(1)}%</span> of your expenses (
-                  {formatCurrency(expenseCategories[0].amount)})
-                </p>
-              ) : (
-                <p className="text-gray-500">No expense data available</p>
-              )}
-            </div>
+        {/* Category Breakdown with Interactive Pie Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          {/* Expense Categories Pie Chart */}
+          {expenseCategories.length > 0 && (
+            <InteractiveChart
+              data={expenseCategories.map(cat => ({
+                name: cat.categoryName,
+                value: cat.amount
+              }))}
+              type="pie"
+              title="💸 Expense Categories"
+              subtitle={`${expenseCategories.length} categories • ${formatCurrency(totalExpense)} total`}
+              height={350}
+            />
+          )}
 
-            <div className="bg-white rounded-lg p-4 border border-blue-100">
-              <h3 className="font-semibold text-gray-900 mb-2">Savings Performance</h3>
-              {savingsRate >= 20 ? (
-                <p className="text-gray-700">
-                  <span className="text-green-600 font-bold">Excellent!</span> You're saving{' '}
-                  <span className="font-bold">{savingsRate.toFixed(1)}%</span> of your income.
-                </p>
-              ) : savingsRate >= 10 ? (
-                <p className="text-gray-700">
-                  <span className="text-yellow-600 font-bold">Good progress!</span> You're saving{' '}
-                  <span className="font-bold">{savingsRate.toFixed(1)}%</span>. Aim for 20%+.
-                </p>
-              ) : savingsRate >= 0 ? (
-                <p className="text-gray-700">
-                  <span className="text-orange-600 font-bold">Room to improve.</span> You're saving only{' '}
-                  <span className="font-bold">{savingsRate.toFixed(1)}%</span>. Try to reduce expenses.
-                </p>
-              ) : (
-                <p className="text-gray-700">
-                  <span className="text-red-600 font-bold">Warning!</span> You're spending more than you earn.
-                  Consider reviewing your budget.
-                </p>
-              )}
-            </div>
+          {/* Income Categories Pie Chart */}
+          {incomeCategories.length > 0 && (
+            <InteractiveChart
+              data={incomeCategories.map(cat => ({
+                name: cat.categoryName,
+                value: cat.amount
+              }))}
+              type="pie"
+              title="💰 Income Sources"
+              subtitle={`${incomeCategories.length} sources • ${formatCurrency(totalIncome)} total`}
+              height={350}
+            />
+          )}
+        </div>
 
-            <div className="bg-white rounded-lg p-4 border border-blue-100">
-              <h3 className="font-semibold text-gray-900 mb-2">Monthly Average</h3>
-              {monthlyData.length > 0 ? (
-                <p className="text-gray-700">
-                  Average monthly expense:{' '}
-                  <span className="font-bold text-red-600">
-                    {formatCurrency(
-                      monthlyData.reduce((sum, m) => sum + m.expense, 0) / monthlyData.length
-                    )}
+        {/* Advanced Analytics Summary */}
+        {forecast && (
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-lg p-6 border border-blue-200">
+            <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+              <span className="text-2xl">🎯</span> Analytics Summary
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              
+              {/* Prediction Confidence */}
+              <div className="bg-white rounded-lg p-4 border border-blue-100">
+                <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                  🔮 Forecast Accuracy
+                </h3>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="h-2 bg-blue-500 rounded-full transition-all"
+                        style={{ width: `${forecast.confidence * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                  <span className="text-sm font-bold text-blue-600">
+                    {(forecast.confidence * 100).toFixed(0)}%
                   </span>
+                </div>
+                <p className="text-xs text-gray-600 mt-2">
+                  Based on {monthlyData.length} months of data
                 </p>
-              ) : (
-                <p className="text-gray-500">No data available</p>
-              )}
-            </div>
+              </div>
 
-            <div className="bg-white rounded-lg p-4 border border-blue-100">
-              <h3 className="font-semibold text-gray-900 mb-2">Transaction Count</h3>
-              <p className="text-gray-700">
-                You've made <span className="font-bold text-blue-600">{filteredTransactions.length}</span>{' '}
-                transactions in this period.
-              </p>
+              {/* Top Insights Count */}
+              <div className="bg-white rounded-lg p-4 border border-blue-100">
+                <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                  💡 Active Insights
+                </h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold text-orange-600">
+                    {forecast.insights.filter(i => i.type === 'warning').length}
+                  </span>
+                  <div className="text-xs">
+                    <div className="text-orange-600 font-medium">Warnings</div>
+                    <div className="text-green-600">
+                      {forecast.insights.filter(i => i.type === 'positive').length} Positive
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Data Range */}
+              <div className="bg-white rounded-lg p-4 border border-blue-100">
+                <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                  📅 Analysis Period
+                </h3>
+                <div className="text-sm text-gray-700">
+                  <div className="font-medium">
+                    {dateRange === '3m' ? '3 Months' : 
+                     dateRange === '6m' ? '6 Months' : 
+                     dateRange === '1y' ? '1 Year' : 'All Time'}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {filteredTransactions.length} transactions
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </DashboardLayout>
     </ProtectedRoute>
   );

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { 
   ChartBarIcon, 
   CurrencyPoundIcon, 
@@ -15,13 +16,14 @@ export default function Home() {
       <header className="absolute top-0 left-0 right-0 z-20 bg-gradient-to-b from-black/50 to-transparent">
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg">
-                <span className="text-white font-bold text-xl">F360</span>
-              </div>
-              <span className="text-2xl font-bold text-white drop-shadow-lg">
-                Finhome360
-              </span>
+            <div className="flex items-center">
+              <Image
+                src="/logo.png"
+                alt="Finhome360"
+                width={180}
+                height={60}
+                className="h-12 w-auto filter brightness-0 invert drop-shadow-lg"
+              />
             </div>
             <Link 
               href="https://app.finhome360.com"
@@ -39,13 +41,13 @@ export default function Home() {
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ 
-            backgroundImage: 'url(/hero-background.jpg), url(https://images.unsplash.com/photo-1642790595397-7047dc98fa72?w=1920&q=80)' 
+            backgroundImage: 'url(/bg.jpg)' 
           }}
         >
           {/* Dark overlay for better text readability */}
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-900/90 via-indigo-900/85 to-purple-900/90"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-900/80 via-indigo-900/75 to-purple-900/80"></div>
           {/* Additional gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60"></div>
+          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/50"></div>
         </div>
 
         <div className="max-w-7xl mx-auto relative z-10">
@@ -292,11 +294,14 @@ export default function Home() {
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div className="col-span-2">
-              <div className="flex items-center space-x-2 mb-4">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-xl">F360</span>
-                </div>
-                <span className="text-2xl font-bold text-white">Finhome360</span>
+              <div className="flex items-center mb-4">
+                <Image
+                  src="/logo.png"
+                  alt="Finhome360"
+                  width={160}
+                  height={50}
+                  className="h-10 w-auto filter brightness-0 invert"
+                />
               </div>
               <p className="text-gray-400 max-w-md">
                 Your comprehensive financial management platform. Get a 360° view of your finances and 

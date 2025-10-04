@@ -31,6 +31,21 @@ export async function authMiddleware(c: AppContext, next: Next): Promise<Respons
       return c.json({ success: false, error: { code: 'INVALID_TOKEN', message: 'Invalid token payload' } }, 401);
     }
 
+    // Verify that JWT tenantId matches subdomain tenantId (if subdomain is present)
+    const subdomainTenantId = c.get('tenantId');
+    if (subdomainTenantId && subdomainTenantId !== payload.tenantId) {
+      return c.json(
+        {
+          success: false,
+          error: {
+            code: 'TENANT_MISMATCH',
+            message: 'Your account does not have access to this tenant. Please log in to the correct subdomain.',
+          },
+        },
+        403
+      );
+    }
+
     // Set user context
     c.set('user', {
       id: payload.userId as string,
@@ -39,7 +54,11 @@ export async function authMiddleware(c: AppContext, next: Next): Promise<Respons
       tenantId: payload.tenantId as string,
       role: payload.role as 'admin' | 'member',
     });
-    c.set('tenantId', payload.tenantId as string);
+    
+    // Set tenantId from JWT if not already set by subdomain middleware
+    if (!subdomainTenantId) {
+      c.set('tenantId', payload.tenantId as string);
+    }
 
     await next();
   } catch (error) {

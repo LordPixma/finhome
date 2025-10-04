@@ -4,12 +4,13 @@
 This is a multi-tenant SaaS budgeting app built on Cloudflare's edge stack with a Turborepo monorepo structure:
 - **API** (`apps/api`): Hono-based Cloudflare Workers API with Drizzle ORM + D1 SQLite
 - **Web** (`apps/web`): Next.js 14 frontend with App Router and Tailwind CSS  
+- **Marketing** (`apps/marketing`): Static marketing site deployed to root domain
 - **Shared** (`packages/shared`): Common Zod schemas and TypeScript types
 
 ## Key Patterns & Conventions
 
 ### Multi-tenancy
-All database entities include `tenantId` for tenant isolation. The API expects subdomain-based tenant routing (e.g., `acme.finhome360.com`).
+All database entities include `tenantId` for tenant isolation. The API expects subdomain-based tenant routing (e.g., `acme.finhome360.com`). The `subdomain.ts` middleware extracts tenant context from subdomains, and `auth.ts` verifies JWT tokens contain matching tenantId.
 
 ### Authentication & Security
 - JWT authentication using `jose` library (access tokens: 1h, refresh tokens: 7d)
@@ -33,6 +34,10 @@ npm run dev
 cd apps/api
 npm run db:generate    # Generate migrations from schema changes
 npm run db:migrate     # Apply migrations to D1
+
+# Deploy to production
+npm run build
+npm run deploy --workspace=@finhome/api
 
 # Testing
 npm test              # Run all tests via Turbo
@@ -62,20 +67,28 @@ The API (`apps/api/wrangler.toml`) is configured for:
 
 ### API Routes (Complete CRUD)
 - `/api/auth` - Login, register, refresh (with rate limiting)
-- `/api/accounts` - Account managementS
+- `/api/accounts` - Account management
 - `/api/categories` - Category management
-- `/api/transactions` - Transaction management
+- `/api/transactions` - Transaction management (includes AI auto-categorization)
 - `/api/budgets` - Budget management
 - `/api/bill-reminders` - Bill reminder management (auto-queues notifications)
 - `/api/analytics` - Spending analytics with 6-month trends
+- `/api/files` - CSV/OFX file upload for transaction import
+- `/api/recurring-transactions` - Recurring transaction management
+- `/api/goals` - Financial goal tracking with contributions
+- `/api/settings` - User settings (currency, timezone, etc.)
+- `/api/tenant-members` - Multi-user tenant management
 
 ### Queue Consumer Pattern
 The `queue()` export in `apps/api/src/index.ts` processes bill reminder notifications. It fetches reminder details, sends notifications, updates statuses, and stores notifications in KV cache.
+
+### API Client Pattern
+Frontend uses `apps/web/src/lib/api.ts` with automatic token refresh on 401. All API calls go through `apiClient()` which handles JWT tokens, automatic refresh, and redirects to login on failure.
 
 ### Error Handling
 All routes wrap logic in try-catch blocks with standardized error responses. Use specific error codes: `VALIDATION_ERROR`, `UNAUTHORIZED`, `NOT_FOUND`, `INTERNAL_ERROR`, `RATE_LIMIT_EXCEEDED`.
 
 ### Transaction Categories & Data Model
-The core entities are: `tenants` → `users`, `accounts`, `categories`, `transactions`, `budgets`, `billReminders`. All transactions link to accounts and categories with proper foreign key relationships.
+The core entities are: `tenants` → `users`, `accounts`, `categories`, `transactions`, `budgets`, `billReminders`. All transactions link to accounts and categories with proper foreign key relationships. Extended with `recurringTransactions`, `goals`, `goalContributions`, `userSettings`, `tenantMembers`.
 
 When implementing features, always consider tenant isolation and use the established Zod validation patterns from the shared package.
