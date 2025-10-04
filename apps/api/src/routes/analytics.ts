@@ -3,7 +3,7 @@ import { eq, and, sql } from 'drizzle-orm';
 import { getDb, transactions, categories } from '../db';
 import { authMiddleware, tenantMiddleware } from '../middleware/auth';
 import type { Env } from '../types';
-import type { SpendingAnalytics } from '@finhome/shared';
+import type { SpendingAnalytics } from '@finhome360/shared';
 
 const analytics = new Hono<Env>();
 

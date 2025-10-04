@@ -3,7 +3,7 @@ import { eq, and, desc } from 'drizzle-orm';
 import { getDb, accounts } from '../db';
 import { authMiddleware, tenantMiddleware } from '../middleware/auth';
 import { validateRequest } from '../middleware/validation';
-import { CreateAccountSchema } from '@finhome/shared';
+import { CreateAccountSchema } from '@finhome360/shared';
 import type { Env } from '../types';
 
 const accountsRouter = new Hono<Env>();

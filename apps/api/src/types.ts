@@ -1,5 +1,5 @@
 import { Context } from 'hono';
-import type { AuthUser } from '@finhome/shared';
+import type { AuthUser } from '@finhome360/shared';
 
 export interface Env {
   Bindings: {

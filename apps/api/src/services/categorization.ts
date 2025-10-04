@@ -213,7 +213,7 @@ function matchKeywords(description: string): { category: string; matches: string
  * Find category by name (case-insensitive, partial match)
  */
 async function findCategoryByName(
-  db: DrizzleD1Database,
+  db: Database,
   tenantId: string,
   categoryName: string,
   type: 'income' | 'expense' = 'expense'

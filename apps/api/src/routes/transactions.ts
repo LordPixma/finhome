@@ -273,7 +273,6 @@ transactionsRouter.post('/auto-categorize-batch', async c => {
       transactionsToProcess.map(t => ({
         id: t.id,
         description: t.description,
-        amount: t.amount,
       }))
     );
 

@@ -7,7 +7,7 @@ import {
   CreateTransactionSchema,
   CreateBudgetSchema,
   CreateBillReminderSchema,
-} from '@finhome/shared';
+} from '@finhome360/shared';
 
 describe('API Health Check', () => {
   it('should return ok status', () => {

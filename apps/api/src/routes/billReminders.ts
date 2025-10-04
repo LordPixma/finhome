@@ -3,7 +3,7 @@ import { eq, and, desc } from 'drizzle-orm';
 import { getDb, billReminders, categories } from '../db';
 import { authMiddleware, tenantMiddleware } from '../middleware/auth';
 import { validateRequest } from '../middleware/validation';
-import { CreateBillReminderSchema } from '@finhome/shared';
+import { CreateBillReminderSchema } from '@finhome360/shared';
 import type { Env } from '../types';
 
 const billRemindersRouter = new Hono<Env>();

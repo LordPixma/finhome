@@ -3,7 +3,7 @@ import { eq, and, desc } from 'drizzle-orm';
 import { getDb, categories } from '../db';
 import { authMiddleware, tenantMiddleware } from '../middleware/auth';
 import { validateRequest } from '../middleware/validation';
-import { CreateCategorySchema } from '@finhome/shared';
+import { CreateCategorySchema } from '@finhome360/shared';
 import type { Env } from '../types';
 
 const categoriesRouter = new Hono<Env>();

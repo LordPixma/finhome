@@ -3,7 +3,7 @@ import * as jose from 'jose';
 import * as bcrypt from 'bcryptjs';
 import { eq, and } from 'drizzle-orm';
 import { getDb, tenants, users } from '../db';
-import { LoginSchema, RegisterSchema, RefreshTokenSchema } from '@finhome/shared';
+import { LoginSchema, RegisterSchema, RefreshTokenSchema } from '@finhome360/shared';
 import { authRateLimiter } from '../middleware/rateLimit';
 import type { Env } from '../types';
 
