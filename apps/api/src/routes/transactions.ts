@@ -2,6 +2,8 @@ import { Hono } from 'hono';
 import { eq, and, desc } from 'drizzle-orm';
 import { getDb, transactions, accounts, categories } from '../db';
 import { authMiddleware, tenantMiddleware } from '../middleware/auth';
+import { validateRequest } from '../middleware/validation';
+import { CreateTransactionSchema } from '@finhome360/shared';
 import { 
   categorizeTransaction, 
   categorizeBatch, 
@@ -83,68 +85,190 @@ transactionsRouter.get('/:id', async c => {
 });
 
 // Create transaction
-transactionsRouter.post('/', async c => {
-  const tenantId = c.get('tenantId')!;
-  const body = await c.req.json();
-  const db = getDb(c.env.DB);
+transactionsRouter.post('/', validateRequest(CreateTransactionSchema), async c => {
+  try {
+    const tenantId = c.get('tenantId')!;
+    const body = c.get('validatedData');
+    const db = getDb(c.env.DB);
 
-  const newTransaction = {
-    id: crypto.randomUUID(),
-    tenantId,
-    ...body,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
+    // Verify that the account exists and belongs to the tenant
+    const account = await db
+      .select()
+      .from(accounts)
+      .where(and(eq(accounts.id, body.accountId), eq(accounts.tenantId, tenantId)))
+      .get();
 
-  await db.insert(transactions).values(newTransaction).run();
+    if (!account) {
+      return c.json(
+        { 
+          success: false, 
+          error: { code: 'INVALID_ACCOUNT', message: 'Account not found or does not belong to your organization' } 
+        },
+        400
+      );
+    }
 
-  return c.json({
-    success: true,
-    data: newTransaction,
-  }, 201);
+    // Verify that the category exists and belongs to the tenant
+    const category = await db
+      .select()
+      .from(categories)
+      .where(and(eq(categories.id, body.categoryId), eq(categories.tenantId, tenantId)))
+      .get();
+
+    if (!category) {
+      return c.json(
+        { 
+          success: false, 
+          error: { code: 'INVALID_CATEGORY', message: 'Category not found or does not belong to your organization' } 
+        },
+        400
+      );
+    }
+
+    // Ensure date is properly converted
+    const date = new Date(body.date);
+    if (isNaN(date.getTime())) {
+      return c.json(
+        { 
+          success: false, 
+          error: { code: 'INVALID_DATE', message: 'Invalid date format' } 
+        },
+        400
+      );
+    }
+
+    const newTransaction = {
+      id: crypto.randomUUID(),
+      tenantId,
+      accountId: body.accountId,
+      categoryId: body.categoryId,
+      amount: body.amount,
+      description: body.description,
+      date,
+      type: body.type,
+      notes: body.notes || null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    await db.insert(transactions).values(newTransaction).run();
+
+    return c.json({
+      success: true,
+      data: newTransaction,
+    }, 201);
+  } catch (error) {
+    console.error('Error creating transaction:', error);
+    return c.json(
+      {
+        success: false,
+        error: { code: 'INTERNAL_ERROR', message: 'Failed to create transaction' },
+      },
+      500
+    );
+  }
 });
 
 // Update transaction
 transactionsRouter.put('/:id', async c => {
-  const id = c.req.param('id');
-  const tenantId = c.get('tenantId')!;
-  const body = await c.req.json();
-  const db = getDb(c.env.DB);
+  try {
+    const id = c.req.param('id');
+    const tenantId = c.get('tenantId')!;
+    const body = await c.req.json();
+    const db = getDb(c.env.DB);
 
-  const updated = await db
-    .update(transactions)
-    .set({ ...body, updatedAt: new Date() })
-    .where(and(eq(transactions.id, id), eq(transactions.tenantId, tenantId)))
-    .run();
+    // First check if transaction exists
+    const existingTransaction = await db
+      .select()
+      .from(transactions)
+      .where(and(eq(transactions.id, id), eq(transactions.tenantId, tenantId)))
+      .get();
 
-  if (!updated.success) {
+    if (!existingTransaction) {
+      return c.json(
+        { success: false, error: { code: 'NOT_FOUND', message: 'Transaction not found' } },
+        404
+      );
+    }
+
+    // Convert date if provided
+    const updateData: any = { ...body, updatedAt: new Date() };
+    if (body.date) {
+      const date = new Date(body.date);
+      if (isNaN(date.getTime())) {
+        return c.json(
+          { 
+            success: false, 
+            error: { code: 'INVALID_DATE', message: 'Invalid date format' } 
+          },
+          400
+        );
+      }
+      updateData.date = date;
+    }
+
+    await db
+      .update(transactions)
+      .set(updateData)
+      .where(and(eq(transactions.id, id), eq(transactions.tenantId, tenantId)))
+      .run();
+
+    return c.json({
+      success: true,
+      data: { id, ...updateData },
+    });
+  } catch (error) {
+    console.error('Error updating transaction:', error);
     return c.json(
-      { success: false, error: { code: 'NOT_FOUND', message: 'Transaction not found' } },
-      404
+      {
+        success: false,
+        error: { code: 'INTERNAL_ERROR', message: 'Failed to update transaction' },
+      },
+      500
     );
   }
-
-  return c.json({
-    success: true,
-    data: { id, ...body },
-  });
 });
 
 // Delete transaction
 transactionsRouter.delete('/:id', async c => {
-  const id = c.req.param('id');
-  const tenantId = c.get('tenantId')!;
-  const db = getDb(c.env.DB);
+  try {
+    const id = c.req.param('id');
+    const tenantId = c.get('tenantId')!;
+    const db = getDb(c.env.DB);
 
-  await db
-    .delete(transactions)
-    .where(and(eq(transactions.id, id), eq(transactions.tenantId, tenantId)))
-    .run();
+    // First check if transaction exists
+    const existingTransaction = await db
+      .select()
+      .from(transactions)
+      .where(and(eq(transactions.id, id), eq(transactions.tenantId, tenantId)))
+      .get();
 
-  return c.json({
-    success: true,
-    data: { id },
-  });
+    if (!existingTransaction) {
+      return c.json(
+        { success: false, error: { code: 'NOT_FOUND', message: 'Transaction not found' } },
+        404
+      );
+    }
+
+    await db
+      .delete(transactions)
+      .where(and(eq(transactions.id, id), eq(transactions.tenantId, tenantId)))
+      .run();
+
+    return c.json({
+      success: true,
+      data: { id },
+    });
+  } catch (error) {
+    console.error('Error deleting transaction:', error);
+    return c.json(
+      {
+        success: false,
+        error: { code: 'INTERNAL_ERROR', message: 'Failed to delete transaction' },
+      },
+      500
+    );
+  }
 });
 
 // Auto-categorize a single transaction

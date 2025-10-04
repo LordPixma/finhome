@@ -114,13 +114,14 @@ export default function TransactionsPage() {
       });
     } else {
       setEditingTransaction(null);
+      const expenseCategories = categories.filter(cat => cat.type === 'expense');
       setFormData({
         description: '',
         amount: '',
         date: new Date().toISOString().split('T')[0],
         type: 'expense',
         accountId: accounts[0]?.id || '',
-        categoryId: '',
+        categoryId: expenseCategories[0]?.id || '',
         notes: '',
       });
     }
@@ -137,18 +138,40 @@ export default function TransactionsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Validation
+    if (!formData.description.trim()) {
+      setError('Description is required');
+      return;
+    }
+    
+    if (!formData.amount || parseFloat(formData.amount) <= 0) {
+      setError('Please enter a valid amount');
+      return;
+    }
+    
+    if (!formData.accountId) {
+      setError('Please select an account');
+      return;
+    }
+    
+    if (!formData.categoryId) {
+      setError('Please select a category');
+      return;
+    }
+
     setIsSaving(true);
 
     try {
       const amount = parseFloat(formData.amount);
       const transactionData = {
-        description: formData.description,
+        description: formData.description.trim(),
         amount: formData.type === 'expense' ? -Math.abs(amount) : Math.abs(amount),
-        date: new Date(formData.date).getTime(),
+        date: new Date(formData.date).toISOString(),
         type: formData.type,
         accountId: formData.accountId,
         categoryId: formData.categoryId,
-        notes: formData.notes || undefined,
+        notes: formData.notes?.trim() || undefined,
       };
 
       if (editingTransaction) {
@@ -584,7 +607,13 @@ export default function TransactionsPage() {
                 required
                 value={formData.type}
                 onChange={(e) => {
-                  setFormData({ ...formData, type: e.target.value, categoryId: '' });
+                  const newType = e.target.value as 'income' | 'expense';
+                  const categoriesForType = categories.filter(cat => cat.type === newType);
+                  setFormData({ 
+                    ...formData, 
+                    type: newType, 
+                    categoryId: categoriesForType[0]?.id || '' 
+                  });
                 }}
                 options={[
                   { value: 'income', label: '💰 Income' },
