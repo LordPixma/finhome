@@ -1,19 +1,23 @@
 # Finhome - Production Deployment Status
 
-**Last Updated**: October 4, 2025, 8:01 AM UTC
+**Last Updated**: October 4, 2025, 8:15 AM UTC
 
 ## 🚀 Deployment Summary
 
 All AI categorization features have been successfully deployed to production on Cloudflare's edge infrastructure.
+
+**✅ Cleanup Complete**: Removed duplicate Pages projects (finhome-web, finhome360-app)
 
 ---
 
 ## 📦 Web Application (Frontend)
 
 **Platform**: Cloudflare Pages  
-**Project Name**: finhome-web  
-**Production URL**: https://9ed8c9d6.finhome-web.pages.dev  
-**Deployment Time**: October 4, 2025, ~8:01 AM UTC  
+**Project Name**: finhome360  
+**Production URL**: https://app.finhome360.com (Custom Domain)  
+**Preview URL**: https://23aa5d68.finhome.pages.dev  
+**Deployment Time**: October 4, 2025, 8:13 AM UTC  
+**Latest Commit**: 5c894db  
 **Status**: ✅ **LIVE**
 
 ### Build Details
@@ -84,10 +88,12 @@ All AI categorization features have been successfully deployed to production on 
 ## 🔗 Production URLs
 
 ### Frontend
-- **Main App**: https://9ed8c9d6.finhome-web.pages.dev
-- **Dashboard**: https://9ed8c9d6.finhome-web.pages.dev/dashboard
-- **Transactions**: https://9ed8c9d6.finhome-web.pages.dev/dashboard/transactions
-- **AI Demo**: https://9ed8c9d6.finhome-web.pages.dev/dashboard/ai-demo
+- **Main App**: https://app.finhome360.com (Custom Domain)
+- **Preview**: https://23aa5d68.finhome.pages.dev
+- **Dashboard**: https://app.finhome360.com/dashboard
+- **Transactions**: https://app.finhome360.com/dashboard/transactions
+- **AI Demo**: https://app.finhome360.com/dashboard/ai-demo
+- **Marketing Site**: https://finhome360-marketing.pages.dev
 
 ### API
 - **Base URL**: https://finhome-api.your-subdomain.workers.dev
