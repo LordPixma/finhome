@@ -83,3 +83,37 @@ export interface AuthUser {
   tenantId: string;
   role: 'admin' | 'member';
 }
+
+// AI Categorization Types
+export interface CategorizationResult {
+  applied: boolean;
+  categoryId: string | null;
+  categoryName: string | null;
+  confidence: number;
+  matchedKeywords: string[];
+  action: 'auto-assign' | 'suggest' | 'manual';
+  reasoning: string;
+}
+
+export interface BatchCategorizationResult {
+  processed: number;
+  applied: number;
+  suggestions: {
+    transactionId: string;
+    categoryId: string | null;
+    categoryName: string | null;
+    confidence: number;
+  }[];
+}
+
+export interface CategorizationStats {
+  totalTransactions: number;
+  categorizedTransactions: number;
+  uncategorizedTransactions: number;
+  categorizationRate: number;
+  topMerchants: {
+    merchant: string;
+    count: number;
+    category: string;
+  }[];
+}
