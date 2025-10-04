@@ -18,15 +18,81 @@ export interface HybridEmailData {
   loginUrl: string;
 }
 
+export interface WelcomeEmailData {
+  userName: string;
+  userEmail: string;
+  tenantName: string;
+  subdomain: string;
+  loginUrl: string;
+}
+
 export class HybridEmailService {
   private readonly resendApiKey?: string;
   private readonly fromEmail: string;
   private readonly appUrl: string;
 
-  constructor(resendApiKey?: string, fromEmail: string = 'noreply@finhome360.com', appUrl: string = 'https://app.finhome360.com') {
+  constructor(
+    fromEmail: string = 'noreply@finhome360.com', // Now using verified domain
+    appUrl: string = 'https://app.finhome360.com',
+    resendApiKey?: string
+  ) {
     this.resendApiKey = resendApiKey;
     this.fromEmail = fromEmail;
     this.appUrl = appUrl;
+  }
+
+  /**
+   * Send welcome email with automatic fallback
+   */
+  async sendWelcomeEmail(email: string, data: WelcomeEmailData): Promise<boolean> {
+    console.log('🚀 Starting hybrid email delivery for welcome email:', {
+      recipientEmail: email,
+      hasResendKey: !!this.resendApiKey,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Try Resend first if API key is available
+    if (this.resendApiKey && this.resendApiKey !== 'SET_THIS_TO_YOUR_RESEND_API_KEY') {
+      console.log('📤 Attempting welcome email delivery via Resend (primary)...');
+      try {
+        const resendService = createResendEmailService(this.resendApiKey, this.fromEmail);
+        const success = await resendService.sendWelcomeEmail(email, data);
+        
+        if (success) {
+          console.log('✅ Welcome email sent successfully via Resend');
+          return true;
+        } else {
+          console.log('⚠️ Resend failed, falling back to MailChannels...');
+        }
+      } catch (error) {
+        console.error('❌ Resend service error, falling back to MailChannels:', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    } else {
+      console.log('⚠️ No Resend API key configured, using MailChannels directly');
+    }
+
+    // Fallback to MailChannels
+    console.log('📤 Attempting welcome email delivery via MailChannels (fallback)...');
+    try {
+      const mailChannelsService = createEmailService(this.fromEmail, this.appUrl);
+      const success = await mailChannelsService.sendWelcomeEmail(email, data);
+      
+      if (success) {
+        console.log('✅ Welcome email sent successfully via MailChannels');
+        return true;
+      } else {
+        console.log('❌ MailChannels also failed');
+      }
+    } catch (error) {
+      console.error('❌ MailChannels service error:', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    console.error('❌ All email providers failed for welcome email:', email);
+    return false;
   }
 
   /**

@@ -5,6 +5,7 @@ import { eq, and } from 'drizzle-orm';
 import { getDb, tenants, users } from '../db';
 import { LoginSchema, RegisterSchema, RefreshTokenSchema } from '@finhome360/shared';
 import { authRateLimiter } from '../middleware/rateLimit';
+import { createHybridEmailService } from '../services/hybridEmail';
 import type { Env } from '../types';
 
 const auth = new Hono<Env>();
@@ -253,6 +254,26 @@ auth.post('/register', async c => {
     const frontendUrl = c.env.FRONTEND_URL || 'https://finhome360.com';
     const baseUrl = new URL(frontendUrl);
     const subdomainUrl = `${baseUrl.protocol}//${subdomain}.${baseUrl.host}`;
+
+    // Send welcome email (async, don't block response)
+    const emailService = createHybridEmailService(
+      c.env.RESEND_API_KEY,
+      'noreply@finhome360.com', // Using verified domain
+      frontendUrl
+    );
+
+    // Send welcome email in background
+    emailService.sendWelcomeEmail(email, {
+      userName: name,
+      userEmail: email,
+      tenantName,
+      subdomain,
+      loginUrl: subdomainUrl
+    }).then((success) => {
+      console.log('📧 Welcome email result:', { success, email, timestamp: new Date().toISOString() });
+    }).catch((error) => {
+      console.error('❌ Welcome email failed:', { error, email, timestamp: new Date().toISOString() });
+    });
 
     return c.json(
       {

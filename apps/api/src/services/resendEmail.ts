@@ -101,6 +101,149 @@ export class ResendEmailService {
   }
 
   /**
+   * Send welcome email to new users
+   */
+  async sendWelcomeEmail(email: string, data: {
+    userName: string;
+    userEmail: string;
+    tenantName: string;
+    subdomain: string;
+    loginUrl: string;
+  }): Promise<boolean> {
+    const subject = `Welcome to Finhome360, ${data.userName}! 🎉`;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 0 auto; }
+            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px; text-align: center; }
+            .logo { font-size: 28px; font-weight: bold; margin-bottom: 10px; }
+            .content { background: white; padding: 40px; }
+            .highlight { background: #f8fafc; border-left: 4px solid #667eea; padding: 20px; margin: 20px 0; border-radius: 5px; }
+            .button { display: inline-block; background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; margin: 20px 0; font-weight: bold; }
+            .features { list-style: none; padding: 0; }
+            .features li { padding: 10px 0; border-bottom: 1px solid #eee; }
+            .features li:before { content: "✅ "; margin-right: 10px; }
+            .footer { background: #f8fafc; padding: 30px; text-align: center; color: #666; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="logo">💰 Finhome360</div>
+              <h1>Welcome to Your Financial Journey!</h1>
+              <p>Hi ${data.userName}, you've successfully created your ${data.tenantName} account</p>
+            </div>
+            
+            <div class="content">
+              <h2>🎉 You're All Set!</h2>
+              
+              <p>Congratulations! You've just taken the first step toward better financial management. Your Finhome360 account is ready and waiting for you.</p>
+              
+              <div class="highlight">
+                <strong>🔗 Your Personal Dashboard:</strong><br>
+                <a href="${data.loginUrl}">${data.subdomain}.finhome360.com</a>
+              </div>
+
+              <p style="text-align: center;">
+                <a href="${data.loginUrl}" class="button">Access Your Dashboard</a>
+              </p>
+
+              <h3>🚀 What You Can Do Now:</h3>
+              
+              <ul class="features">
+                <li><strong>Connect Your Accounts:</strong> Link bank accounts, credit cards, and other financial accounts</li>
+                <li><strong>Set Up Budgets:</strong> Create monthly budgets for different spending categories</li>
+                <li><strong>Track Transactions:</strong> Import bank statements or add transactions manually</li>
+                <li><strong>Bill Reminders:</strong> Never miss a payment with automated bill notifications</li>
+                <li><strong>Financial Goals:</strong> Set and track progress toward your savings goals</li>
+                <li><strong>Invite Family:</strong> Add up to 3 family members to collaborate on budgets</li>
+                <li><strong>Analytics:</strong> View spending trends and financial insights</li>
+              </ul>
+
+              <h3>💡 Quick Start Tips:</h3>
+              <p>
+                1. <strong>Add your first account</strong> - Start by adding your main checking or savings account<br>
+                2. <strong>Create categories</strong> - Set up spending categories that match your lifestyle<br>
+                3. <strong>Import transactions</strong> - Upload a CSV file from your bank to get started quickly<br>
+                4. <strong>Set your first budget</strong> - Create a monthly budget for groceries or entertainment
+              </p>
+
+              <div class="highlight">
+                <strong>🔐 Security First:</strong><br>
+                Your financial data is encrypted and secure. We use bank-level security to protect your information.
+              </div>
+
+              <p>If you have any questions or need help getting started, don't hesitate to reach out to our support team.</p>
+              
+              <p>Welcome to the Finhome360 family!</p>
+              
+              <p>
+                Best regards,<br>
+                <strong>The Finhome360 Team</strong>
+              </p>
+            </div>
+            
+            <div class="footer">
+              <p>© 2025 Finhome360. All rights reserved.</p>
+              <p>This email was sent to ${data.userEmail} because you created a Finhome360 account.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const text = `
+Welcome to Finhome360! 🎉
+
+Hi ${data.userName},
+
+Congratulations! You've successfully created your ${data.tenantName} account and you're ready to take control of your finances.
+
+Your Personal Dashboard: ${data.loginUrl}
+
+What You Can Do Now:
+✅ Connect Your Accounts - Link bank accounts, credit cards, and other financial accounts
+✅ Set Up Budgets - Create monthly budgets for different spending categories  
+✅ Track Transactions - Import bank statements or add transactions manually
+✅ Bill Reminders - Never miss a payment with automated bill notifications
+✅ Financial Goals - Set and track progress toward your savings goals
+✅ Invite Family - Add up to 3 family members to collaborate on budgets
+✅ Analytics - View spending trends and financial insights
+
+Quick Start Tips:
+1. Add your first account - Start by adding your main checking or savings account
+2. Create categories - Set up spending categories that match your lifestyle
+3. Import transactions - Upload a CSV file from your bank to get started quickly
+4. Set your first budget - Create a monthly budget for groceries or entertainment
+
+🔐 Security First:
+Your financial data is encrypted and secure. We use bank-level security to protect your information.
+
+If you have any questions or need help getting started, don't hesitate to reach out to our support team.
+
+Welcome to the Finhome360 family!
+
+Best regards,
+The Finhome360 Team
+
+© 2025 Finhome360. All rights reserved.
+This email was sent to ${data.userEmail} because you created a Finhome360 account.
+    `;
+
+    return this.sendWithResend({
+      to: email,
+      subject,
+      html,
+      text,
+    });
+  }
+
+  /**
    * Send member invitation email
    */
   async sendMemberInvitationEmail(

@@ -160,7 +160,7 @@ router.post('/', validateRequest(InviteTenantMemberSchema), async (c) => {
 
       const emailService = createHybridEmailService(
         c.env.RESEND_API_KEY, 
-        'noreply@finhome360.com', 
+        'noreply@finhome360.com', // Using verified domain
         c.env.FRONTEND_URL || 'https://app.finhome360.com'
       );
       
