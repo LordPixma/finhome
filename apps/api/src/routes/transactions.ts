@@ -2,6 +2,12 @@ import { Hono } from 'hono';
 import { eq, and, desc } from 'drizzle-orm';
 import { getDb, transactions, accounts, categories } from '../db';
 import { authMiddleware, tenantMiddleware } from '../middleware/auth';
+import { 
+  categorizeTransaction, 
+  categorizeBatch, 
+  getMerchantPatterns,
+  getCategorizationStats 
+} from '../services/categorization';
 import type { Env } from '../types';
 
 const transactionsRouter = new Hono<Env>();
@@ -139,6 +145,205 @@ transactionsRouter.delete('/:id', async c => {
     success: true,
     data: { id },
   });
+});
+
+// Auto-categorize a single transaction
+transactionsRouter.post('/:id/auto-categorize', async c => {
+  try {
+    const id = c.req.param('id');
+    const tenantId = c.get('tenantId')!;
+    const db = getDb(c.env.DB);
+
+    // Get the transaction
+    const transaction = await db
+      .select()
+      .from(transactions)
+      .where(and(eq(transactions.id, id), eq(transactions.tenantId, tenantId)))
+      .get();
+
+    if (!transaction) {
+      return c.json(
+        {
+          success: false,
+          error: { code: 'NOT_FOUND', message: 'Transaction not found' },
+        },
+        404
+      );
+    }
+
+    // Get categorization suggestion
+    const merchantPatterns = await getMerchantPatterns(db, tenantId);
+    const result = await categorizeTransaction(
+      db,
+      tenantId,
+      transaction.description,
+      merchantPatterns
+    );
+
+    // If confidence is high enough, auto-apply
+    if (result.action === 'auto-assign' && result.suggestedCategoryId) {
+      await db
+        .update(transactions)
+        .set({
+          categoryId: result.suggestedCategoryId,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(transactions.id, id), eq(transactions.tenantId, tenantId)))
+        .run();
+
+      return c.json({
+        success: true,
+        data: {
+          transactionId: id,
+          applied: true,
+          categoryId: result.suggestedCategoryId,
+          categoryName: result.suggestedCategoryName,
+          confidence: result.confidence,
+          reasoning: result.reasoning,
+        },
+      });
+    }
+
+    // Otherwise, return suggestion
+    return c.json({
+      success: true,
+      data: {
+        transactionId: id,
+        applied: false,
+        suggestion: result,
+      },
+    });
+  } catch (error) {
+    console.error('Auto-categorize error:', error);
+    return c.json(
+      {
+        success: false,
+        error: { code: 'INTERNAL_ERROR', message: 'Failed to categorize transaction' },
+      },
+      500
+    );
+  }
+});
+
+// Batch auto-categorize uncategorized transactions
+transactionsRouter.post('/auto-categorize-batch', async c => {
+  try {
+    const tenantId = c.get('tenantId')!;
+    const db = getDb(c.env.DB);
+    const body = await c.req.json();
+    const { transactionIds, autoApply = false } = body;
+
+    // Get uncategorized transactions
+    let transactionsToProcess;
+    
+    if (transactionIds && Array.isArray(transactionIds)) {
+      // Process specific transactions
+      transactionsToProcess = await db
+        .select({
+          id: transactions.id,
+          description: transactions.description,
+          amount: transactions.amount,
+          categoryId: transactions.categoryId,
+        })
+        .from(transactions)
+        .where(eq(transactions.tenantId, tenantId))
+        .all();
+      
+      transactionsToProcess = transactionsToProcess.filter(t => 
+        transactionIds.includes(t.id)
+      );
+    } else {
+      // Process all uncategorized
+      transactionsToProcess = await db
+        .select({
+          id: transactions.id,
+          description: transactions.description,
+          amount: transactions.amount,
+          categoryId: transactions.categoryId,
+        })
+        .from(transactions)
+        .where(eq(transactions.tenantId, tenantId))
+        .all();
+    }
+
+    // Categorize batch
+    const results = await categorizeBatch(
+      db,
+      tenantId,
+      transactionsToProcess.map(t => ({
+        id: t.id,
+        description: t.description,
+        amount: t.amount,
+      }))
+    );
+
+    // Apply high-confidence suggestions if autoApply is true
+    let appliedCount = 0;
+    const suggestions = [];
+
+    for (const [transactionId, result] of results.entries()) {
+      if (autoApply && result.action === 'auto-assign' && result.suggestedCategoryId) {
+        await db
+          .update(transactions)
+          .set({
+            categoryId: result.suggestedCategoryId,
+            updatedAt: new Date(),
+          })
+          .where(and(eq(transactions.id, transactionId), eq(transactions.tenantId, tenantId)))
+          .run();
+        
+        appliedCount++;
+      }
+
+      suggestions.push({
+        transactionId,
+        ...result,
+        applied: autoApply && result.action === 'auto-assign',
+      });
+    }
+
+    return c.json({
+      success: true,
+      data: {
+        processed: suggestions.length,
+        applied: appliedCount,
+        suggestions,
+      },
+    });
+  } catch (error) {
+    console.error('Batch categorize error:', error);
+    return c.json(
+      {
+        success: false,
+        error: { code: 'INTERNAL_ERROR', message: 'Failed to batch categorize' },
+      },
+      500
+    );
+  }
+});
+
+// Get categorization statistics
+transactionsRouter.get('/categorization-stats', async c => {
+  try {
+    const tenantId = c.get('tenantId')!;
+    const db = getDb(c.env.DB);
+
+    const stats = await getCategorizationStats(db, tenantId);
+
+    return c.json({
+      success: true,
+      data: stats,
+    });
+  } catch (error) {
+    console.error('Stats error:', error);
+    return c.json(
+      {
+        success: false,
+        error: { code: 'INTERNAL_ERROR', message: 'Failed to get stats' },
+      },
+      500
+    );
+  }
 });
 
 export default transactionsRouter;

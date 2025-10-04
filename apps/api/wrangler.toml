@@ -11,6 +11,7 @@ workers_dev = true
 binding = "DB"
 database_name = "finhome-db"
 database_id = "1115b8c7-85fd-4ce8-a553-8fe85fb5b629"
+migrations_dir = "drizzle"
 
 # KV Namespaces (production)
 [[kv_namespaces]]

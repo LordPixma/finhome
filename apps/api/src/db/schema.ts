@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, real, index } from 'drizzle-orm/sqlite-core';
 
 // Tenants Table
 export const tenants = sqliteTable('tenants', {
@@ -21,7 +21,10 @@ export const users = sqliteTable('users', {
   role: text('role', { enum: ['admin', 'member'] }).notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
-});
+}, (table) => ({
+  tenantIdx: index('idx_users_tenant').on(table.tenantId),
+  emailIdx: index('idx_users_email').on(table.email),
+}));
 
 // Accounts Table
 export const accounts = sqliteTable('accounts', {
@@ -37,7 +40,10 @@ export const accounts = sqliteTable('accounts', {
   currency: text('currency').notNull().default('GBP'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
-});
+}, (table) => ({
+  tenantIdx: index('idx_accounts_tenant').on(table.tenantId),
+  typeIdx: index('idx_accounts_type').on(table.type),
+}));
 
 // Categories Table
 export const categories = sqliteTable('categories', {
@@ -52,9 +58,12 @@ export const categories = sqliteTable('categories', {
   parentId: text('parent_id'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
-});
+}, (table) => ({
+  tenantTypeIdx: index('idx_categories_tenant_type').on(table.tenantId, table.type),
+  parentIdx: index('idx_categories_parent').on(table.parentId),
+}));
 
-// Transactions Table
+// Transactions Table (CRITICAL: Most queried table, needs extensive indexing)
 export const transactions = sqliteTable('transactions', {
   id: text('id').primaryKey(),
   tenantId: text('tenant_id')
@@ -73,7 +82,16 @@ export const transactions = sqliteTable('transactions', {
   notes: text('notes'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
-});
+}, (table) => ({
+  // Composite indexes for common query patterns (tenant + date/category/type)
+  tenantDateIdx: index('idx_transactions_tenant_date').on(table.tenantId, table.date),
+  tenantCategoryIdx: index('idx_transactions_tenant_category').on(table.tenantId, table.categoryId),
+  tenantTypeIdx: index('idx_transactions_tenant_type').on(table.tenantId, table.type),
+  // Single column indexes
+  accountIdx: index('idx_transactions_account').on(table.accountId),
+  dateIdx: index('idx_transactions_date').on(table.date),
+  categoryIdx: index('idx_transactions_category').on(table.categoryId),
+}));
 
 // Budgets Table
 export const budgets = sqliteTable('budgets', {
@@ -90,7 +108,12 @@ export const budgets = sqliteTable('budgets', {
   endDate: integer('end_date', { mode: 'timestamp' }),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
-});
+}, (table) => ({
+  tenantIdx: index('idx_budgets_tenant').on(table.tenantId),
+  categoryIdx: index('idx_budgets_category').on(table.categoryId),
+  periodIdx: index('idx_budgets_period').on(table.period),
+  startDateIdx: index('idx_budgets_start_date').on(table.startDate),
+}));
 
 // Bill Reminders Table
 export const billReminders = sqliteTable('bill_reminders', {
@@ -109,7 +132,12 @@ export const billReminders = sqliteTable('bill_reminders', {
   status: text('status', { enum: ['pending', 'paid', 'overdue'] }).notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
-});
+}, (table) => ({
+  tenantIdx: index('idx_bill_reminders_tenant').on(table.tenantId),
+  dueDateIdx: index('idx_bill_reminders_due_date').on(table.dueDate),
+  statusIdx: index('idx_bill_reminders_status').on(table.status),
+  tenantStatusIdx: index('idx_bill_reminders_tenant_status').on(table.tenantId, table.status),
+}));
 
 // Recurring Transactions Table
 export const recurringTransactions = sqliteTable('recurring_transactions', {
@@ -135,7 +163,12 @@ export const recurringTransactions = sqliteTable('recurring_transactions', {
   notes: text('notes'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
-});
+}, (table) => ({
+  tenantIdx: index('idx_recurring_tenant').on(table.tenantId),
+  nextDateIdx: index('idx_recurring_next_date').on(table.nextDate),
+  statusIdx: index('idx_recurring_status').on(table.status),
+  autoCreateIdx: index('idx_recurring_auto_create').on(table.autoCreate),
+}));
 
 // Goals Table
 export const goals = sqliteTable('goals', {
@@ -154,7 +187,11 @@ export const goals = sqliteTable('goals', {
   icon: text('icon').notNull().default('🎯'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
-});
+}, (table) => ({
+  tenantStatusIdx: index('idx_goals_tenant_status').on(table.tenantId, table.status),
+  deadlineIdx: index('idx_goals_deadline').on(table.deadline),
+  accountIdx: index('idx_goals_account').on(table.accountId),
+}));
 
 // Goal Contributions Table
 export const goalContributions = sqliteTable('goal_contributions', {
@@ -167,7 +204,11 @@ export const goalContributions = sqliteTable('goal_contributions', {
   date: integer('date', { mode: 'timestamp' }).notNull(),
   notes: text('notes'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-});
+}, (table) => ({
+  goalIdx: index('idx_goal_contributions_goal').on(table.goalId),
+  dateIdx: index('idx_goal_contributions_date').on(table.date),
+  transactionIdx: index('idx_goal_contributions_transaction').on(table.transactionId),
+}));
 
 // User Settings Table
 export const userSettings = sqliteTable('user_settings', {
@@ -183,7 +224,9 @@ export const userSettings = sqliteTable('user_settings', {
   dateFormat: text('date_format').notNull().default('DD/MM/YYYY'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
-});
+}, (table) => ({
+  userIdx: index('idx_user_settings_user').on(table.userId),
+}));
 
 // Tenant Members Table (for multi-user access to tenants)
 export const tenantMembers = sqliteTable('tenant_members', {
@@ -201,4 +244,8 @@ export const tenantMembers = sqliteTable('tenant_members', {
   status: text('status', { enum: ['pending', 'active', 'removed'] }).notNull().default('active'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
-});
+}, (table) => ({
+  tenantIdx: index('idx_tenant_members_tenant').on(table.tenantId),
+  userIdx: index('idx_tenant_members_user').on(table.userId),
+  tenantStatusIdx: index('idx_tenant_members_tenant_status').on(table.tenantId, table.status),
+}));

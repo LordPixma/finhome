@@ -129,6 +129,16 @@ export const api = {
   createTransaction: (data: any) => apiClient('/api/transactions', { method: 'POST', body: JSON.stringify(data) }),
   updateTransaction: (id: string, data: any) => apiClient(`/api/transactions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteTransaction: (id: string) => apiClient(`/api/transactions/${id}`, { method: 'DELETE' }),
+  
+  // AI Categorization
+  autoCategorizeTransaction: (id: string) => 
+    apiClient(`/api/transactions/${id}/auto-categorize`, { method: 'POST' }),
+  autoCategorizeTransactionsBatch: (data?: { transactionIds?: string[]; autoApply?: boolean }) =>
+    apiClient('/api/transactions/auto-categorize-batch', { 
+      method: 'POST', 
+      body: JSON.stringify(data || {}) 
+    }),
+  getCategorizationStats: () => apiClient('/api/transactions/categorization-stats'),
 
   // Budgets
   getBudgets: () => apiClient('/api/budgets'),
