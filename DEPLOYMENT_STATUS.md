@@ -1,12 +1,14 @@
 # Finhome - Production Deployment Status
 
-**Last Updated**: October 4, 2025, 8:15 AM UTC
+**Last Updated**: October 4, 2025, 8:30 AM UTC
 
 ## 🚀 Deployment Summary
 
 All AI categorization features have been successfully deployed to production on Cloudflare's edge infrastructure.
 
-**✅ Cleanup Complete**: Removed duplicate Pages projects (finhome-web, finhome360-app)
+**✅ Cleanup Complete**: Removed duplicate Pages projects (finhome-web, finhome360-app)  
+**✅ Deployment Fixed**: Corrected deployment folder from `.next` to `out` (static export)  
+**✅ Production Live**: Custom domain `app.finhome360.com` is working
 
 ---
 
@@ -14,11 +16,12 @@ All AI categorization features have been successfully deployed to production on 
 
 **Platform**: Cloudflare Pages  
 **Project Name**: finhome360  
-**Production URL**: https://app.finhome360.com (Custom Domain)  
-**Preview URL**: https://23aa5d68.finhome.pages.dev  
-**Deployment Time**: October 4, 2025, 8:13 AM UTC  
-**Latest Commit**: 5c894db  
-**Status**: ✅ **LIVE**
+**Production URL**: https://app.finhome360.com (Custom Domain) ✅  
+**Preview URL**: https://2507e338.finhome.pages.dev  
+**Alias URL**: https://main.finhome.pages.dev  
+**Deployment Time**: October 4, 2025, 8:25 AM UTC  
+**Latest Commit**: d4a581f  
+**Status**: ✅ **LIVE AND WORKING**
 
 ### Build Details
 - **Framework**: Next.js 14.0.4
