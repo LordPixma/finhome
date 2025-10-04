@@ -5,7 +5,7 @@ import { authMiddleware } from '../middleware/auth';
 import { validateRequest } from '../middleware/validation';
 import { getDb, tenantMembers, users, tenants } from '../db';
 import { InviteTenantMemberSchema, UpdateTenantMemberSchema } from '@finhome360/shared';
-import { createEmailService } from '../services/email';
+import { createHybridEmailService } from '../services/hybridEmail';
 import type { Env } from '../types';
 
 const router = new Hono<Env>();
@@ -158,7 +158,11 @@ router.post('/', validateRequest(InviteTenantMemberSchema), async (c) => {
         timestamp: new Date().toISOString(),
       });
 
-      const emailService = createEmailService('noreply@finhome360.com', c.env.FRONTEND_URL || 'https://app.finhome360.com');
+      const emailService = createHybridEmailService(
+        c.env.RESEND_API_KEY, 
+        'noreply@finhome360.com', 
+        c.env.FRONTEND_URL || 'https://app.finhome360.com'
+      );
       
       // Get tenant name
       const tenant = await db

@@ -11,6 +11,7 @@ export interface Env {
     JWT_SECRET: string;
     FRONTEND_URL: string;
     ENVIRONMENT: string;
+    RESEND_API_KEY?: string;
   };
   Variables: {
     user?: AuthUser;
