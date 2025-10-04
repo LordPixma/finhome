@@ -6,6 +6,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { Modal, Input, Select, Button } from '@/components/ui';
 import { api } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
+import { AutoCategorizeButton, BatchCategorizeButton } from '@/components/ai';
 
 interface Transaction {
   id: string;
@@ -65,6 +66,7 @@ export default function TransactionsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const itemsPerPage = 10;
 
@@ -219,6 +221,21 @@ export default function TransactionsPage() {
     return type === 'income' ? '💰' : '💸';
   };
 
+  const showNotification = (message: string, type: 'success' | 'error') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 5000);
+  };
+
+  const handleCategorizeSuccess = async (_transactionId: string, _categoryId: string, categoryName: string) => {
+    showNotification(`Successfully categorized as "${categoryName}"`, 'success');
+    await loadData();
+  };
+
+  const handleBatchCategorizeSuccess = async (results: { processed: number; applied: number }) => {
+    showNotification(`Processed ${results.processed} transactions, applied ${results.applied} categories`, 'success');
+    await loadData();
+  };
+
   // Calculate stats
   const totalIncome = filteredTransactions
     .filter((t) => t.type === 'income')
@@ -246,15 +263,36 @@ export default function TransactionsPage() {
   return (
     <ProtectedRoute>
       <DashboardLayout>
+        {/* Notification Toast */}
+        {notification && (
+          <div className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg ${
+            notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+          } text-white animate-slide-in-right`}>
+            <div className="flex items-center gap-3">
+              <span className="text-xl">
+                {notification.type === 'success' ? '✅' : '❌'}
+              </span>
+              <span className="font-medium">{notification.message}</span>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Transactions</h1>
             <p className="text-gray-600 mt-1">Track your income and expenses</p>
           </div>
-          <Button onClick={() => handleOpenModal()} icon="➕">
-            Add Transaction
-          </Button>
+          <div className="flex items-center gap-3">
+            <BatchCategorizeButton
+              autoApply={true}
+              onSuccess={handleBatchCategorizeSuccess}
+              onError={(error) => showNotification(error, 'error')}
+            />
+            <Button onClick={() => handleOpenModal()} icon="➕">
+              Add Transaction
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -398,6 +436,9 @@ export default function TransactionsPage() {
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Amount
                       </th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        AI
+                      </th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Actions
                       </th>
@@ -428,6 +469,18 @@ export default function TransactionsPage() {
                           <span className={`font-semibold ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
                             {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
                           </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          {!transaction.categoryId && (
+                            <AutoCategorizeButton
+                              transactionId={transaction.id}
+                              onSuccess={(categoryId, categoryName) => 
+                                handleCategorizeSuccess(transaction.id, categoryId, categoryName)
+                              }
+                              onError={(error) => showNotification(error, 'error')}
+                              size="sm"
+                            />
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                           <button
