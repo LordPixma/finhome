@@ -13,6 +13,7 @@ import recurringTransactions from './routes/recurringTransactions';
 import goals from './routes/goals';
 import settings from './routes/settings';
 import tenantMembers from './routes/tenantMembers';
+import profile from './routes/profile';
 import { getDb, billReminders, users, userSettings } from './db';
 import { createEmailService } from './services/email';
 import type { Env } from './types';
@@ -100,6 +101,7 @@ app.route('/api/recurring-transactions', recurringTransactions);
 app.route('/api/goals', goals);
 app.route('/api/settings', settings);
 app.route('/api/tenant-members', tenantMembers);
+app.route('/api/profile', profile);
 
 // 404 handler
 app.notFound(c => {

@@ -3,9 +3,11 @@ import type { Config } from 'drizzle-kit';
 export default {
   schema: './src/db/schema.ts',
   out: './drizzle',
-  driver: 'd1',
+  dialect: 'sqlite',
+  driver: 'd1-http',
   dbCredentials: {
-    wranglerConfigPath: './wrangler.toml',
-    dbName: 'finhome-db',
+    accountId: process.env.CLOUDFLARE_ACCOUNT_ID || '',
+    databaseId: process.env.CLOUDFLARE_DATABASE_ID || '',
+    token: process.env.CLOUDFLARE_D1_TOKEN || '',
   },
 } satisfies Config;

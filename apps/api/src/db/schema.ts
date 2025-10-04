@@ -19,6 +19,18 @@ export const users = sqliteTable('users', {
   name: text('name').notNull(),
   passwordHash: text('password_hash').notNull(),
   role: text('role', { enum: ['admin', 'member'] }).notNull(),
+  // Profile fields
+  profilePictureUrl: text('profile_picture_url'),
+  bio: text('bio'),
+  phoneNumber: text('phone_number'),
+  dateOfBirth: text('date_of_birth'), // YYYY-MM-DD format
+  // Address fields
+  addressLine1: text('address_line_1'),
+  addressLine2: text('address_line_2'),
+  city: text('city'),
+  state: text('state'),
+  postalCode: text('postal_code'),
+  country: text('country'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 }, (table) => ({

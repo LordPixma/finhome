@@ -19,6 +19,18 @@ export const UserSchema = z.object({
   name: z.string().min(1).max(255),
   passwordHash: z.string(),
   role: z.enum(['admin', 'member']),
+  // Profile fields
+  profilePictureUrl: z.string().url().optional(),
+  bio: z.string().max(500).optional(),
+  phoneNumber: z.string().regex(/^[\+]?[1-9][\d]{0,15}$/).optional(),
+  dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), // YYYY-MM-DD
+  // Address fields
+  addressLine1: z.string().max(255).optional(),
+  addressLine2: z.string().max(255).optional(),
+  city: z.string().max(100).optional(),
+  state: z.string().max(100).optional(),
+  postalCode: z.string().max(20).optional(),
+  country: z.string().length(2).optional(), // ISO 3166-1 alpha-2
   createdAt: z.date(),
   updatedAt: z.date(),
 });
@@ -311,3 +323,40 @@ export const UpdateTenantMemberSchema = z.object({
 });
 
 export type UpdateTenantMemberRequest = z.infer<typeof UpdateTenantMemberSchema>;
+
+// Password Change Schema
+export const ChangePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Current password is required'),
+  newPassword: z.string().min(8, 'Password must be at least 8 characters')
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Password must contain at least one lowercase letter, one uppercase letter, and one number'),
+  confirmPassword: z.string().min(1, 'Password confirmation is required'),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ['confirmPassword'],
+});
+
+export type ChangePasswordRequest = z.infer<typeof ChangePasswordSchema>;
+
+// User Profile Update Schema
+export const UpdateUserProfileSchema = z.object({
+  name: z.string().min(1).max(255).optional(),
+  bio: z.string().max(500).optional(),
+  phoneNumber: z.string().regex(/^[\+]?[1-9][\d]{0,15}$/).optional(),
+  dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  addressLine1: z.string().max(255).optional(),
+  addressLine2: z.string().max(255).optional(),
+  city: z.string().max(100).optional(),
+  state: z.string().max(100).optional(),
+  postalCode: z.string().max(20).optional(),
+  country: z.string().length(2).optional(),
+});
+
+export type UpdateUserProfileRequest = z.infer<typeof UpdateUserProfileSchema>;
+
+// Profile Picture Upload Schema
+export const ProfilePictureUploadSchema = z.object({
+  file: z.any(), // Will be validated as File object in frontend
+  maxSizeBytes: z.number().default(5 * 1024 * 1024), // 5MB default
+});
+
+export type ProfilePictureUploadRequest = z.infer<typeof ProfilePictureUploadSchema>;

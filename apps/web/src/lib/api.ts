@@ -192,6 +192,20 @@ export const api = {
   getSettings: () => apiClient('/api/settings'),
   updateSettings: (data: any) => apiClient('/api/settings', { method: 'PUT', body: JSON.stringify(data) }),
 
+  // User Profile
+  getProfile: () => apiClient('/api/profile'),
+  updateProfile: (data: any) => apiClient('/api/profile/profile', { method: 'PUT', body: JSON.stringify(data) }),
+  changePassword: (data: any) => apiClient('/api/profile/change-password', { method: 'POST', body: JSON.stringify(data) }),
+  uploadProfilePicture: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiClient('/api/profile/profile-picture', { 
+      method: 'POST', 
+      body: formData,
+      headers: {} // Let browser set content-type for FormData
+    });
+  },
+
   // Tenant Members
   getTenantMembers: () => apiClient('/api/tenant-members'),
   inviteTenantMember: (data: any) => apiClient('/api/tenant-members', { method: 'POST', body: JSON.stringify(data) }),
