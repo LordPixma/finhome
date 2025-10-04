@@ -28,6 +28,65 @@ app.get('/', c => {
   return c.json({ status: 'ok', service: 'Finhome360 API', version: '1.0.0' });
 });
 
+// Test MailChannels verification (temporary debugging endpoint)
+app.get('/test-mailchannels', async c => {
+  console.log('🔍 Starting MailChannels domain verification test...');
+  
+  const testPayload = {
+    personalizations: [
+      {
+        to: [{ email: 'test@example.com' }],
+      },
+    ],
+    from: {
+      email: 'noreply@finhome360.com',
+      name: 'Finhome360 Test',
+    },
+    subject: 'MailChannels Domain Verification Test',
+    content: [
+      {
+        type: 'text/plain',
+        value: 'This is a test to verify MailChannels domain configuration.',
+      },
+    ],
+  };
+
+  try {
+    console.log('📤 Testing MailChannels API...');
+    
+    const response = await fetch('https://api.mailchannels.net/tx/v1/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(testPayload),
+    });
+
+    console.log('📧 MailChannels test response:', {
+      status: response.status,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers),
+    });
+
+    const responseText = await response.text();
+    console.log('📧 Response body:', responseText);
+
+    return c.json({
+      success: response.ok,
+      status: response.status,
+      statusText: response.statusText,
+      body: responseText,
+      headers: Object.fromEntries(response.headers),
+    });
+  } catch (error) {
+    console.error('❌ MailChannels test exception:', error);
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+});
+
 // Routes
 app.route('/api/auth', auth);
 app.route('/api/accounts', accounts);

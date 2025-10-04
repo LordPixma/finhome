@@ -150,6 +150,14 @@ router.post('/', validateRequest(InviteTenantMemberSchema), async (c) => {
 
     // Send invitation email with temporary password
     try {
+      console.log('🚀 Starting member invitation email process:', {
+        recipientEmail: body.email,
+        recipientName: body.name,
+        inviterName: user.name,
+        tenantId,
+        timestamp: new Date().toISOString(),
+      });
+
       const emailService = createEmailService('noreply@finhome360.com', c.env.FRONTEND_URL || 'https://app.finhome360.com');
       
       // Get tenant name
@@ -159,7 +167,12 @@ router.post('/', validateRequest(InviteTenantMemberSchema), async (c) => {
         .where(eq(tenants.id, tenantId))
         .get();
 
-      await emailService.sendMemberInvitationEmail(body.email, {
+      console.log('📋 Tenant information retrieved:', {
+        tenantName: tenant?.name || 'Your Family',
+        tenantId,
+      });
+
+      const emailData = {
         inviterName: user.name,
         tenantName: tenant?.name || 'Your Family',
         memberName: body.name,
@@ -167,11 +180,27 @@ router.post('/', validateRequest(InviteTenantMemberSchema), async (c) => {
         temporaryPassword: tempPassword,
         role: body.role,
         loginUrl: c.env.FRONTEND_URL || 'https://app.finhome360.com',
+      };
+
+      console.log('📤 Sending invitation email with data:', {
+        ...emailData,
+        temporaryPassword: '[REDACTED]', // Don't log the password
       });
 
-      console.log(`Invitation email sent to ${body.email}`);
+      const emailSent = await emailService.sendMemberInvitationEmail(body.email, emailData);
+
+      if (emailSent) {
+        console.log(`✅ Invitation email successfully sent to ${body.email}`);
+      } else {
+        console.error(`❌ Failed to send invitation email to ${body.email}`);
+      }
     } catch (emailError) {
-      console.error('Failed to send invitation email:', emailError);
+      console.error('❌ Exception during invitation email send:', {
+        error: emailError instanceof Error ? emailError.message : String(emailError),
+        stack: emailError instanceof Error ? emailError.stack : undefined,
+        recipientEmail: body.email,
+        timestamp: new Date().toISOString(),
+      });
       // Don't fail the request if email fails
     }
 

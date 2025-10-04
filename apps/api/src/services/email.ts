@@ -72,6 +72,13 @@ export class EmailService {
         ...(options.replyTo && { reply_to: { email: options.replyTo } }),
       };
 
+      console.log('📧 Attempting to send email:', {
+        to: recipients,
+        subject: options.subject,
+        from: options.from || this.fromEmail,
+        timestamp: new Date().toISOString(),
+      });
+
       const response = await fetch('https://api.mailchannels.net/tx/v1/send', {
         method: 'POST',
         headers: {
@@ -80,16 +87,42 @@ export class EmailService {
         body: JSON.stringify(payload),
       });
 
+      console.log('📧 MailChannels response:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers),
+        timestamp: new Date().toISOString(),
+      });
+
       if (!response.ok) {
         const error = await response.text();
-        console.error('MailChannels error:', error);
+        console.error('❌ MailChannels error details:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: error,
+          recipients,
+          subject: options.subject,
+          timestamp: new Date().toISOString(),
+        });
         return false;
       }
 
-      console.log(`Email sent successfully to ${recipients.join(', ')}`);
+      const responseBody = await response.text();
+      console.log('✅ Email sent successfully:', {
+        recipients: recipients.join(', '),
+        subject: options.subject,
+        response: responseBody,
+        timestamp: new Date().toISOString(),
+      });
       return true;
     } catch (error) {
-      console.error('Failed to send email:', error);
+      console.error('❌ Failed to send email - Exception:', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        recipients: Array.isArray(options.to) ? options.to : [options.to],
+        subject: options.subject,
+        timestamp: new Date().toISOString(),
+      });
       return false;
     }
   }
