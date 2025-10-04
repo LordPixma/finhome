@@ -42,7 +42,7 @@ max_batch_timeout = 30
 ENVIRONMENT = "production"
 JWT_SECRET = "gBk9Lm3Np2Qr5Ts8Wv1Yx4Za7Cd0Ef3Hi6Jl9Mo2Pr5Su8Vx1Za4Cd7Ff0Hi3"
 FRONTEND_URL = "https://app.finhome360.com"
-RESEND_API_KEY = "SET_THIS_TO_YOUR_RESEND_API_KEY"
+RESEND_API_KEY = "re_joNCiaUb_4q5et1qJxxfpNbXPhUbq2pFL"
 
 # Durable Objects (for future use)
 # [[durable_objects.bindings]]
