@@ -37,6 +37,10 @@ queue = "finhome-bill-reminders"
 max_batch_size = 10
 max_batch_timeout = 30
 
+# AI Binding
+[ai]
+binding = "AI"
+
 # Environment Variables
 [vars]
 ENVIRONMENT = "production"

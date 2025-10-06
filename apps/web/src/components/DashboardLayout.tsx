@@ -28,6 +28,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Categories', href: '/dashboard/categories', icon: '🏷️' },
     { name: 'Bill Reminders', href: '/dashboard/bill-reminders', icon: '🔔' },
     { name: 'Analytics', href: '/dashboard/analytics', icon: '📈' },
+    { name: 'AI Features', href: '/dashboard/ai', icon: '🤖' },
     { name: 'Import', href: '/dashboard/import', icon: '📥' },
     { name: 'Settings', href: '/dashboard/settings', icon: '⚙️' },
   ];

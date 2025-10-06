@@ -5,9 +5,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/Card';
 import {
-  AutoCategorizeButton,
   CategorySuggestionCard,
-  BatchCategorizeButton,
   CategorizationStatsWidget,
 } from '@/components/ai';
 
@@ -23,13 +21,7 @@ export default function AICategorizationDemoPage() {
     setTimeout(() => setNotification(null), 3000);
   };
 
-  const handleAutoCategorizeError = (error: string) => {
-    setNotification({
-      type: 'error',
-      message: `✗ ${error}`,
-    });
-    setTimeout(() => setNotification(null), 3000);
-  };
+
 
   const handleBatchSuccess = (results: { processed: number; applied: number }) => {
     setNotification({
@@ -130,11 +122,17 @@ export default function AICategorizationDemoPage() {
                         <p className="text-sm text-gray-600">$5.47 • Oct 3, 2025</p>
                         <p className="text-xs text-red-600 mt-1">⚠ Uncategorized</p>
                       </div>
-                      <AutoCategorizeButton
-                        transactionId="demo-transaction-1"
-                        onSuccess={handleAutoCategorizeSuccess}
-                        onError={handleAutoCategorizeError}
-                      />
+                      <button
+                        onClick={() => {
+                          // Simulate demo auto-categorization
+                          setTimeout(() => {
+                            handleAutoCategorizeSuccess('food-dining', 'Food & Dining');
+                          }, 1000);
+                        }}
+                        className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition-colors"
+                      >
+                        🤖 Auto-Categorize (Demo)
+                      </button>
                     </div>
                   </div>
 
@@ -238,18 +236,28 @@ export default function AICategorizationDemoPage() {
                   </div>
 
                   <div className="flex gap-3">
-                    <BatchCategorizeButton
-                      autoApply={true}
-                      onSuccess={handleBatchSuccess}
-                      onError={handleAutoCategorizeError}
-                      className="flex-1"
-                    />
-                    <BatchCategorizeButton
-                      autoApply={false}
-                      onSuccess={handleBatchSuccess}
-                      onError={handleAutoCategorizeError}
-                      className="flex-1"
-                    />
+                    <button
+                      onClick={() => {
+                        // Simulate demo batch categorization with auto-apply
+                        setTimeout(() => {
+                          handleBatchSuccess({ processed: 3, applied: 3 });
+                        }, 2000);
+                      }}
+                      className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors"
+                    >
+                      🤖 Auto-Apply (Demo)
+                    </button>
+                    <button
+                      onClick={() => {
+                        // Simulate demo batch categorization without auto-apply
+                        setTimeout(() => {
+                          handleBatchSuccess({ processed: 3, applied: 0 });
+                        }, 2000);
+                      }}
+                      className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+                    >
+                      🤖 Suggest Only (Demo)
+                    </button>
                   </div>
 
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">

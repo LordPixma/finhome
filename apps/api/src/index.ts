@@ -15,6 +15,7 @@ import settings from './routes/settings';
 import tenantMembers from './routes/tenantMembers';
 import profile from './routes/profile';
 import tenant from './routes/tenant';
+import aiRouter from './routes/ai';
 import { getDb, billReminders, users, userSettings } from './db';
 import { createEmailService } from './services/email';
 import type { Env } from './types';
@@ -104,6 +105,7 @@ app.route('/api/settings', settings);
 app.route('/api/tenant-members', tenantMembers);
 app.route('/api/profile', profile);
 app.route('/api/tenant', tenant);
+app.route('/api/ai', aiRouter);
 
 // 404 handler
 app.notFound(c => {

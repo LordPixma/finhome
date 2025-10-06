@@ -10,42 +10,49 @@ export default {
     if (subdomainMatch) {
       const subdomain = subdomainMatch[1];
       
-      // System subdomains - redirect to Pages directly
+      // System subdomains - handle specially
       if (['app', 'www', 'api', 'admin', 'docs'].includes(subdomain)) {
-        // For 'app' subdomain, serve from the finhome360 Pages project
-        if (subdomain === 'app') {
-          const pagesUrl = new URL(request.url);
-          pagesUrl.hostname = 'finhome360.pages.dev';
+        // API subdomain - proxy to Workers API
+        if (subdomain === 'api') {
+          const apiUrl = new URL(request.url);
+          apiUrl.hostname = env.API_HOSTNAME || 'finhome-api.samuel-1e5.workers.dev';
           
-          const response = await fetch(pagesUrl, {
+          return fetch(apiUrl, {
             method: request.method,
             headers: request.headers,
             body: request.body,
           });
-          
-          return response;
+        }
+        
+        // App/www subdomain - serve from Pages
+        if (subdomain === 'app' || subdomain === 'www') {
+          return await serveFromPages(request, env);
         }
         
         // Other system subdomains - redirect to app
         return Response.redirect(`https://app.finhome360.com${url.pathname}${url.search}`, 302);
       }
       
-      // Tenant subdomains - validate and serve
-      // For now, serve from the same Pages deployment
-      // Later we can add tenant validation here
-      const pagesUrl = new URL(request.url);
-      pagesUrl.hostname = 'finhome360.pages.dev';
-      
-      const response = await fetch(pagesUrl, {
-        method: request.method,
-        headers: request.headers,
-        body: request.body,
-      });
-      
-      return response;
+      // Tenant subdomains - validate and serve with tenant context
+      if (await isValidTenant(subdomain, env)) {
+        // Add tenant parameter to URL for proper routing
+        const tenantUrl = new URL(request.url);
+        tenantUrl.searchParams.set('tenant', subdomain);
+        
+        // Serve from Pages with tenant context
+        const tenantRequest = new Request(tenantUrl.toString(), {
+          method: request.method,
+          headers: request.headers,
+          body: request.body,
+        });
+        return await serveFromPages(tenantRequest, env);
+      } else {
+        // Invalid tenant - redirect to app with error
+        return Response.redirect(`https://app.finhome360.com?error=invalid-tenant`, 404);
+      }
     }
     
-    // Base domain - redirect to app subdomain
+    // Base domain - redirect to app subdomain  
     if (hostname === 'finhome360.com') {
       return Response.redirect(`https://app.finhome360.com${url.pathname}${url.search}`, 301);
     }
@@ -54,3 +61,28 @@ export default {
     return new Response('Not Found', { status: 404 });
   },
 };
+
+// Helper function to serve content from Pages
+async function serveFromPages(request, env) {
+  const pagesUrl = new URL(request.url);
+  pagesUrl.hostname = env.PAGES_HOSTNAME || 'd00a4a8d.finhome360-app.pages.dev';
+  
+  const response = await fetch(pagesUrl, {
+    method: request.method,
+    headers: request.headers,
+    body: request.body,
+  });
+  
+  return response;
+}
+
+// Helper function to validate if subdomain is a valid tenant
+async function isValidTenant(subdomain, env) {
+  // List of valid tenant subdomains (in production, this would query your database)
+  const validTenants = [
+    'odekunle', 'demofamily', 'family', 'smith', 'johnson', 
+    'williams', 'brown', 'jones', 'garcia', 'miller'
+  ];
+  
+  return validTenants.includes(subdomain);
+}

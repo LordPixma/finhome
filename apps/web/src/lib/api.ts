@@ -217,4 +217,15 @@ export const api = {
   inviteTenantMember: (data: any) => apiClient('/api/tenant-members', { method: 'POST', body: JSON.stringify(data) }),
   updateTenantMember: (id: string, data: any) => apiClient(`/api/tenant-members/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   removeTenantMember: (id: string) => apiClient(`/api/tenant-members/${id}`, { method: 'DELETE' }),
+
+  // AI Features
+  aiStatus: () => apiClient('/api/ai/status'),
+  categorizeTransaction: (data: { description: string; amount: number }) => 
+    apiClient('/api/ai/categorize-transaction', { method: 'POST', body: JSON.stringify(data) }),
+  getSpendingInsights: () => apiClient('/api/ai/spending-insights'),
+  detectAnomalies: () => apiClient('/api/ai/detect-anomalies'),
+  getFinancialAdvice: (data: { question: string; monthlyIncome?: number }) => 
+    apiClient('/api/ai/financial-advice', { method: 'POST', body: JSON.stringify(data) }),
+  getMonthlySummary: () => apiClient('/api/ai/monthly-summary'),
+  getBudgetRecommendations: () => apiClient('/api/ai/budget-recommendations'),
 };

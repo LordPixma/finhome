@@ -6,40 +6,59 @@ import { api } from './api';
 
 /**
  * Get the current subdomain from hostname or URL parameter
+ * Prefers actual subdomain routing over URL parameter fallback
  */
 export function getCurrentSubdomain(): string | null {
   if (typeof window === 'undefined') return null;
   
-  // First check URL parameter (fallback method)
+  const hostname = window.location.hostname;
+  const parts = hostname.split('.');
+  
+  // First, check hostname subdomain (preferred method)
+  // For localhost development
+  if (hostname.includes('localhost')) {
+    if (parts.length === 2 && parts[1] === 'localhost') {
+      return parts[0]; // e.g., "demo.localhost" -> "demo"
+    }
+  }
+  
+  // For production (finhome360.com) - check for actual subdomain
+  if (parts.length >= 3) {
+    const subdomain = parts[0];
+    // Skip system subdomains but allow tenant subdomains
+    if (!['www', 'app', 'api', 'admin'].includes(subdomain)) {
+      return subdomain;
+    }
+  }
+  
+  // Fallback to URL parameter if no valid subdomain found
   const urlParams = new URLSearchParams(window.location.search);
   const tenantParam = urlParams.get('tenant');
   if (tenantParam) {
     return tenantParam;
   }
   
-  // Then check hostname subdomain
-  const hostname = window.location.hostname;
-  const parts = hostname.split('.');
-  
-  // For localhost development
-  if (hostname.includes('localhost')) {
-    if (parts.length === 2 && parts[1] === 'localhost') {
-      return parts[0]; // e.g., "demo.localhost" -> "demo"
-    }
-    return null;
-  }
-  
-  // For production (finhome360.com)
-  if (parts.length >= 3) {
-    const subdomain = parts[0];
-    // Skip system subdomains
-    if (['www', 'app', 'api', 'admin'].includes(subdomain)) {
-      return null;
-    }
-    return subdomain;
-  }
-  
   return null;
+}
+
+/**
+ * Test if subdomain routing is available by making a quick request
+ */
+async function testSubdomainAvailability(subdomain: string): Promise<boolean> {
+  try {
+    // Test if we can reach the subdomain
+    const testUrl = `https://${subdomain}.finhome360.com`;
+    await fetch(testUrl, { 
+      method: 'HEAD', 
+      mode: 'no-cors',
+      signal: AbortSignal.timeout(3000) // 3 second timeout
+    });
+    return true;
+  } catch (error) {
+    // If subdomain routing fails, fall back to URL parameters
+    console.log('Subdomain routing not available, using URL parameter fallback');
+    return false;
+  }
 }
 
 /**
@@ -51,7 +70,7 @@ export function isAppDomain(): boolean {
 }
 
 /**
- * Redirect to dashboard with tenant context (using URL parameter for now)
+ * Redirect to dashboard with tenant context (subdomain preferred, URL parameter fallback)
  */
 export async function redirectToTenantSubdomain(): Promise<void> {
   if (typeof window === 'undefined') return;
@@ -62,17 +81,27 @@ export async function redirectToTenantSubdomain(): Promise<void> {
     if (response.success && response.data) {
       const { subdomain } = response.data;
       
-      // For now, use URL parameter approach until wildcard DNS is configured
-      // Later this can be updated to use actual subdomains
-      const currentUrl = new URL(window.location.href);
-      currentUrl.searchParams.set('tenant', subdomain);
+      // Try subdomain approach first (if wildcard DNS is configured)
+      const isSubdomainAvailable = await testSubdomainAvailability(subdomain);
       
-      // Redirect to dashboard if coming from login/register
-      if (currentUrl.pathname === '/login' || currentUrl.pathname === '/register' || currentUrl.pathname === '/') {
-        currentUrl.pathname = '/dashboard';
+      let targetUrl: URL;
+      
+      if (isSubdomainAvailable) {
+        // Use actual subdomain routing
+        targetUrl = new URL(`https://${subdomain}.finhome360.com`);
+        targetUrl.pathname = '/dashboard';
+      } else {
+        // Fallback to URL parameter approach
+        targetUrl = new URL(window.location.href);
+        targetUrl.searchParams.set('tenant', subdomain);
+        
+        // Redirect to dashboard if coming from login/register
+        if (targetUrl.pathname === '/login' || targetUrl.pathname === '/register' || targetUrl.pathname === '/') {
+          targetUrl.pathname = '/dashboard';
+        }
       }
       
-      window.location.href = currentUrl.toString();
+      window.location.href = targetUrl.toString();
     }
   } catch (error) {
     console.error('Failed to redirect with tenant context:', error);
