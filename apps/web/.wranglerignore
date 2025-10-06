@@ -1,0 +1,5 @@
+# Exclude build cache and webpack files
+cache/
+.next/cache/
+*.pack
+node_modules/
