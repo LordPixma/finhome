@@ -1,0 +1,12 @@
+name = "finhome-subdomain-router"
+main = "subdomain-router.js"
+compatibility_date = "2023-12-01"
+
+# Route configuration for custom domains
+[[routes]]
+pattern = "finhome360.com/*"
+zone_name = "finhome360.com"
+
+[[routes]]
+pattern = "*.finhome360.com/*"
+zone_name = "finhome360.com"

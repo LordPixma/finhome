@@ -14,6 +14,7 @@ import goals from './routes/goals';
 import settings from './routes/settings';
 import tenantMembers from './routes/tenantMembers';
 import profile from './routes/profile';
+import tenant from './routes/tenant';
 import { getDb, billReminders, users, userSettings } from './db';
 import { createEmailService } from './services/email';
 import type { Env } from './types';
@@ -102,6 +103,7 @@ app.route('/api/goals', goals);
 app.route('/api/settings', settings);
 app.route('/api/tenant-members', tenantMembers);
 app.route('/api/profile', profile);
+app.route('/api/tenant', tenant);
 
 // 404 handler
 app.notFound(c => {

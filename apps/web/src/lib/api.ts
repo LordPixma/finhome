@@ -1,6 +1,9 @@
 import type { ApiResponse } from '@finhome360/shared';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
+// Use the environment variable if available, otherwise fallback to production API
+const API_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://finhome-api.samuel-1e5.workers.dev'
+  : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787');
 
 // Token management
 export const tokenManager = {
@@ -191,6 +194,9 @@ export const api = {
   // User Settings
   getSettings: () => apiClient('/api/settings'),
   updateSettings: (data: any) => apiClient('/api/settings', { method: 'PUT', body: JSON.stringify(data) }),
+
+  // Tenant
+  getTenantInfo: () => apiClient('/api/tenant/info'),
 
   // User Profile
   getProfile: () => apiClient('/api/profile'),

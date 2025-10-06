@@ -19,6 +19,7 @@ export interface Env {
     subdomain?: string;
     tenantName?: string;
     validatedData?: any;
+    isAppDomain?: boolean;
   };
 }
 

@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import Image from 'next/image';
 import Footer from './Footer';
+import { TenantIndicator } from './TenantIndicator';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -217,6 +218,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       <div className="lg:pl-64 flex flex-col min-h-screen">
         <main className="flex-1 pt-16 lg:pt-0">
           <div className="py-6 px-4 sm:px-6 lg:px-8">
+            <TenantIndicator />
             {children}
           </div>
         </main>

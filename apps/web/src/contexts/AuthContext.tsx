@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { api, tokenManager } from '@/lib/api';
+import { redirectToTenantSubdomain, isAppDomain } from '@/lib/subdomain';
 
 interface User {
   id: string;
@@ -78,9 +79,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         tokenManager.setTokens(accessToken, refreshToken);
         setUser(userData);
         
-        // Redirect using window.location since we can't use useRouter in this context
+        // Redirect to tenant subdomain if on app domain, otherwise to dashboard
         if (typeof window !== 'undefined') {
-          window.location.href = '/dashboard';
+          if (isAppDomain()) {
+            await redirectToTenantSubdomain();
+          } else {
+            window.location.href = '/dashboard';
+          }
         }
       } else {
         throw new Error('Login failed');
@@ -101,9 +106,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         tokenManager.setTokens(accessToken, refreshToken);
         setUser(userData);
         
-        // Redirect using window.location
+        // Redirect to tenant subdomain if on app domain, otherwise to dashboard
         if (typeof window !== 'undefined') {
-          window.location.href = '/dashboard';
+          if (isAppDomain()) {
+            await redirectToTenantSubdomain();
+          } else {
+            window.location.href = '/dashboard';
+          }
         }
       } else {
         throw new Error('Registration failed');

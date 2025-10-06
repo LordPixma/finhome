@@ -10,19 +10,39 @@ import type { AppContext } from '../types';
 export async function subdomainMiddleware(c: AppContext, next: Next): Promise<Response | void> {
   const host = c.req.header('Host') || c.req.header('host') || '';
   
-  // Extract subdomain from host
+  // Extract subdomain from host or URL parameter (fallback)
   // Expected formats:
   // - acme.finhome360.com -> subdomain: "acme"
   // - acme.localhost:8787 -> subdomain: "acme" (local dev)
-  // - localhost:8787 -> no subdomain (skip validation for base domain)
-  const subdomain = extractSubdomain(host);
-
-  // If no subdomain detected, skip validation
-  // This allows access to base domain (e.g., www.finhome360.com, finhome360.com)
+  // - app.finhome360.com?tenant=acme -> subdomain: "acme" (fallback)
+  let subdomain = extractSubdomain(host);
+  
+  // If no subdomain from host, check URL parameter (fallback for when DNS wildcards aren't available)
   if (!subdomain) {
-    // For auth endpoints (login/register), allow access without subdomain
+    const url = new URL(c.req.url);
+    const tenantParam = url.searchParams.get('tenant');
+    if (tenantParam && isValidSubdomain(tenantParam)) {
+      subdomain = tenantParam;
+    }
+  }
+
+  // If no subdomain detected, check if this is a system subdomain
+  if (!subdomain) {
     const path = new URL(c.req.url).pathname;
+    
+    // For auth endpoints, always allow access without tenant validation
     if (path.startsWith('/api/auth/')) {
+      await next();
+      return;
+    }
+    
+    // Check if this is the app subdomain by examining the host
+    const hostWithoutPort = host.split(':')[0];
+    const isAppSubdomain = hostWithoutPort.startsWith('app.');
+    
+    if (isAppSubdomain) {
+      // For app.finhome360.com, allow access but set a special context
+      c.set('isAppDomain', true);
       await next();
       return;
     }

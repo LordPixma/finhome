@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "clean": "rm -rf .next"
+    "clean": "rm -rf .next",
+    "deploy": "echo 'Frontend is deployed via Cloudflare Pages dashboard. Push changes to trigger deployment.'"
   },
   "dependencies": {
     "@finhome360/shared": "file:../../packages/shared",
