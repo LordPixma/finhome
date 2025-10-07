@@ -20,6 +20,25 @@ const aiRouter = new Hono<Env>();
 aiRouter.use('*', authMiddleware);
 aiRouter.use('*', subdomainMiddleware);
 
+// Index route to enumerate available AI endpoints (prevents base path 404 confusion)
+aiRouter.get('/', c => {
+  return c.json({
+    success: true,
+    data: {
+      endpoints: [
+        'GET /api/ai/status',
+        'POST /api/ai/categorize-transaction',
+        'GET /api/ai/spending-insights',
+        'GET /api/ai/detect-anomalies',
+        'POST /api/ai/financial-advice',
+        'GET /api/ai/monthly-summary',
+        'GET /api/ai/budget-recommendations'
+      ],
+      note: 'All routes require Authorization bearer token and tenant subdomain.'
+    }
+  });
+});
+
 // Validation schemas
 const CategorySuggestionSchema = z.object({
   description: z.string().min(1, 'Description is required'),
