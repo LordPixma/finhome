@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/Card';
 import { Button } from '@/components/Button';
 import { AIFinancialAssistant } from '@/components/ai/AIFinancialAssistant';
@@ -43,8 +45,8 @@ export default function AIFeaturesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-      <div className="container mx-auto p-6 max-w-7xl">
+    <ProtectedRoute>
+      <DashboardLayout>
         {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-3 mb-4">
@@ -56,7 +58,7 @@ export default function AIFeaturesPage() {
                 AI-Powered Financial Intelligence
               </h1>
               <p className="text-gray-600 mt-2">
-                Leverage Cloudflare Workers AI to get insights, advice, and automation for your finances
+                Get intelligent insights, advice, and automation for your finances
               </p>
             </div>
           </div>
@@ -151,17 +153,17 @@ export default function AIFeaturesPage() {
                       <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center">
                         🚀
                       </div>
-                      <h4 className="font-semibold text-gray-900">Powered by Cloudflare Workers AI</h4>
+                      <h4 className="font-semibold text-gray-900">Powered by Advanced AI</h4>
                     </div>
                     <p className="text-sm text-gray-600 mb-3">
-                      Our AI features leverage state-of-the-art language models running on Cloudflare's edge network for fast, 
+                      Our AI features leverage state-of-the-art language models for fast, 
                       secure, and intelligent financial analysis.
                     </p>
                     <div className="flex items-center gap-4 text-xs text-gray-500">
-                      <span>🧠 LLaMA-2 7B Model</span>
-                      <span>⚡ Edge Computing</span>
+                      <span>🧠 Advanced Models</span>
+                      <span>⚡ Fast Processing</span>
                       <span>🔒 Privacy-First</span>
-                      <span>🌐 Global CDN</span>
+                      <span>🌐 Always Available</span>
                     </div>
                   </div>
                 </CardContent>
@@ -183,7 +185,7 @@ export default function AIFeaturesPage() {
             </Button>
           </div>
         )}
-      </div>
-    </div>
+      </DashboardLayout>
+    </ProtectedRoute>
   );
 }

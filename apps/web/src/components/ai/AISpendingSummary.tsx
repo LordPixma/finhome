@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '../Card';
 import { Button } from '../Button';
+import { api } from '@/lib/api';
 
 export function AISpendingSummary() {
   const [summary, setSummary] = useState<any>(null);
@@ -14,14 +15,7 @@ export function AISpendingSummary() {
     setError(null);
 
     try {
-      const response = await fetch('/api/ai/spending-summary', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      const result = await response.json();
+      const result = await api.getMonthlySummary();
       
       if (result.success && result.data) {
         setSummary(result.data);

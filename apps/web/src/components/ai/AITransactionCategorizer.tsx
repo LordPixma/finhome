@@ -74,7 +74,7 @@ export function AITransactionCategorizer() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="e.g., STARBUCKS #1234 SEATTLE WA"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900 placeholder-gray-500"
             />
           </div>
           <div>
@@ -87,7 +87,7 @@ export function AITransactionCategorizer() {
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="25.99"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900 placeholder-gray-500"
             />
           </div>
         </div>

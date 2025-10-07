@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '../Card';
 import { Button } from '../Button';
+import { api } from '@/lib/api';
 
 
 export function AIFinancialAssistant() {
@@ -18,19 +19,10 @@ export function AIFinancialAssistant() {
     setError(null);
 
     try {
-      const response = await fetch('/api/ai/financial-advice', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ question })
-      });
-
-      const result = await response.json();
+      const result = await api.getFinancialAdvice({ question });
       
       if (result.success && result.data) {
-        setAdvice(result.data.advice);
+        setAdvice((result.data as any).advice);
         setQuestion(''); // Clear the question
       } else {
         setError(result.error?.message || 'Failed to get advice');
@@ -70,7 +62,7 @@ export function AIFinancialAssistant() {
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             placeholder="e.g., How can I save more money each month?"
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900 placeholder-gray-500"
             rows={3}
           />
           <Button
