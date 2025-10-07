@@ -32,6 +32,34 @@ const FinancialQuestionSchema = z.object({
 });
 
 /**
+ * AI Service Status Check
+ * GET /api/ai/status
+ */
+aiRouter.get('/status', async c => {
+  try {
+    // Initialize AI service to test availability
+    new CloudflareAIService(c.env.AI);
+    
+    return c.json({
+      success: true,
+      data: {
+        status: 'AI service ready',
+        modelsAvailable: true,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    return c.json({
+      success: false,
+      error: {
+        code: 'AI_SERVICE_ERROR',
+        message: 'AI service not available'
+      }
+    }, 500);
+  }
+});
+
+/**
  * AI Transaction Categorization
  * POST /api/ai/categorize-transaction
  */

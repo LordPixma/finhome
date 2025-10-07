@@ -47,6 +47,16 @@ export async function subdomainMiddleware(c: AppContext, next: Next): Promise<Re
       return;
     }
     
+    // Check if this is a direct Workers API call (finhome-api.samuel-1e5.workers.dev)
+    // In this case, we'll rely on the auth middleware to extract tenant from JWT
+    const isWorkersApiDomain = hostWithoutPort.includes('.workers.dev');
+    
+    if (isWorkersApiDomain) {
+      // Allow access - tenant context will be set by auth middleware from JWT
+      await next();
+      return;
+    }
+    
     return c.json(
       {
         success: false,

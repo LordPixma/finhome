@@ -59,6 +59,30 @@ transactionsRouter.get('/', async c => {
   });
 });
 
+// Get categorization statistics
+transactionsRouter.get('/categorization-stats', async c => {
+  try {
+    const tenantId = c.get('tenantId')!;
+    const db = getDb(c.env.DB);
+
+    const stats = await getCategorizationStats(db, tenantId);
+
+    return c.json({
+      success: true,
+      data: stats,
+    });
+  } catch (error) {
+    console.error('Stats error:', error);
+    return c.json(
+      {
+        success: false,
+        error: { code: 'INTERNAL_ERROR', message: 'Failed to get stats' },
+      },
+      500
+    );
+  }
+});
+
 // Get single transaction
 transactionsRouter.get('/:id', async c => {
   const id = c.req.param('id');
@@ -439,30 +463,6 @@ transactionsRouter.post('/auto-categorize-batch', async c => {
       {
         success: false,
         error: { code: 'INTERNAL_ERROR', message: 'Failed to batch categorize' },
-      },
-      500
-    );
-  }
-});
-
-// Get categorization statistics
-transactionsRouter.get('/categorization-stats', async c => {
-  try {
-    const tenantId = c.get('tenantId')!;
-    const db = getDb(c.env.DB);
-
-    const stats = await getCategorizationStats(db, tenantId);
-
-    return c.json({
-      success: true,
-      data: stats,
-    });
-  } catch (error) {
-    console.error('Stats error:', error);
-    return c.json(
-      {
-        success: false,
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to get stats' },
       },
       500
     );
