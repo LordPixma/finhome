@@ -153,13 +153,63 @@ filesRouter.post('/upload', async c => {
     let skippedCount = 0;
     const errors: string[] = [];
 
+    // Get all categories for this tenant for matching
+    const tenantCategories = await db
+      .select()
+      .from(categories)
+      .where(eq(categories.tenantId, tenantId))
+      .all();
+
     for (const parsed of parsedTransactions) {
       try {
+        // Try to match category by name if provided in CSV
+        let transactionCategoryId = categoryId; // Default to uncategorized
+        
+        if (parsed.category && parsed.category.trim() !== '') {
+          const matchedCategory = tenantCategories.find(
+            cat => cat.name.toLowerCase() === parsed.category!.toLowerCase()
+          );
+          
+          if (matchedCategory) {
+            transactionCategoryId = matchedCategory.id;
+          } else {
+            // Create new category if it doesn't exist
+            const newCategoryId = crypto.randomUUID();
+            await db
+              .insert(categories)
+              .values({
+                id: newCategoryId,
+                tenantId,
+                name: parsed.category,
+                type: parsed.type,
+                color: `#${Math.floor(Math.random()*16777215).toString(16)}`, // Random color
+                icon: null,
+                parentId: null,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              })
+              .run();
+            
+            transactionCategoryId = newCategoryId;
+            tenantCategories.push({
+              id: newCategoryId,
+              tenantId,
+              name: parsed.category,
+              type: parsed.type,
+              color: `#${Math.floor(Math.random()*16777215).toString(16)}`,
+              icon: null,
+              parentId: null,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            });
+          }
+        }
+
         const newTransaction = {
           id: crypto.randomUUID(),
           tenantId,
           accountId,
-          categoryId,
+          categoryId: transactionCategoryId,
           amount: parsed.amount,
           description: parsed.description,
           date: parsed.date,
