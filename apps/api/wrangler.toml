@@ -1,4 +1,4 @@
-name = "finhome-api"
+name = "finhome" # Aligned with CI expected Worker name to avoid duplicate script creation causing queue consumer conflicts
 main = "src/index.ts"
 compatibility_date = "2023-12-01"
 compatibility_flags = ["nodejs_compat"]
