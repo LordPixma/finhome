@@ -6,7 +6,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui';
 import { api } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
-import { InteractiveChart } from '@/components/InteractiveChart';
+import dynamic from 'next/dynamic';
 import { InsightsWidget } from '@/components/InsightsWidget';
 import { TrendsWidget } from '@/components/TrendsWidget';
 import PredictiveAnalytics, { type ForecastResult } from '@/lib/predictiveAnalytics';
@@ -36,6 +36,8 @@ interface CategoryData {
   color?: string;
   percentage: number;
 }
+
+const ChartsBundle = dynamic(() => import('./ChartsBundle').then(m => m.ChartsBundle), { ssr: false, loading: () => <div className="text-sm text-gray-500">Loading charts…</div> });
 
 export default function AnalyticsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -297,70 +299,15 @@ export default function AnalyticsPage() {
           )}
         </div>
 
-        {/* Interactive Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {/* Monthly Cashflow Chart with Predictions */}
-          {forecast && (
-            <InteractiveChart
-              data={forecast.predictions.map(p => ({
-                name: p.month,
-                income: p.income,
-                expense: p.expense,
-                net: p.net,
-                predicted: p.predicted
-              }))}
-              type="line"
-              title="📈 Cashflow Forecast"
-              subtitle={`Including ${forecast.predictions.filter(p => p.predicted).length} months prediction (${(forecast.confidence * 100).toFixed(0)}% confidence)`}
-              height={350}
-              showPrediction={true}
-            />
-          )}
-
-          {/* Area Chart for Income vs Expenses */}
-          <InteractiveChart
-            data={monthlyData.map(m => ({
-              name: m.month,
-              income: m.income,
-              expense: m.expense
-            }))}
-            type="area"
-            title="💰 Income vs Expenses"
-            subtitle="Historical cashflow comparison"
-            height={350}
-          />
-        </div>
-
-        {/* Category Breakdown with Interactive Pie Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {/* Expense Categories Pie Chart */}
-          {expenseCategories.length > 0 && (
-            <InteractiveChart
-              data={expenseCategories.map(cat => ({
-                name: cat.categoryName,
-                value: cat.amount
-              }))}
-              type="pie"
-              title="💸 Expense Categories"
-              subtitle={`${expenseCategories.length} categories • ${formatCurrency(totalExpense)} total`}
-              height={350}
-            />
-          )}
-
-          {/* Income Categories Pie Chart */}
-          {incomeCategories.length > 0 && (
-            <InteractiveChart
-              data={incomeCategories.map(cat => ({
-                name: cat.categoryName,
-                value: cat.amount
-              }))}
-              type="pie"
-              title="💰 Income Sources"
-              subtitle={`${incomeCategories.length} sources • ${formatCurrency(totalIncome)} total`}
-              height={350}
-            />
-          )}
-        </div>
+        {/* Charts dynamically loaded client-side to reduce server bundle size */}
+        <ChartsBundle 
+          forecast={forecast}
+          monthlyData={monthlyData}
+          expenseCategories={expenseCategories}
+          incomeCategories={incomeCategories}
+          totalIncome={totalIncome}
+          totalExpense={totalExpense}
+        />
 
         {/* Advanced Analytics Summary */}
         {forecast && (
