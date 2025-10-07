@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui';
 import { formatCurrency } from '@/lib/utils';
+import { api } from '@/lib/api';
 
 interface ImportedTransaction {
   date: string;
@@ -22,6 +23,13 @@ interface ImportResult {
   transactions?: ImportedTransaction[];
 }
 
+interface Account {
+  id: string;
+  name: string;
+  type: string;
+  balance: number;
+}
+
 export default function ImportPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -29,6 +37,32 @@ export default function ImportPage() {
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [previewData, setPreviewData] = useState<ImportedTransaction[]>([]);
   const [error, setError] = useState('');
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('');
+  const [isLoadingAccounts, setIsLoadingAccounts] = useState(true);
+
+  useEffect(() => {
+    loadAccounts();
+  }, []);
+
+  const loadAccounts = async () => {
+    try {
+      setIsLoadingAccounts(true);
+      const response = await api.getAccounts();
+      if (response.success && response.data) {
+        const accountList = response.data as Account[];
+        setAccounts(accountList);
+        if (accountList.length > 0) {
+          setSelectedAccountId(accountList[0].id);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load accounts:', err);
+      setError('Failed to load accounts. Please refresh the page.');
+    } finally {
+      setIsLoadingAccounts(false);
+    }
+  };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -177,23 +211,23 @@ export default function ImportPage() {
       return;
     }
 
+    if (!selectedAccountId) {
+      setError('Please select an account first.');
+      return;
+    }
+
     setIsProcessing(true);
     setError('');
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      // Note: This would use the API's uploadFile endpoint with accountId
-      // For now, we'll simulate the import result
-      const response = { success: true, data: { imported: previewData.length, failed: 0, errors: [] } } as any;
+      const response = await api.uploadFile(file, selectedAccountId);
 
       if (response.success) {
         setImportResult({
-          success: response.data.imported || previewData.length,
-          failed: response.data.failed || 0,
+          success: response.data.imported || 0,
+          failed: response.data.skipped || 0,
           errors: response.data.errors || [],
-          transactions: response.data.transactions,
+          transactions: response.data.transactions || [],
         });
         setFile(null);
         setPreviewData([]);
@@ -201,7 +235,7 @@ export default function ImportPage() {
         setError('Import failed: ' + (response.error?.message || 'Unknown error'));
       }
     } catch (err: any) {
-      setError('Import failed: ' + err.message);
+      setError('Import failed: ' + (err.message || 'Network error'));
     } finally {
       setIsProcessing(false);
     }
@@ -231,11 +265,12 @@ export default function ImportPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h3 className="font-semibold text-blue-900 mb-2">CSV Format</h3>
-              <p className="text-sm text-blue-800 mb-2">Required columns:</p>
+              <p className="text-sm text-blue-800 mb-2">Supported formats:</p>
               <ul className="text-sm text-blue-700 space-y-1 list-disc list-inside">
-                <li><code className="bg-blue-100 px-1 rounded">date</code> - Transaction date (YYYY-MM-DD)</li>
-                <li><code className="bg-blue-100 px-1 rounded">description</code> or <code className="bg-blue-100 px-1 rounded">memo</code> - Transaction description</li>
-                <li><code className="bg-blue-100 px-1 rounded">amount</code> - Transaction amount (positive for income, negative for expense)</li>
+                <li>Standard CSV with Date, Description, Amount columns</li>
+                <li>Monzo format with Money In / Money Out columns</li>
+                <li>Most UK and US bank statement formats</li>
+                <li>Automatic field detection and category matching</li>
               </ul>
             </div>
             <div>
@@ -249,9 +284,47 @@ export default function ImportPage() {
             </div>
           </div>
           <div className="mt-4 text-sm text-blue-800">
-            <strong>Note:</strong> Maximum file size is 5MB. First 10 transactions will be shown for preview.
+            <strong>Note:</strong> Maximum file size is 5MB. Categories from your CSV will be automatically created if they don't exist.
           </div>
         </div>
+
+        {/* Account Selector */}
+        {!importResult && (
+          <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Select Account</h2>
+            {isLoadingAccounts ? (
+              <div className="text-gray-500">Loading accounts...</div>
+            ) : accounts.length === 0 ? (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p className="text-yellow-800">
+                  No accounts found. Please{' '}
+                  <a href="/dashboard/accounts" className="text-blue-600 hover:underline font-semibold">
+                    create an account
+                  </a>{' '}
+                  before importing transactions.
+                </p>
+              </div>
+            ) : (
+              <div>
+                <label htmlFor="account-select" className="block text-sm font-medium text-gray-700 mb-2">
+                  Choose which account to import transactions into:
+                </label>
+                <select
+                  id="account-select"
+                  value={selectedAccountId}
+                  onChange={(e) => setSelectedAccountId(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  {accounts.map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.name} ({account.type}) - {formatCurrency(account.balance)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Upload Area */}
         {!importResult && (
@@ -334,7 +407,11 @@ export default function ImportPage() {
                     Showing first {previewData.length} transactions
                   </p>
                 </div>
-                <Button onClick={handleImport} isLoading={isProcessing}>
+                <Button 
+                  onClick={handleImport} 
+                  isLoading={isProcessing}
+                  disabled={!selectedAccountId || accounts.length === 0}
+                >
                   Import {previewData.length} Transaction{previewData.length !== 1 ? 's' : ''}
                 </Button>
               </div>
