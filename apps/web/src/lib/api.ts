@@ -2,7 +2,7 @@ import type { ApiResponse } from '@finhome360/shared';
 
 // Use the environment variable if available, otherwise fallback to production API
 const API_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://finhome-api.samuel-1e5.workers.dev'
+  ? 'https://finhome.samuel-1e5.workers.dev'
   : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787');
 
 // Token management
