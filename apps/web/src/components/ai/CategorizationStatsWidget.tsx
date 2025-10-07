@@ -103,7 +103,7 @@ export function CategorizationStatsWidget() {
   // Show empty state if no transactions
   if (stats.totalTransactions === 0) {
     return (
-      <Card className="border-2 border-indigo-100 bg-gradient-to-br from-indigo-50 to-purple-50">
+      <Card className="bg-white border border-gray-200 shadow-sm">
         <CardHeader>
           <CardTitle className="text-indigo-900 flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
@@ -144,11 +144,11 @@ export function CategorizationStatsWidget() {
   const progressColor = ratePercent >= 80 ? 'bg-green-500' : ratePercent >= 50 ? 'bg-yellow-500' : 'bg-red-500';
 
   return (
-    <Card className="border-2 border-indigo-100 bg-gradient-to-br from-indigo-50 to-purple-50">
+    <Card className="bg-white border border-gray-200 shadow-sm">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-indigo-900 flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+          <CardTitle className="text-gray-900 flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-indigo-600/10 text-indigo-600 flex items-center justify-center">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
@@ -251,7 +251,7 @@ export function CategorizationStatsWidget() {
         )}
 
         {/* AI Learning Status */}
-        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg p-4 text-white">
+  <div className="bg-indigo-600 rounded-lg p-4 text-white">
           <div className="flex items-start gap-3">
             <svg className="w-6 h-6 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path

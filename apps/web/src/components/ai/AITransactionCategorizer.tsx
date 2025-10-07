@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '../Card';
 import { Button } from '../Button';
+import { api } from '@/lib/api';
 
 export function AITransactionCategorizer() {
   const [description, setDescription] = useState('');
@@ -13,25 +14,10 @@ export function AITransactionCategorizer() {
 
   const handleCategorize = async () => {
     if (!description.trim() || !amount) return;
-
     setLoading(true);
     setError(null);
-
     try {
-      const response = await fetch('/api/ai/categorize-transaction', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          description,
-          amount: parseFloat(amount)
-        })
-      });
-
-      const result = await response.json();
-      
+      const result = await api.categorizeTransaction({ description, amount: parseFloat(amount) });
       if (result.success && result.data) {
         setSuggestion(result.data);
       } else {
@@ -53,10 +39,10 @@ export function AITransactionCategorizer() {
   ];
 
   return (
-    <Card className="border-2 border-green-100 bg-gradient-to-br from-green-50 to-emerald-50">
+    <Card className="bg-white border border-gray-200 shadow-sm">
       <CardHeader>
-        <CardTitle className="text-green-900 flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
+        <CardTitle className="text-gray-900 flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-green-600/10 text-green-600 flex items-center justify-center">
             🎯
           </div>
           AI Transaction Categorizer
@@ -95,7 +81,7 @@ export function AITransactionCategorizer() {
         <Button
           onClick={handleCategorize}
           disabled={!description.trim() || !amount || loading}
-          className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+          className="bg-green-600 hover:bg-green-700"
         >
           {loading ? 'Analyzing...' : '🤖 Categorize with AI'}
         </Button>

@@ -34,10 +34,10 @@ export function AISpendingSummary() {
   }, []);
 
   return (
-    <Card className="border-2 border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50">
+    <Card className="bg-white border border-gray-200 shadow-sm">
       <CardHeader>
-        <CardTitle className="text-blue-900 flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+        <CardTitle className="text-gray-900 flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-blue-600/10 text-blue-600 flex items-center justify-center">
             📊
           </div>
           AI Spending Insights
@@ -76,48 +76,34 @@ export function AISpendingSummary() {
 
             {/* Summary Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg p-4 text-white">
+              <div className="rounded-lg p-4 border border-gray-200 bg-gray-50">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-blue-100 text-sm">Analysis Period</p>
-                    <p className="text-xl font-bold">{summary.period}</p>
+                    <p className="text-xs text-gray-500 mb-1">Analysis Period</p>
+                    <p className="text-lg font-semibold text-gray-900">{summary.period}</p>
                   </div>
                   <div className="text-2xl">📅</div>
                 </div>
               </div>
-
-              <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg p-4 text-white">
+              <div className="rounded-lg p-4 border border-gray-200 bg-gray-50">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-indigo-100 text-sm">Transactions Analyzed</p>
-                    <p className="text-xl font-bold">{summary.transactionCount}</p>
+                    <p className="text-xs text-gray-500 mb-1">Transactions Analyzed</p>
+                    <p className="text-lg font-semibold text-gray-900">{summary.transactionCount}</p>
                   </div>
                   <div className="text-2xl">💳</div>
                 </div>
               </div>
             </div>
-
-            {/* AI Features Preview */}
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
-              <h4 className="font-semibold text-blue-900 mb-3">🚀 More AI Features Coming Soon</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="flex items-center gap-2 text-sm text-blue-700">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span>Budget recommendations</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-blue-700">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span>Anomaly detection</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-blue-700">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span>Spending predictions</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-blue-700">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span>Smart alerts</span>
-                </div>
-              </div>
+            {/* Mini roadmap */}
+            <div className="rounded-lg p-4 border border-dashed border-gray-300 bg-white">
+              <h4 className="font-semibold text-gray-900 mb-3">🚀 Roadmap Preview</h4>
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-700">
+                <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>Budget recommendations</li>
+                <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>Anomaly detection</li>
+                <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>Spending predictions</li>
+                <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>Smart alerts</li>
+              </ul>
             </div>
           </div>
         )}

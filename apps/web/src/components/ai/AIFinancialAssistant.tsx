@@ -43,10 +43,10 @@ export function AIFinancialAssistant() {
   ];
 
   return (
-    <Card className="border-2 border-purple-100 bg-gradient-to-br from-purple-50 to-blue-50">
+    <Card className="bg-white border border-gray-200 shadow-sm">
       <CardHeader>
-        <CardTitle className="text-purple-900 flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
+        <CardTitle className="text-gray-900 flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-purple-600/10 text-purple-600 flex items-center justify-center">
             🤖
           </div>
           AI Financial Assistant
@@ -68,7 +68,7 @@ export function AIFinancialAssistant() {
           <Button
             onClick={handleAskQuestion}
             disabled={!question.trim() || loading}
-            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+            className="bg-purple-600 hover:bg-purple-700"
           >
             {loading ? 'Thinking...' : 'Ask AI Assistant'}
           </Button>
