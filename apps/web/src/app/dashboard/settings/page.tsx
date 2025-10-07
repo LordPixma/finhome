@@ -104,18 +104,13 @@ export default function SettingsPage() {
   const loadProfile = async () => {
     try {
       setIsLoadingProfile(true);
-      // This will call our new profile endpoint
-      const response = await fetch('/api/profile', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      const data = await response.json();
-      if (data.success) {
-        setProfile(data.data);
+      const response = await api.getProfile() as any;
+      if (response.success) {
+        setProfile(response.data);
       }
     } catch (error) {
       console.error('Failed to load profile:', error);
+      setErrorMessage('Failed to load profile information');
     } finally {
       setIsLoadingProfile(false);
     }

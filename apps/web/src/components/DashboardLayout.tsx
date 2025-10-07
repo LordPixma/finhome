@@ -52,9 +52,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <Image
               src="/logo.png"
               alt="Finhome360"
-              width={120}
-              height={40}
-              className="h-8 w-auto"
+              width={200}
+              height={60}
+              className="h-12 w-auto"
             />
           </div>
           <button
@@ -76,9 +76,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <Image
               src="/logo.png"
               alt="Finhome360"
-              width={150}
-              height={50}
-              className="h-10 w-auto"
+              width={200}
+              height={60}
+              className="h-12 w-auto"
             />
           </div>
 
