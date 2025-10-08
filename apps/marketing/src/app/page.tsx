@@ -142,7 +142,7 @@ export default function Home() {
               </div>
               <h3 className="text-xl font-bold mb-3 text-gray-900">Budget Management</h3>
               <p className="text-gray-600 leading-relaxed">
-                Create flexible budgets, track your spending in real-time, and receive alerts when you're 
+                Create flexible budgets, track your spending in real-time, and receive alerts when you&apos;re 
                 approaching your limits.
               </p>
             </div>
@@ -195,7 +195,7 @@ export default function Home() {
                 A Complete 360° View of Your Finances
               </h2>
               <p className="text-lg text-gray-600 mb-6 leading-relaxed">
-                Finhome360 isn't just another budgeting app. It's your comprehensive financial command center 
+                Finhome360 isn&apos;t just another budgeting app. It&apos;s your comprehensive financial command center 
                 that gives you complete visibility and control over your financial life.
               </p>
               <ul className="space-y-4">
