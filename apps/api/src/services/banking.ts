@@ -94,11 +94,11 @@ export class TrueLayerService {
       client_id: this.config.clientId,
       redirect_uri: this.config.redirectUri,
       scope: 'info accounts balance transactions offline_access',
-      providers: 'uk-ob-all uk-oauth-all', // All UK banks
+      providers: 'uk-ob-all', // UK Open Banking providers
       ...(state && { state }),
     });
 
-    return `${TRUELAYER_AUTH_URL}?${params.toString()}`;
+    return `${TRUELAYER_AUTH_URL}/?${params.toString()}`;
   }
 
   /**
