@@ -6,28 +6,8 @@ import { TrueLayerService } from '../services/banking';
 import type { Env } from '../types';
 
 const banking = new Hono<Env>();
-banking.use('*', authMiddleware, tenantMiddleware);
 
-banking.post('/connect', async c => {
-  try {
-    const user = c.get('user')!;
-    const tenantId = c.get('tenantId')!;
-    const truelayer = new TrueLayerService(c.env);
-    const state = crypto.randomUUID();
-    
-    await c.env.SESSIONS.put(
-      `banking_state:${state}`,
-      JSON.stringify({ userId: user.id, tenantId }),
-      { expirationTtl: 600 }
-    );
-
-    const authUrl = truelayer.getAuthorizationUrl(state);
-    return c.json({ success: true, data: { authUrl } });
-  } catch (error: any) {
-    return c.json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }, 500);
-  }
-});
-
+// Callback route - no auth required (called by TrueLayer)
 banking.get('/callback', async c => {
   try {
     const code = c.req.query('code');
@@ -114,6 +94,29 @@ banking.get('/callback', async c => {
   } catch (error: any) {
     const frontendUrl = c.env.FRONTEND_URL || 'https://app.finhome360.com';
     return c.redirect(`${frontendUrl}/dashboard/banking?error=${encodeURIComponent(error.message)}`);
+  }
+});
+
+// Apply auth middleware to all other routes
+banking.use('*', authMiddleware, tenantMiddleware);
+
+banking.post('/connect', async c => {
+  try {
+    const user = c.get('user')!;
+    const tenantId = c.get('tenantId')!;
+    const truelayer = new TrueLayerService(c.env);
+    const state = crypto.randomUUID();
+    
+    await c.env.SESSIONS.put(
+      `banking_state:${state}`,
+      JSON.stringify({ userId: user.id, tenantId }),
+      { expirationTtl: 600 }
+    );
+
+    const authUrl = truelayer.getAuthorizationUrl(state);
+    return c.json({ success: true, data: { authUrl } });
+  } catch (error: any) {
+    return c.json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }, 500);
   }
 });
 
