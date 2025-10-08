@@ -56,7 +56,3 @@ TRUELAYER_REDIRECT_URI = "https://finhome.samuel-1e5.workers.dev/api/banking/cal
 # name = "ANALYTICS"
 # class_name = "AnalyticsCounter"
 # script_name = "finhome-api"
-
-[build]
-command = "npm run build"
-
