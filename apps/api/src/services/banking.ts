@@ -94,7 +94,7 @@ export class TrueLayerService {
       client_id: this.config.clientId,
       redirect_uri: this.config.redirectUri,
       scope: 'info accounts balance transactions offline_access',
-      providers: 'uk-ob-all', // UK Open Banking providers
+      // Don't specify providers - let TrueLayer show all available sandbox banks
       enable_mock: 'true', // Enable sandbox mock banks
       ...(state && { state }),
     });
