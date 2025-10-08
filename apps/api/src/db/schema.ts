@@ -92,12 +92,14 @@ export const transactions = sqliteTable('transactions', {
   date: integer('date', { mode: 'timestamp' }).notNull(),
   type: text('type', { enum: ['income', 'expense', 'transfer'] }).notNull(),
   notes: text('notes'),
+  providerTransactionId: text('provider_transaction_id'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 }, (table) => ({
   // Composite indexes for common query patterns (tenant + date/category/type)
   tenantDateIdx: index('idx_transactions_tenant_date').on(table.tenantId, table.date),
   tenantCategoryIdx: index('idx_transactions_tenant_category').on(table.tenantId, table.categoryId),
+  providerIdx: index('idx_transactions_provider').on(table.providerTransactionId),
   tenantTypeIdx: index('idx_transactions_tenant_type').on(table.tenantId, table.type),
   // Single column indexes
   accountIdx: index('idx_transactions_account').on(table.accountId),
@@ -260,4 +262,79 @@ export const tenantMembers = sqliteTable('tenant_members', {
   tenantIdx: index('idx_tenant_members_tenant').on(table.tenantId),
   userIdx: index('idx_tenant_members_user').on(table.userId),
   tenantStatusIdx: index('idx_tenant_members_tenant_status').on(table.tenantId, table.status),
+}));
+
+// Bank Connections Table (Open Banking integration)
+export const bankConnections = sqliteTable('bank_connections', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id')
+    .notNull()
+    .references(() => tenants.id, { onDelete: 'cascade' }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  provider: text('provider').notNull().default('truelayer'),
+  providerConnectionId: text('provider_connection_id').notNull(),
+  institutionId: text('institution_id'),
+  institutionName: text('institution_name'),
+  accessToken: text('access_token'),
+  refreshToken: text('refresh_token'),
+  tokenExpiresAt: integer('token_expires_at'),
+  status: text('status', { enum: ['active', 'disconnected', 'expired', 'error'] }).notNull().default('active'),
+  lastSyncAt: integer('last_sync_at'),
+  lastError: text('last_error'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  tenantIdx: index('idx_bank_connections_tenant').on(table.tenantId),
+  userIdx: index('idx_bank_connections_user').on(table.userId),
+  statusIdx: index('idx_bank_connections_status').on(table.status),
+  providerIdx: index('idx_bank_connections_provider').on(table.provider, table.providerConnectionId),
+}));
+
+// Bank Accounts Table (Links provider accounts to Finhome accounts)
+export const bankAccounts = sqliteTable('bank_accounts', {
+  id: text('id').primaryKey(),
+  connectionId: text('connection_id')
+    .notNull()
+    .references(() => bankConnections.id, { onDelete: 'cascade' }),
+  accountId: text('account_id')
+    .notNull()
+    .references(() => accounts.id, { onDelete: 'cascade' }),
+  providerAccountId: text('provider_account_id').notNull(),
+  accountNumber: text('account_number'),
+  sortCode: text('sort_code'),
+  iban: text('iban'),
+  accountType: text('account_type', { enum: ['checking', 'savings', 'credit_card'] }),
+  currency: text('currency').default('GBP'),
+  syncFromDate: integer('sync_from_date'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  connectionIdx: index('idx_bank_accounts_connection').on(table.connectionId),
+  accountIdx: index('idx_bank_accounts_account').on(table.accountId),
+  providerIdx: index('idx_bank_accounts_provider').on(table.providerAccountId),
+}));
+
+// Transaction Sync History Table (Audit trail)
+export const transactionSyncHistory = sqliteTable('transaction_sync_history', {
+  id: text('id').primaryKey(),
+  connectionId: text('connection_id')
+    .notNull()
+    .references(() => bankConnections.id, { onDelete: 'cascade' }),
+  bankAccountId: text('bank_account_id')
+    .references(() => bankAccounts.id, { onDelete: 'set null' }),
+  syncStartedAt: integer('sync_started_at').notNull(),
+  syncCompletedAt: integer('sync_completed_at'),
+  transactionsFetched: integer('transactions_fetched').default(0),
+  transactionsImported: integer('transactions_imported').default(0),
+  transactionsSkipped: integer('transactions_skipped').default(0),
+  transactionsFailed: integer('transactions_failed').default(0),
+  status: text('status', { enum: ['in_progress', 'completed', 'failed'] }).notNull().default('in_progress'),
+  errorMessage: text('error_message'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  connectionIdx: index('idx_sync_history_connection').on(table.connectionId),
+  statusIdx: index('idx_sync_history_status').on(table.status),
+  dateIdx: index('idx_sync_history_date').on(table.syncStartedAt),
 }));

@@ -156,35 +156,50 @@ function detectFields(headers: string[]): {
 
 /**
  * Parse date from various formats
+ * Prioritizes DD/MM/YYYY (UK) format for slash-separated dates
  */
 function parseDate(dateStr: string): Date | null {
   if (!dateStr) return null;
   
-  // Try standard Date parsing first
-  let date = new Date(dateStr);
-  if (!isNaN(date.getTime())) return date;
-  
-  // Try DD/MM/YYYY format (UK banks like Monzo)
-  const ukMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (ukMatch) {
-    const [, day, month, year] = ukMatch;
-    date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-    if (!isNaN(date.getTime())) return date;
+  // Try DD/MM/YYYY format first (UK banks like Monzo, Barclays, HSBC)
+  const slashMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (slashMatch) {
+    const [, first, second, year] = slashMatch;
+    // Assume DD/MM/YYYY for slash format (UK standard)
+    const day = parseInt(first);
+    const month = parseInt(second) - 1; // JS months are 0-indexed
+    const yearNum = parseInt(year);
+    
+    // Validate it's a valid date
+    const date = new Date(yearNum, month, day);
+    if (!isNaN(date.getTime()) && 
+        date.getFullYear() === yearNum &&
+        date.getMonth() === month &&
+        date.getDate() === day) {
+      return date;
+    }
   }
   
-  // Try MM/DD/YYYY format (US banks)
-  const usMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (usMatch) {
-    const [, month, day, year] = usMatch;
-    date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-    if (!isNaN(date.getTime())) return date;
-  }
-  
-  // Try YYYY-MM-DD format (ISO)
+  // Try YYYY-MM-DD format (ISO standard)
   const isoMatch = dateStr.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
   if (isoMatch) {
     const [, year, month, day] = isoMatch;
-    date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    if (!isNaN(date.getTime())) return date;
+  }
+  
+  // Try MM-DD-YYYY or MM/DD/YYYY with dash (less ambiguous US format)
+  const dashMatch = dateStr.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (dashMatch) {
+    const [, month, day, year] = dashMatch;
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    if (!isNaN(date.getTime())) return date;
+  }
+  
+  // Last resort: try standard Date parsing (works for many formats)
+  // But skip if it looks like DD/MM/YYYY to avoid misinterpretation
+  if (!slashMatch) {
+    const date = new Date(dateStr);
     if (!isNaN(date.getTime())) return date;
   }
   

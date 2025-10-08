@@ -34,10 +34,11 @@ export default function DashboardPage() {
   const [totalBalance, setTotalBalance] = useState(0);
   const [monthlyIncome, setMonthlyIncome] = useState(0);
   const [monthlyExpenses, setMonthlyExpenses] = useState(0);
+  const [timeRange, setTimeRange] = useState<'30days' | 'alltime'>('30days');
 
   useEffect(() => {
     loadDashboardData();
-  }, []);
+  }, [timeRange]);
 
   const loadDashboardData = async () => {
     try {
@@ -63,20 +64,23 @@ export default function DashboardPage() {
         const recent = allTransactions.slice(0, 5);
         setRecentTransactions(recent);
 
-        // Calculate monthly totals (current month)
+        // Calculate totals based on selected time range
         const now = Date.now() / 1000;
-        const startOfMonth = new Date();
-        startOfMonth.setDate(1);
-        startOfMonth.setHours(0, 0, 0, 0);
-        const monthStart = startOfMonth.getTime() / 1000;
+        let filteredTransactions = allTransactions;
 
-        const thisMonthTransactions = allTransactions.filter((t: Transaction) => t.date >= monthStart && t.date <= now);
+        if (timeRange === '30days') {
+          const thirtyDaysAgo = now - (30 * 24 * 60 * 60);
+          filteredTransactions = allTransactions.filter((t: Transaction) => 
+            t.date >= thirtyDaysAgo && t.date <= now
+          );
+        }
+        // For 'alltime', use all transactions (no filtering)
         
-        const income = thisMonthTransactions
+        const income = filteredTransactions
           .filter((t: Transaction) => t.type === 'income')
           .reduce((sum: number, t: Transaction) => sum + t.amount, 0);
         
-        const expenses = thisMonthTransactions
+        const expenses = filteredTransactions
           .filter((t: Transaction) => t.type === 'expense')
           .reduce((sum: number, t: Transaction) => sum + t.amount, 0);
 
@@ -109,8 +113,36 @@ export default function DashboardPage() {
       <DashboardLayout>
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600 mt-1">Welcome back! Here's your financial overview.</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+              <p className="text-gray-600 mt-1">Welcome back! Here's your financial overview.</p>
+            </div>
+            
+            {/* Time Range Toggle */}
+            <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
+              <button
+                onClick={() => setTimeRange('30days')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  timeRange === '30days'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Last 30 Days
+              </button>
+              <button
+                onClick={() => setTimeRange('alltime')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  timeRange === 'alltime'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                All Time
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -128,21 +160,21 @@ export default function DashboardPage() {
           {/* Monthly Income */}
           <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-gray-600 text-sm font-medium">Monthly Income</p>
+              <p className="text-gray-600 text-sm font-medium">Income</p>
               <span className="text-2xl">📈</span>
             </div>
             <p className="text-3xl font-bold text-green-600">{formatCurrency(monthlyIncome)}</p>
-            <p className="text-gray-500 text-sm mt-2">This month</p>
+            <p className="text-gray-500 text-sm mt-2">{timeRange === '30days' ? 'Last 30 days' : 'All time'}</p>
           </div>
 
           {/* Monthly Expenses */}
           <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-gray-600 text-sm font-medium">Monthly Expenses</p>
+              <p className="text-gray-600 text-sm font-medium">Expenses</p>
               <span className="text-2xl">📉</span>
             </div>
             <p className="text-3xl font-bold text-red-600">{formatCurrency(monthlyExpenses)}</p>
-            <p className="text-gray-500 text-sm mt-2">This month</p>
+            <p className="text-gray-500 text-sm mt-2">{timeRange === '30days' ? 'Last 30 days' : 'All time'}</p>
           </div>
 
           {/* Net Savings */}
@@ -154,7 +186,7 @@ export default function DashboardPage() {
             <p className={`text-3xl font-bold ${monthlyIncome - monthlyExpenses >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {formatCurrency(monthlyIncome - monthlyExpenses)}
             </p>
-            <p className="text-gray-500 text-sm mt-2">This month</p>
+            <p className="text-gray-500 text-sm mt-2">{timeRange === '30days' ? 'Last 30 days' : 'All time'}</p>
           </div>
         </div>
 
