@@ -228,4 +228,11 @@ export const api = {
     apiClient('/api/ai/financial-advice', { method: 'POST', body: JSON.stringify(data) }),
   getMonthlySummary: () => apiClient('/api/ai/monthly-summary'),
   getBudgetRecommendations: () => apiClient('/api/ai/budget-recommendations'),
+
+  // Banking / Open Banking
+  connectBank: () => apiClient('/api/banking/connect', { method: 'POST' }),
+  getBankConnections: () => apiClient('/api/banking/connections'),
+  disconnectBank: (connectionId: string) => 
+    apiClient(`/api/banking/connections/${connectionId}`, { method: 'DELETE' }),
 };
+

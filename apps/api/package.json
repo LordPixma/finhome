@@ -20,6 +20,7 @@
     "hono": "^4.9.9",
     "jose": "^6.1.0",
     "next": "14.2.33",
+    "truelayer-client": "^1.3.2",
     "zod": "^3.22.4"
   },
   "devDependencies": {

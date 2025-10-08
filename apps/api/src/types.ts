@@ -13,6 +13,9 @@ export interface Env {
     FRONTEND_URL: string;
     ENVIRONMENT: string;
     RESEND_API_KEY?: string;
+    TRUELAYER_CLIENT_ID: string;
+    TRUELAYER_CLIENT_SECRET: string;
+    TRUELAYER_REDIRECT_URI: string;
   };
   Variables: {
     user?: AuthUser;
