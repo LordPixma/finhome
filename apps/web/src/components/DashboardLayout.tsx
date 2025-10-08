@@ -21,6 +21,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: '📊' },
     { name: 'Accounts', href: '/dashboard/accounts', icon: '🏦' },
+    { name: 'Banking', href: '/dashboard/banking', icon: '🔗' },
     { name: 'Transactions', href: '/dashboard/transactions', icon: '💸' },
     { name: 'Recurring', href: '/dashboard/recurring', icon: '🔁' },
     { name: 'Budgets', href: '/dashboard/budgets', icon: '🎯' },
