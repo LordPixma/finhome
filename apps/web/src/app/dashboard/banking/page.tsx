@@ -1,5 +1,6 @@
 'use client';
 
+// Open Banking Integration - TrueLayer Sandbox
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
