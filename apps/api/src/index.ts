@@ -17,10 +17,14 @@ import profile from './routes/profile';
 import tenant from './routes/tenant';
 import aiRouter from './routes/ai';
 import banking from './routes/banking';
+import testBanking from './routes/test-banking';
 import { getDb, billReminders, users, userSettings } from './db';
 import { createEmailService } from './services/email';
 import type { Env } from './types';
 import type { MessageBatch } from '@cloudflare/workers-types';
+
+console.log('Banking module imported:', banking);
+console.log('Test Banking module imported:', testBanking);
 
 const app = new Hono<Env>();
 
@@ -30,6 +34,36 @@ app.use('*', corsMiddleware);
 // Health check
 app.get('/', c => {
   return c.json({ status: 'ok', service: 'Finhome360 API', version: '1.0.0' });
+});
+
+// Debug endpoint to list all routes
+app.get('/debug/routes', c => {
+  // Hono doesn't expose routes easily, but we can list what we registered
+  return c.json({ 
+    message: 'Route debugging',
+    bankingModuleExists: !!banking,
+    bankingModuleType: typeof banking,
+    testBankingExists: !!testBanking,
+    registeredPaths: [
+      '/api/auth',
+      '/api/accounts',
+      '/api/categories',
+      '/api/transactions',
+      '/api/budgets',
+      '/api/bill-reminders',
+      '/api/files',
+      '/api/analytics',
+      '/api/recurring-transactions',
+      '/api/goals',
+      '/api/settings',
+      '/api/tenant-members',
+      '/api/profile',
+      '/api/tenant',
+      '/api/ai',
+      '/api/banking',
+      '/api/test-banking'
+    ]
+  });
 });
 
 // Test MailChannels verification (temporary debugging endpoint)
@@ -107,7 +141,23 @@ app.route('/api/tenant-members', tenantMembers);
 app.route('/api/profile', profile);
 app.route('/api/tenant', tenant);
 app.route('/api/ai', aiRouter);
-app.route('/api/banking', banking);
+
+// Debug banking route registration
+if (!banking) {
+  console.error('❌ Banking module is undefined!');
+} else {
+  console.log('✅ Banking module loaded:', typeof banking, Object.keys(banking));
+  try {
+    app.route('/api/banking', banking);
+    console.log('✅ Banking route registered successfully');
+  } catch (error) {
+    console.error('❌ Failed to register banking route:', error);
+  }
+}
+
+if (testBanking) {
+  app.route('/api/test-banking', testBanking);
+}
 
 // 404 handler
 app.notFound(c => {

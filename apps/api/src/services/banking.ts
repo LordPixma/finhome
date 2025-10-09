@@ -77,12 +77,17 @@ export interface TransactionsResponse {
 export class TrueLayerService {
   private config: TrueLayerConfig;
 
-  constructor(env: Env['Bindings']) {
+  constructor(env: Env['Bindings'] | any) {
     this.config = {
       clientId: env.TRUELAYER_CLIENT_ID,
       clientSecret: env.TRUELAYER_CLIENT_SECRET,
       redirectUri: env.TRUELAYER_REDIRECT_URI,
     };
+    
+    // Validate config
+    if (!this.config.clientId || !this.config.clientSecret || !this.config.redirectUri) {
+      throw new Error('TrueLayer configuration is missing required values');
+    }
   }
 
   /**
