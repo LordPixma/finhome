@@ -25,10 +25,29 @@ export function getCurrentSubdomain(): string | null {
   // For production (finhome360.com) - check for actual subdomain
   if (parts.length >= 3) {
     const subdomain = parts[0];
-    // Skip system subdomains but allow tenant subdomains
-    if (!['www', 'app', 'api', 'admin'].includes(subdomain)) {
-      return subdomain;
+    // Skip system subdomains (www, api, admin) but allow app and tenant subdomains
+    // 'app' is treated as a special case - no specific tenant required
+    if (['www', 'api', 'admin'].includes(subdomain)) {
+      return null; // System subdomains don't have tenant context
     }
+    // For 'app' subdomain, check if there's a tenant in URL params or localStorage
+    if (subdomain === 'app') {
+      // Check URL parameter first
+      const urlParams = new URLSearchParams(window.location.search);
+      const tenantParam = urlParams.get('tenant');
+      if (tenantParam) {
+        return tenantParam;
+      }
+      // Check localStorage for last used tenant
+      const savedTenant = localStorage.getItem('lastTenant');
+      if (savedTenant) {
+        return savedTenant;
+      }
+      // No tenant context for app subdomain
+      return null;
+    }
+    // Regular tenant subdomain
+    return subdomain;
   }
   
   // Fallback to URL parameter if no valid subdomain found
@@ -81,6 +100,9 @@ export async function redirectToTenantSubdomain(): Promise<void> {
     if (response.success && response.data) {
       const { subdomain } = response.data;
       
+      // Save tenant to localStorage for app subdomain
+      localStorage.setItem('lastTenant', subdomain);
+      
       // Try subdomain approach first (if wildcard DNS is configured)
       const isSubdomainAvailable = await testSubdomainAvailability(subdomain);
       
@@ -91,7 +113,7 @@ export async function redirectToTenantSubdomain(): Promise<void> {
         targetUrl = new URL(`https://${subdomain}.finhome360.com`);
         targetUrl.pathname = '/dashboard';
       } else {
-        // Fallback to URL parameter approach
+        // Fallback to URL parameter approach or stay on app domain
         targetUrl = new URL(window.location.href);
         targetUrl.searchParams.set('tenant', subdomain);
         
@@ -101,12 +123,17 @@ export async function redirectToTenantSubdomain(): Promise<void> {
         }
       }
       
-      window.location.href = targetUrl.toString();
+      // Only redirect if we're actually changing location
+      if (targetUrl.toString() !== window.location.href) {
+        window.location.href = targetUrl.toString();
+      }
     }
   } catch (error) {
     console.error('Failed to redirect with tenant context:', error);
     // Fallback to dashboard without tenant parameter
-    window.location.href = '/dashboard';
+    if (window.location.pathname !== '/dashboard') {
+      window.location.href = '/dashboard';
+    }
   }
 }
 
@@ -117,7 +144,7 @@ export function shouldRedirectToTenantSubdomain(): boolean {
   // Only redirect if:
   // 1. We're on the app domain
   // 2. User is authenticated (has token)
-  // 3. We're not on login/register pages
+  // 3. We're on login/register pages (redirect after successful auth)
   
   if (!isAppDomain()) return false;
   
@@ -127,13 +154,14 @@ export function shouldRedirectToTenantSubdomain(): boolean {
   const hasToken = localStorage.getItem('accessToken');
   if (!hasToken) return false;
   
-  // Don't redirect on auth pages
+  // Only redirect on auth pages (after successful login/register)
   const pathname = window.location.pathname;
   if (pathname === '/login' || pathname === '/register' || pathname === '/') {
-    return false;
+    return true;
   }
   
-  return true;
+  // Don't redirect if already on other pages - they can work without tenant context
+  return false;
 }
 
 /**
