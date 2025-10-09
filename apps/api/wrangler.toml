@@ -6,6 +6,11 @@ compatibility_flags = ["nodejs_compat"]
 # Cloudflare Workers Configuration
 workers_dev = true
 
+# Custom Domain
+routes = [
+  { pattern = "portal.finhome360.com/*", custom_domain = true }
+]
+
 # D1 Database (production)
 [[d1_databases]]
 binding = "DB"
@@ -49,7 +54,7 @@ FRONTEND_URL = "https://app.finhome360.com"
 RESEND_API_KEY = "re_joNCiaUb_4q5et1qJxxfpNbXPhUbq2pFL"
 TRUELAYER_CLIENT_ID = "sandbox-finhome360-366caa"
 TRUELAYER_CLIENT_SECRET = "170f41bf-afe8-46dd-857d-df0eb28a615d"
-TRUELAYER_REDIRECT_URI = "https://finhome.samuel-1e5.workers.dev/api/banking/callback"
+TRUELAYER_REDIRECT_URI = "https://portal.finhome360.com/api/banking/callback"
 
 # Durable Objects (for future use)
 # [[durable_objects.bindings]]
