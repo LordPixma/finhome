@@ -50,6 +50,8 @@ The API (`apps/api/wrangler.toml`) is configured for:
 - **KV**: Session storage (`SESSIONS`) and caching (`CACHE`)
 - **R2**: File storage for CSV/OFX uploads (`FILES`)  
 - **Queues**: Bill reminders processing (`BILL_REMINDERS`)
+- **Workers AI**: AI-powered categorization and insights (binding: `AI`)
+- **Custom Domains**: API at `api.finhome360.com`, Web at `app.finhome360.com`
 
 ### File Structure Patterns
 - Route handlers in `apps/api/src/routes/` export Hono router instances
@@ -78,6 +80,10 @@ The API (`apps/api/wrangler.toml`) is configured for:
 - `/api/goals` - Financial goal tracking with contributions
 - `/api/settings` - User settings (currency, timezone, etc.)
 - `/api/tenant-members` - Multi-user tenant management
+- `/api/ai` - AI-powered features (categorization, insights, financial advice)
+- `/api/banking` - Open Banking integration with TrueLayer
+- `/api/profile` - User profile management with picture uploads
+- `/api/tenant` - Tenant information and settings
 
 ### Queue Consumer Pattern
 The `queue()` export in `apps/api/src/index.ts` processes bill reminder notifications. It fetches reminder details, sends notifications, updates statuses, and stores notifications in KV cache.
@@ -87,6 +93,23 @@ Frontend uses `apps/web/src/lib/api.ts` with automatic token refresh on 401. All
 
 ### Error Handling
 All routes wrap logic in try-catch blocks with standardized error responses. Use specific error codes: `VALIDATION_ERROR`, `UNAUTHORIZED`, `NOT_FOUND`, `INTERNAL_ERROR`, `RATE_LIMIT_EXCEEDED`.
+
+### AI-Powered Features
+- **Transaction Categorization**: `apps/api/src/services/categorization.ts` with 200+ keywords and confidence scoring
+- **Workers AI Integration**: `apps/api/src/services/workersai.service.ts` for insights and financial advice
+- **Dual Email System**: `apps/api/src/services/hybridEmail.ts` - Resend (primary) + MailChannels (fallback)
+- **Auto-categorization Algorithm**: Confidence-based (auto ≥0.8, suggest ≥0.5, manual <0.5)
+
+### Banking Integration
+- **TrueLayer**: Open Banking API integration in `apps/api/src/services/banking.ts`
+- **Bank Connections**: Secure OAuth flow with refresh tokens stored in KV
+- **Account Sync**: Automatic transaction import from connected bank accounts
+
+### Email Notifications
+- **Welcome Emails**: Sent on user registration with tenant-specific dashboard links
+- **Bill Reminders**: Queue-processed notifications with HTML templates
+- **Member Invitations**: Admin-triggered invites for multi-user tenants
+- **Failover System**: Resend → MailChannels with DNS verification
 
 ### Transaction Categories & Data Model
 The core entities are: `tenants` → `users`, `accounts`, `categories`, `transactions`, `budgets`, `billReminders`. All transactions link to accounts and categories with proper foreign key relationships. Extended with `recurringTransactions`, `goals`, `goalContributions`, `userSettings`, `tenantMembers`.

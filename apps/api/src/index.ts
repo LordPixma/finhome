@@ -17,14 +17,10 @@ import profile from './routes/profile';
 import tenant from './routes/tenant';
 import aiRouter from './routes/ai';
 import banking from './routes/banking';
-import testBanking from './routes/test-banking';
 import { getDb, billReminders, users, userSettings } from './db';
 import { createEmailService } from './services/email';
 import type { Env } from './types';
 import type { MessageBatch } from '@cloudflare/workers-types';
-
-console.log('Banking module imported:', banking);
-console.log('Test Banking module imported:', testBanking);
 
 const app = new Hono<Env>();
 
@@ -34,95 +30,6 @@ app.use('*', corsMiddleware);
 // Health check
 app.get('/', c => {
   return c.json({ status: 'ok', service: 'Finhome360 API', version: '1.0.0' });
-});
-
-// Debug endpoint to list all routes
-app.get('/debug/routes', c => {
-  // Hono doesn't expose routes easily, but we can list what we registered
-  return c.json({ 
-    message: 'Route debugging',
-    bankingModuleExists: !!banking,
-    bankingModuleType: typeof banking,
-    testBankingExists: !!testBanking,
-    registeredPaths: [
-      '/api/auth',
-      '/api/accounts',
-      '/api/categories',
-      '/api/transactions',
-      '/api/budgets',
-      '/api/bill-reminders',
-      '/api/files',
-      '/api/analytics',
-      '/api/recurring-transactions',
-      '/api/goals',
-      '/api/settings',
-      '/api/tenant-members',
-      '/api/profile',
-      '/api/tenant',
-      '/api/ai',
-      '/api/banking',
-      '/api/test-banking'
-    ]
-  });
-});
-
-// Test MailChannels verification (temporary debugging endpoint)
-app.get('/test-mailchannels', async c => {
-  console.log('🔍 Starting MailChannels domain verification test...');
-  
-  const testPayload = {
-    personalizations: [
-      {
-        to: [{ email: 'test@example.com' }],
-      },
-    ],
-    from: {
-      email: 'noreply@finhome360.com',
-      name: 'Finhome360 Test',
-    },
-    subject: 'MailChannels Domain Verification Test',
-    content: [
-      {
-        type: 'text/plain',
-        value: 'This is a test to verify MailChannels domain configuration.',
-      },
-    ],
-  };
-
-  try {
-    console.log('📤 Testing MailChannels API...');
-    
-    const response = await fetch('https://api.mailchannels.net/tx/v1/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(testPayload),
-    });
-
-    console.log('📧 MailChannels test response:', {
-      status: response.status,
-      statusText: response.statusText,
-      headers: Object.fromEntries(response.headers),
-    });
-
-    const responseText = await response.text();
-    console.log('📧 Response body:', responseText);
-
-    return c.json({
-      success: response.ok,
-      status: response.status,
-      statusText: response.statusText,
-      body: responseText,
-      headers: Object.fromEntries(response.headers),
-    });
-  } catch (error) {
-    console.error('❌ MailChannels test exception:', error);
-    return c.json({
-      success: false,
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
 });
 
 // Routes
@@ -141,23 +48,7 @@ app.route('/api/tenant-members', tenantMembers);
 app.route('/api/profile', profile);
 app.route('/api/tenant', tenant);
 app.route('/api/ai', aiRouter);
-
-// Debug banking route registration
-if (!banking) {
-  console.error('❌ Banking module is undefined!');
-} else {
-  console.log('✅ Banking module loaded:', typeof banking, Object.keys(banking));
-  try {
-    app.route('/api/banking', banking);
-    console.log('✅ Banking route registered successfully');
-  } catch (error) {
-    console.error('❌ Failed to register banking route:', error);
-  }
-}
-
-if (testBanking) {
-  app.route('/api/test-banking', testBanking);
-}
+app.route('/api/banking', banking);
 
 // 404 handler
 app.notFound(c => {
