@@ -106,7 +106,7 @@ export default function SecurityPage() {
     }
   };
 
-  const handleAssignIncident = (incident: SecurityIncident) => {
+  const handleAssignIncident = (_incident: SecurityIncident) => {
     const assignee = prompt('Assign to:');
     if (assignee) {
       alert(`Incident assigned to ${assignee}`);
