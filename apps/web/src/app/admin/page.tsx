@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { api } from '@/lib/api';
 
 interface PlatformStats {
   totalTenants: number;
@@ -52,76 +53,53 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Mock API calls for now - would need proper global admin auth
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         setError(null);
         
-        // Mock data for demonstration
-        setStats({
-          totalTenants: 42,
-          totalUsers: 156,
-          totalGlobalAdmins: 3,
-          recentTenants: 8,
-          recentUsers: 23,
-        });
-        
-        setTenants([
-          {
-            id: '1',
-            name: 'Acme Corp',
-            subdomain: 'acme',
-            createdAt: '2024-10-20T10:00:00Z',
-          },
-          {
-            id: '2',
-            name: 'TechStart Inc',
-            subdomain: 'techstart',
-            createdAt: '2024-10-19T14:30:00Z',
-          },
+        // Fetch real data from API
+        const [statsResponse, tenantsResponse, auditResponse] = await Promise.all([
+          api.getGlobalAdminStats(),
+          api.getGlobalAdminTenants(1, 10),
+          api.getGlobalAdminAuditLog(1, 10),
         ]);
         
-        setUsers([
-          {
-            id: '1',
-            email: 'admin@acme.com',
-            name: 'John Smith',
-            role: 'admin',
-            isGlobalAdmin: false,
-            tenantName: 'Acme Corp',
-            subdomain: 'acme',
-            createdAt: '2024-10-20T10:05:00Z',
-          },
-          {
-            id: '2',
-            email: 'global@finhome360.com',
-            name: 'Global Admin',
-            role: 'admin',
-            isGlobalAdmin: true,
-            tenantName: '',
-            subdomain: '',
-            createdAt: '2024-10-01T09:00:00Z',
-          },
-        ]);
+        setStats(statsResponse.data as PlatformStats);
+        setTenants((tenantsResponse.data as any)?.tenants || []);
+        setAuditLog((auditResponse.data as any)?.auditLog || []);
         
-        setAuditLog([
-          {
-            id: '1',
-            action: 'view_stats',
-            targetType: 'system',
-            targetId: '',
-            details: '{}',
-            ipAddress: '192.168.1.1',
-            createdAt: '2024-10-26T12:00:00Z',
-            adminName: 'Global Admin',
-            adminEmail: 'global@finhome360.com',
-          },
-        ]);
+        // Extract users from tenants for the users tab
+        const allUsers: User[] = [];
+        const tenantsList = (tenantsResponse.data as any)?.tenants || [];
         
-      } catch (err) {
-        setError('Failed to fetch admin data');
+        for (const tenant of tenantsList) {
+          try {
+            const tenantDetailResponse = await api.getGlobalAdminTenant(tenant.id);
+            const tenantUsers = (tenantDetailResponse.data as any)?.users || [];
+            
+            tenantUsers.forEach((user: any) => {
+              allUsers.push({
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                role: user.role,
+                isGlobalAdmin: user.isGlobalAdmin || false,
+                tenantName: tenant.name,
+                subdomain: tenant.subdomain,
+                createdAt: user.createdAt,
+              });
+            });
+          } catch (error) {
+            console.error(`Failed to fetch users for tenant ${tenant.id}:`, error);
+          }
+        }
+        
+        setUsers(allUsers);
+        
+      } catch (err: any) {
+        setError(`Failed to fetch admin data: ${err.message}`);
         console.error('Admin fetch error:', err);
       } finally {
         setLoading(false);
@@ -139,6 +117,25 @@ export default function AdminDashboard() {
       hour: '2-digit',
       minute: '2-digit',
     });
+  };
+
+  const handleMakeGlobalAdmin = async (userId: string, userName: string) => {
+    if (!confirm(`Are you sure you want to make ${userName} a global admin?`)) {
+      return;
+    }
+    
+    try {
+      await api.makeUserGlobalAdmin(userId);
+      alert(`${userName} is now a global admin`);
+      // Refresh the user list
+      window.location.reload();
+    } catch (error: any) {
+      alert(`Failed to make user global admin: ${error.message}`);
+    }
+  };
+
+  const handleViewTenantDetails = (tenant: Tenant) => {
+    alert(`Viewing details for ${tenant.name} - This would open a detailed view`);
   };
 
   if (loading) {
@@ -254,7 +251,11 @@ export default function AdminDashboard() {
                     <p className="text-xs text-gray-500">Created: {formatDate(tenant.createdAt)}</p>
                   </div>
                   <div className="flex space-x-2">
-                    <Button variant="secondary" size="sm">
+                    <Button 
+                      variant="secondary" 
+                      size="sm"
+                      onClick={() => handleViewTenantDetails(tenant)}
+                    >
                       View Details
                     </Button>
                     <Button variant="danger" size="sm">
@@ -298,7 +299,11 @@ export default function AdminDashboard() {
                   </div>
                   <div className="flex space-x-2">
                     {!user.isGlobalAdmin && (
-                      <Button variant="secondary" size="sm">
+                      <Button 
+                        variant="secondary" 
+                        size="sm"
+                        onClick={() => handleMakeGlobalAdmin(user.id, user.name)}
+                      >
                         Make Global Admin
                       </Button>
                     )}

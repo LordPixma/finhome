@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { api, tokenManager } from '@/lib/api';
 
 export default function GlobalAdminLogin() {
   const [email, setEmail] = useState('');
@@ -18,17 +19,25 @@ export default function GlobalAdminLogin() {
     setError('');
 
     try {
-      // This would be replaced with actual global admin authentication
-      // For now, we'll simulate the login
-      if (email === 'admin@finhome360.com' && password === 'admin123') {
-        // Simulate successful login
-        localStorage.setItem('globalAdminToken', 'mock-token');
+      // Use the real global admin login API
+      const response = await api.globalAdminLogin(email, password);
+      
+      const data = response.data as any;
+      if (response.success && data?.accessToken) {
+        // Store the tokens
+        tokenManager.setTokens(data.accessToken, data.refreshToken);
+        
+        // Store global admin flag
+        localStorage.setItem('isGlobalAdmin', 'true');
+        
+        // Redirect to admin dashboard
         router.push('/admin');
       } else {
         setError('Invalid global admin credentials');
       }
-    } catch (err) {
-      setError('Login failed. Please try again.');
+    } catch (err: any) {
+      setError(err.message || 'Login failed. Please try again.');
+      console.error('Global admin login error:', err);
     } finally {
       setIsLoading(false);
     }

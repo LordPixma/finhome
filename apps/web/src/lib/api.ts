@@ -234,5 +234,37 @@ export const api = {
   getBankConnections: () => apiClient('/api/banking/connections'),
   disconnectBank: (connectionId: string) => 
     apiClient(`/api/banking/connections/${connectionId}`, { method: 'DELETE' }),
+
+  // Global Admin
+  globalAdminLogin: (email: string, password: string) =>
+    apiClient('/api/auth/global-admin-login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+      headers: {}, // No auth header for login
+    }),
+  getGlobalAdminStats: () => apiClient('/api/global-admin/stats'),
+  getGlobalAdminTenants: (page?: number, limit?: number) => {
+    const params = new URLSearchParams();
+    if (page) params.append('page', page.toString());
+    if (limit) params.append('limit', limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return apiClient(`/api/global-admin/tenants${query}`);
+  },
+  getGlobalAdminTenant: (id: string) => apiClient(`/api/global-admin/tenants/${id}`),
+  makeUserGlobalAdmin: (userId: string) => 
+    apiClient(`/api/global-admin/users/${userId}/make-global-admin`, { method: 'PUT' }),
+  getGlobalAdminAuditLog: (page?: number, limit?: number) => {
+    const params = new URLSearchParams();
+    if (page) params.append('page', page.toString());
+    if (limit) params.append('limit', limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return apiClient(`/api/global-admin/audit-log${query}`);
+  },
+  getGlobalAdminSettings: () => apiClient('/api/global-admin/settings'),
+  updateGlobalAdminSetting: (key: string, value: string) =>
+    apiClient(`/api/global-admin/settings/${key}`, {
+      method: 'PUT',
+      body: JSON.stringify({ value }),
+    }),
 };
 
