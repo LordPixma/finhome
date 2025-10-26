@@ -23,6 +23,7 @@ import { adminAnalyticsRouter } from './routes/admin-analytics';
 import { adminTenantRouter } from './routes/admin-tenants';
 import adminSecurity from './routes/admin-security';
 import adminUsers from './routes/admin-users';
+import adminMetrics from './routes/admin-metrics';
 import { getDb, billReminders, users, userSettings } from './db';
 import { createEmailService } from './services/email';
 import type { Env } from './types';
@@ -61,6 +62,7 @@ app.route('/api/admin/analytics', adminAnalyticsRouter);
 app.route('/api/admin/tenants', adminTenantRouter);
 app.route('/api/admin/security', adminSecurity);
 app.route('/api/admin', adminUsers);
+app.route('/api/admin/metrics', adminMetrics);
 
 // 404 handler
 app.notFound(c => {
