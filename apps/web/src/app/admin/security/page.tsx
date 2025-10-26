@@ -9,6 +9,7 @@ import {
   CheckCircleIcon,
   XCircleIcon 
 } from '@heroicons/react/24/outline';
+import { api } from '@/lib/api';
 
 interface SecurityIncident {
   id: string;
@@ -27,67 +28,31 @@ interface SecurityIncident {
   assignedTo?: string;
 }
 
-const mockIncidents: SecurityIncident[] = [
-  {
-    id: '1',
-    type: 'login_failure',
-    severity: 'medium',
-    status: 'open',
-    title: 'Multiple Failed Login Attempts',
-    description: 'User john.doe@acme.corp has 15 failed login attempts in the last 10 minutes',
-    affectedUser: 'john.doe@acme.corp',
-    affectedTenant: 'Acme Corporation',
-    ipAddress: '192.168.1.100',
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-    createdAt: '2024-01-22T14:30:00Z',
-    updatedAt: '2024-01-22T14:30:00Z'
-  },
-  {
-    id: '2',
-    type: 'suspicious_activity',
-    severity: 'high',
-    status: 'investigating',
-    title: 'Unusual API Access Pattern',
-    description: 'API endpoints accessed from multiple countries within 5 minutes',
-    affectedTenant: 'TechStart Inc',
-    ipAddress: '203.0.113.195',
-    createdAt: '2024-01-22T10:15:00Z',
-    updatedAt: '2024-01-22T12:30:00Z',
-    assignedTo: 'Security Team'
-  },
-  {
-    id: '3',
-    type: 'unauthorized_access',
-    severity: 'critical',
-    status: 'resolved',
-    title: 'Admin Panel Access from Unknown Device',
-    description: 'Admin panel accessed from unrecognized device without MFA',
-    affectedUser: 'admin@globalfinance.com',
-    affectedTenant: 'Global Finance Ltd',
-    ipAddress: '198.51.100.42',
-    createdAt: '2024-01-21T08:45:00Z',
-    updatedAt: '2024-01-21T16:20:00Z',
-    resolvedAt: '2024-01-21T16:20:00Z',
-    assignedTo: 'Admin'
-  }
-];
-
 export default function SecurityPage() {
   const [incidents, setIncidents] = useState<SecurityIncident[]>([]);
   const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'investigating' | 'resolved' | 'false_positive'>('all');
   const [severityFilter, setSeverityFilter] = useState<'all' | 'low' | 'medium' | 'high' | 'critical'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'login_failure' | 'suspicious_activity' | 'data_breach' | 'unauthorized_access' | 'malware_detected'>('all');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Simulate API call
-    const timer = setTimeout(() => {
-      setIncidents(mockIncidents);
-      setLoading(false);
-    }, 1000);
-
-    return () => clearTimeout(timer);
+    fetchIncidents();
   }, []);
+
+  const fetchIncidents = async () => {
+    try {
+      setLoading(true);
+      const response = await api.admin.getSecurityIncidents();
+      setIncidents(Array.isArray(response.data) ? response.data : []);
+      setError(null);
+    } catch (err) {
+      console.error('Failed to fetch security incidents:', err);
+      setError('Failed to load security incidents. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredIncidents = incidents.filter(incident => {
     const matchesStatus = statusFilter === 'all' || incident.status === statusFilter;
@@ -100,16 +65,30 @@ export default function SecurityPage() {
     alert(`View incident details for: ${incident.title}`);
   };
 
-  const handleResolveIncident = (incident: SecurityIncident) => {
+  const handleResolveIncident = async (incident: SecurityIncident) => {
     if (confirm(`Mark incident "${incident.title}" as resolved?`)) {
-      alert(`Incident marked as resolved`);
+      try {
+        await api.admin.resolveIncident(incident.id);
+        await fetchIncidents(); // Refresh the list
+        alert(`Incident marked as resolved`);
+      } catch (err) {
+        console.error('Failed to resolve incident:', err);
+        alert('Failed to resolve incident. Please try again.');
+      }
     }
   };
 
-  const handleAssignIncident = (_incident: SecurityIncident) => {
+  const handleAssignIncident = async (incident: SecurityIncident) => {
     const assignee = prompt('Assign to:');
     if (assignee) {
-      alert(`Incident assigned to ${assignee}`);
+      try {
+        await api.admin.assignIncident(incident.id, assignee);
+        await fetchIncidents(); // Refresh the list
+        alert(`Incident assigned to ${assignee}`);
+      } catch (err) {
+        console.error('Failed to assign incident:', err);
+        alert('Failed to assign incident. Please try again.');
+      }
     }
   };
 
@@ -162,6 +141,25 @@ export default function SecurityPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Security & Incidents</h1>
+        </div>
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <div className="text-red-800">{error}</div>
+          <button 
+            onClick={() => fetchIncidents()} 
+            className="mt-2 text-red-600 hover:text-red-800 underline"
+          >
+            Try again
+          </button>
+        </div>
       </div>
     );
   }

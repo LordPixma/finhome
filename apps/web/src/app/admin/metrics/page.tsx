@@ -8,6 +8,7 @@ import {
   ExclamationTriangleIcon,
   CheckCircleIcon 
 } from '@heroicons/react/24/outline';
+import { api } from '@/lib/api';
 
 interface SystemMetrics {
   apiUsage: {
@@ -36,33 +37,6 @@ interface SystemMetrics {
   };
 }
 
-const mockMetrics: SystemMetrics = {
-  apiUsage: {
-    totalRequests: 45672,
-    requestsPerHour: 2134,
-    averageResponseTime: 180,
-    errorRate: 0.02
-  },
-  performance: {
-    cpuUsage: 45,
-    memoryUsage: 62,
-    diskUsage: 34,
-    activeConnections: 156
-  },
-  errors: {
-    total24h: 23,
-    criticalErrors: 2,
-    warningCount: 15,
-    resolved: 18
-  },
-  health: {
-    api: 'healthy',
-    database: 'healthy',
-    cache: 'degraded',
-    queue: 'healthy'
-  }
-};
-
 const mockTimeSeriesData = [
   { time: '00:00', requests: 1200, errors: 5, responseTime: 150 },
   { time: '04:00', requests: 800, errors: 2, responseTime: 140 },
@@ -77,18 +51,70 @@ export default function MetricsPage() {
   const [timeRange, setTimeRange] = useState<'1h' | '24h' | '7d' | '30d'>('24h');
   const [refreshInterval, setRefreshInterval] = useState<number>(30);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
   useEffect(() => {
-    // Simulate API call
-    const timer = setTimeout(() => {
-      setMetrics(mockMetrics);
-      setLoading(false);
-      setLastUpdated(new Date());
-    }, 1000);
+    fetchMetrics();
+  }, [timeRange]);
 
-    return () => clearTimeout(timer);
-  }, []);
+  const fetchMetrics = async () => {
+    try {
+      setLoading(true);
+      const [healthResponse, apiUsageResponse, performanceResponse, errorsResponse] = await Promise.all([
+        api.admin.getHealthCheck(),
+        api.admin.getAPIUsage(),  
+        api.admin.getPerformanceMetrics(),
+        api.admin.getErrorMetrics()
+      ]);
+
+      // Set defaults for missing data
+      const defaultApiUsage = {
+        totalRequests: 0,
+        requestsPerHour: 0,
+        averageResponseTime: 0,
+        errorRate: 0
+      };
+
+      const defaultPerformance = {
+        cpuUsage: 0,
+        memoryUsage: 0,
+        diskUsage: 0,
+        activeConnections: 0
+      };
+
+      const defaultErrors = {
+        total24h: 0,
+        criticalErrors: 0,
+        warningCount: 0,
+        resolved: 0
+      };
+
+      const defaultHealth = {
+        api: 'healthy' as const,
+        database: 'healthy' as const,
+        cache: 'healthy' as const,
+        queue: 'healthy' as const
+      };
+
+      // Combine all the data into our expected format
+      const combinedMetrics: SystemMetrics = {
+        apiUsage: (apiUsageResponse.data as any) || defaultApiUsage,
+        performance: (performanceResponse.data as any) || defaultPerformance,
+        errors: (errorsResponse.data as any) || defaultErrors,
+        health: (healthResponse.data as any) || defaultHealth
+      };
+
+      setMetrics(combinedMetrics);
+      setLastUpdated(new Date());
+      setError(null);
+    } catch (err) {
+      console.error('Failed to fetch metrics:', err);
+      setError('Failed to load system metrics. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     // Auto-refresh metrics
@@ -141,6 +167,25 @@ export default function MetricsPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">System Metrics & Monitoring</h1>
+        </div>
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <div className="text-red-800">{error}</div>
+          <button 
+            onClick={() => fetchMetrics()} 
+            className="mt-2 text-red-600 hover:text-red-800 underline"
+          >
+            Try again
+          </button>
+        </div>
       </div>
     );
   }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { PlusIcon, MagnifyingGlassIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
+import { api } from '@/lib/api';
 
 interface Tenant {
   id: string;
@@ -13,51 +14,30 @@ interface Tenant {
   status: 'active' | 'suspended' | 'pending';
 }
 
-const mockTenants: Tenant[] = [
-  {
-    id: '1',
-    name: 'Acme Corporation',
-    subdomain: 'acme',
-    createdAt: '2024-01-15T10:30:00Z',
-    updatedAt: '2024-01-20T14:15:00Z',
-    userCount: 45,
-    status: 'active'
-  },
-  {
-    id: '2',
-    name: 'TechStart Inc',
-    subdomain: 'techstart',
-    createdAt: '2024-01-10T09:00:00Z',
-    updatedAt: '2024-01-18T16:45:00Z',
-    userCount: 23,
-    status: 'active'
-  },
-  {
-    id: '3',
-    name: 'Global Finance Ltd',
-    subdomain: 'globalfinance',
-    createdAt: '2024-01-05T11:20:00Z',
-    updatedAt: '2024-01-22T13:30:00Z',
-    userCount: 78,
-    status: 'suspended'
-  }
-];
-
 export default function TenantsPage() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'suspended' | 'pending'>('all');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Simulate API call
-    const timer = setTimeout(() => {
-      setTenants(mockTenants);
-      setLoading(false);
-    }, 1000);
-
-    return () => clearTimeout(timer);
+    fetchTenants();
   }, []);
+
+  const fetchTenants = async () => {
+    try {
+      setLoading(true);
+      const response = await api.admin.getTenants();
+      setTenants(Array.isArray(response.data) ? response.data : []);
+      setError(null);
+    } catch (err) {
+      console.error('Failed to fetch tenants:', err);
+      setError('Failed to load tenants. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredTenants = tenants.filter(tenant => {
     const matchesSearch = tenant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -74,15 +54,29 @@ export default function TenantsPage() {
     alert(`View details for ${tenant.name}`);
   };
 
-  const handleSuspendTenant = (tenant: Tenant) => {
+  const handleSuspendTenant = async (tenant: Tenant) => {
     if (confirm(`Are you sure you want to suspend ${tenant.name}?`)) {
-      alert(`${tenant.name} has been suspended`);
+      try {
+        await api.admin.suspendTenant(tenant.id);
+        await fetchTenants(); // Refresh the list
+        alert(`${tenant.name} has been suspended`);
+      } catch (err) {
+        console.error('Failed to suspend tenant:', err);
+        alert('Failed to suspend tenant. Please try again.');
+      }
     }
   };
 
-  const handleActivateTenant = (tenant: Tenant) => {
+  const handleActivateTenant = async (tenant: Tenant) => {
     if (confirm(`Are you sure you want to activate ${tenant.name}?`)) {
-      alert(`${tenant.name} has been activated`);
+      try {
+        await api.admin.activateTenant(tenant.id);
+        await fetchTenants(); // Refresh the list
+        alert(`${tenant.name} has been activated`);
+      } catch (err) {
+        console.error('Failed to activate tenant:', err);
+        alert('Failed to activate tenant. Please try again.');
+      }
     }
   };
 
@@ -104,6 +98,25 @@ export default function TenantsPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Tenant Management</h1>
+        </div>
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <div className="text-red-800">{error}</div>
+          <button 
+            onClick={() => fetchTenants()} 
+            className="mt-2 text-red-600 hover:text-red-800 underline"
+          >
+            Try again
+          </button>
+        </div>
       </div>
     );
   }

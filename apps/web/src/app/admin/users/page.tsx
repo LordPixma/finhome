@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { PlusIcon, MagnifyingGlassIcon, UserIcon, ShieldCheckIcon, ShieldExclamationIcon } from '@heroicons/react/24/outline';
+import { api } from '@/lib/api';
 
 interface User {
   id: string;
@@ -16,61 +17,31 @@ interface User {
   mfaEnabled: boolean;
 }
 
-const mockUsers: User[] = [
-  {
-    id: '1',
-    email: 'john.doe@acme.corp',
-    firstName: 'John',
-    lastName: 'Doe',
-    tenantName: 'Acme Corporation',
-    role: 'admin',
-    status: 'active',
-    lastLogin: '2024-01-22T14:30:00Z',
-    createdAt: '2024-01-15T10:30:00Z',
-    mfaEnabled: true
-  },
-  {
-    id: '2',
-    email: 'jane.smith@techstart.com',
-    firstName: 'Jane',
-    lastName: 'Smith',
-    tenantName: 'TechStart Inc',
-    role: 'user',
-    status: 'active',
-    lastLogin: '2024-01-21T09:15:00Z',
-    createdAt: '2024-01-10T09:00:00Z',
-    mfaEnabled: false
-  },
-  {
-    id: '3',
-    email: 'admin@globalfinance.com',
-    firstName: 'Robert',
-    lastName: 'Johnson',
-    tenantName: 'Global Finance Ltd',
-    role: 'admin',
-    status: 'suspended',
-    lastLogin: '2024-01-18T16:45:00Z',
-    createdAt: '2024-01-05T11:20:00Z',
-    mfaEnabled: true
-  }
-];
-
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'user' | 'admin' | 'super_admin'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'suspended' | 'pending'>('all');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Simulate API call
-    const timer = setTimeout(() => {
-      setUsers(mockUsers);
-      setLoading(false);
-    }, 1000);
-
-    return () => clearTimeout(timer);
+    fetchUsers();
   }, []);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const response = await api.admin.getUsers();
+      setUsers(Array.isArray(response.data) ? response.data : []);
+      setError(null);
+    } catch (err) {
+      console.error('Failed to fetch users:', err);
+      setError('Failed to load users. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -90,22 +61,47 @@ export default function UsersPage() {
     alert(`View details for ${user.firstName} ${user.lastName}`);
   };
 
-  const handleSuspendUser = (user: User) => {
+  const handleSuspendUser = async (user: User) => {
     if (confirm(`Are you sure you want to suspend ${user.firstName} ${user.lastName}?`)) {
-      alert(`${user.firstName} ${user.lastName} has been suspended`);
+      try {
+        await api.admin.suspendUser(user.id);
+        await fetchUsers(); // Refresh the list
+        alert(`${user.firstName} ${user.lastName} has been suspended`);
+      } catch (err) {
+        console.error('Failed to suspend user:', err);
+        alert('Failed to suspend user. Please try again.');
+      }
     }
   };
 
-  const handleActivateUser = (user: User) => {
+  const handleActivateUser = async (user: User) => {
     if (confirm(`Are you sure you want to activate ${user.firstName} ${user.lastName}?`)) {
-      alert(`${user.firstName} ${user.lastName} has been activated`);
+      try {
+        await api.admin.activateUser(user.id);
+        await fetchUsers(); // Refresh the list
+        alert(`${user.firstName} ${user.lastName} has been activated`);
+      } catch (err) {
+        console.error('Failed to activate user:', err);
+        alert('Failed to activate user. Please try again.');
+      }
     }
   };
 
-  const handleToggleMFA = (user: User) => {
+  const handleToggleMFA = async (user: User) => {
     const action = user.mfaEnabled ? 'disable' : 'enable';
     if (confirm(`Are you sure you want to ${action} MFA for ${user.firstName} ${user.lastName}?`)) {
-      alert(`MFA has been ${action}d for ${user.firstName} ${user.lastName}`);
+      try {
+        if (user.mfaEnabled) {
+          await api.admin.disableUserMFA(user.id);
+        } else {
+          await api.admin.enableUserMFA(user.id);
+        }
+        await fetchUsers(); // Refresh the list
+        alert(`MFA has been ${action}d for ${user.firstName} ${user.lastName}`);
+      } catch (err) {
+        console.error(`Failed to ${action} MFA:`, err);
+        alert(`Failed to ${action} MFA. Please try again.`);
+      }
     }
   };
 
@@ -141,6 +137,25 @@ export default function UsersPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
+        </div>
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <div className="text-red-800">{error}</div>
+          <button 
+            onClick={() => fetchUsers()} 
+            className="mt-2 text-red-600 hover:text-red-800 underline"
+          >
+            Try again
+          </button>
+        </div>
       </div>
     );
   }

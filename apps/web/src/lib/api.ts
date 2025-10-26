@@ -2,7 +2,7 @@ import type { ApiResponse } from '@finhome360/shared';
 
 // Use the environment variable if available, otherwise fallback to production API
 const API_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://finhome.samuel-1e5.workers.dev'
+  ? 'https://api.finhome360.com'
   : (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8787');
 
 // Token management
@@ -266,5 +266,68 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify({ value }),
     }),
+
+  // Admin API endpoints
+  admin: {
+    // Tenants
+    getTenants: () => apiClient('/api/admin/tenants'),
+    getTenant: (id: string) => apiClient(`/api/admin/tenants/${id}`),
+    createTenant: (data: any) => apiClient('/api/admin/tenants', { method: 'POST', body: JSON.stringify(data) }),
+    updateTenant: (id: string, data: any) => apiClient(`/api/admin/tenants/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    suspendTenant: (id: string) => apiClient(`/api/admin/tenants/${id}/suspend`, { method: 'POST' }),
+    activateTenant: (id: string) => apiClient(`/api/admin/tenants/${id}/activate`, { method: 'POST' }),
+    
+    // Users
+    getUsers: () => apiClient('/api/admin/users'),
+    getUser: (id: string) => apiClient(`/api/admin/users/${id}`),
+    createUser: (data: any) => apiClient('/api/admin/users', { method: 'POST', body: JSON.stringify(data) }),
+    updateUser: (id: string, data: any) => apiClient(`/api/admin/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    suspendUser: (id: string) => apiClient(`/api/admin/users/${id}/suspend`, { method: 'POST' }),
+    activateUser: (id: string) => apiClient(`/api/admin/users/${id}/activate`, { method: 'POST' }),
+    
+    // MFA
+    getMFAStats: () => apiClient('/api/admin/mfa/stats'),
+    getMFAUsers: () => apiClient('/api/admin/mfa/users'),
+    getMFASettings: () => apiClient('/api/admin/mfa/settings'),
+    updateMFASettings: (data: any) => apiClient('/api/admin/mfa/settings', { method: 'PUT', body: JSON.stringify(data) }),
+    enableUserMFA: (userId: string) => apiClient(`/api/admin/mfa/users/${userId}/enable`, { method: 'POST' }),
+    disableUserMFA: (userId: string) => apiClient(`/api/admin/mfa/users/${userId}/disable`, { method: 'POST' }),
+    resetUserMFA: (userId: string) => apiClient(`/api/admin/mfa/users/${userId}/reset`, { method: 'POST' }),
+    generateBackupCodes: (userId: string) => apiClient(`/api/admin/mfa/users/${userId}/backup-codes`, { method: 'POST' }),
+    
+    // Security
+    getSecurityIncidents: () => apiClient('/api/admin/security/incidents'),
+    getSecurityIncident: (id: string) => apiClient(`/api/admin/security/incidents/${id}`),
+    acknowledgeIncident: (id: string) => apiClient(`/api/admin/security/incidents/${id}/acknowledge`, { method: 'POST' }),
+    resolveIncident: (id: string) => apiClient(`/api/admin/security/incidents/${id}/resolve`, { method: 'POST' }),
+    assignIncident: (id: string, assignee: string) => apiClient(`/api/admin/security/incidents/${id}/assign`, { 
+      method: 'POST', 
+      body: JSON.stringify({ assignee }) 
+    }),
+    
+    // Analytics
+    getTenantAnalytics: () => apiClient('/api/admin/tenant-analytics/overview'),
+    getTenantMetrics: (tenantId: string) => apiClient(`/api/admin/tenant-analytics/tenant/${tenantId}`),
+    getTopTenants: () => apiClient('/api/admin/tenant-analytics/top-tenants'),
+    getUserActivity: () => apiClient('/api/admin/tenant-analytics/user-activity'),
+    
+    // Metrics
+    getSystemMetrics: () => apiClient('/api/admin/metrics/overview'),
+    getAPIUsage: () => apiClient('/api/admin/metrics/api-usage'),
+    getPerformanceMetrics: () => apiClient('/api/admin/metrics/performance'),
+    getErrorMetrics: () => apiClient('/api/admin/metrics/errors'),
+    getHealthCheck: () => apiClient('/api/admin/metrics/health'),
+    
+    // Alerts
+    getAlerts: () => apiClient('/api/admin/metrics/alerts'),
+    getAlert: (id: string) => apiClient(`/api/admin/metrics/alerts/${id}`),
+    acknowledgeAlert: (id: string) => apiClient(`/api/admin/metrics/alerts/${id}/acknowledge`, { method: 'POST' }),
+    resolveAlert: (id: string) => apiClient(`/api/admin/metrics/alerts/${id}/resolve`, { method: 'POST' }),
+    dismissAlert: (id: string) => apiClient(`/api/admin/metrics/alerts/${id}/dismiss`, { method: 'POST' }),
+    getAlertRules: () => apiClient('/api/admin/metrics/alert-rules'),
+    createAlertRule: (data: any) => apiClient('/api/admin/metrics/alert-rules', { method: 'POST', body: JSON.stringify(data) }),
+    updateAlertRule: (id: string, data: any) => apiClient(`/api/admin/metrics/alert-rules/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    toggleAlertRule: (id: string) => apiClient(`/api/admin/metrics/alert-rules/${id}/toggle`, { method: 'POST' }),
+  },
 };
 
