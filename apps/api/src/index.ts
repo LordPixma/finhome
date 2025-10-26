@@ -17,6 +17,7 @@ import profile from './routes/profile';
 import tenant from './routes/tenant';
 import aiRouter from './routes/ai';
 import banking from './routes/banking';
+import globalAdmin from './routes/global-admin';
 import { getDb, billReminders, users, userSettings } from './db';
 import { createEmailService } from './services/email';
 import type { Env } from './types';
@@ -49,6 +50,7 @@ app.route('/api/profile', profile);
 app.route('/api/tenant', tenant);
 app.route('/api/ai', aiRouter);
 app.route('/api/banking', banking);
+app.route('/api/global-admin', globalAdmin);
 
 // 404 handler
 app.notFound(c => {

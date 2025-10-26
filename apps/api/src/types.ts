@@ -24,6 +24,14 @@ export interface Env {
     tenantName?: string;
     validatedData?: any;
     isAppDomain?: boolean;
+    isAdminDomain?: boolean;
+    // Global admin context
+    isGlobalAdmin?: boolean;
+    userId?: string;
+    userName?: string;
+    userEmail?: string;
+    userRole?: string;
+    originalTenantId?: string;
   };
 }
 

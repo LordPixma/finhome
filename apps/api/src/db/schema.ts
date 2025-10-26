@@ -13,12 +13,13 @@ export const tenants = sqliteTable('tenants', {
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
   tenantId: text('tenant_id')
-    .notNull()
     .references(() => tenants.id),
   email: text('email').notNull(),
   name: text('name').notNull(),
   passwordHash: text('password_hash').notNull(),
   role: text('role', { enum: ['admin', 'member'] }).notNull(),
+  // Global admin flag
+  isGlobalAdmin: integer('is_global_admin', { mode: 'boolean' }).default(false),
   // Profile fields
   profilePictureUrl: text('profile_picture_url'),
   bio: text('bio'),
@@ -36,6 +37,7 @@ export const users = sqliteTable('users', {
 }, (table) => ({
   tenantIdx: index('idx_users_tenant').on(table.tenantId),
   emailIdx: index('idx_users_email').on(table.email),
+  globalAdminIdx: index('idx_users_global_admin').on(table.isGlobalAdmin),
 }));
 
 // Accounts Table
@@ -337,4 +339,36 @@ export const transactionSyncHistory = sqliteTable('transaction_sync_history', {
   connectionIdx: index('idx_sync_history_connection').on(table.connectionId),
   statusIdx: index('idx_sync_history_status').on(table.status),
   dateIdx: index('idx_sync_history_date').on(table.syncStartedAt),
+}));
+
+// Global Admin Action Log Table
+export const globalAdminActions = sqliteTable('global_admin_actions', {
+  id: text('id').primaryKey(),
+  adminUserId: text('admin_user_id')
+    .notNull()
+    .references(() => users.id),
+  action: text('action').notNull(), // e.g., 'tenant_created', 'user_suspended', 'tenant_deleted'
+  targetType: text('target_type').notNull(), // 'tenant', 'user', 'system'
+  targetId: text('target_id'), // ID of the affected resource
+  details: text('details'), // JSON string with additional details
+  ipAddress: text('ip_address'),
+  userAgent: text('user_agent'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  adminIdx: index('idx_global_admin_actions_admin').on(table.adminUserId),
+  actionIdx: index('idx_global_admin_actions_action').on(table.action),
+  targetIdx: index('idx_global_admin_actions_target').on(table.targetType, table.targetId),
+  dateIdx: index('idx_global_admin_actions_date').on(table.createdAt),
+}));
+
+// Global Admin Settings Table
+export const globalAdminSettings = sqliteTable('global_admin_settings', {
+  id: text('id').primaryKey(),
+  key: text('key').notNull().unique(),
+  value: text('value'),
+  description: text('description'),
+  updatedBy: text('updated_by').references(() => users.id),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  keyIdx: index('idx_global_admin_settings_key').on(table.key),
 }));

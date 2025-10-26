@@ -18,7 +18,7 @@ async function generateTokens(
   userId: string,
   email: string,
   name: string,
-  tenantId: string,
+  tenantId: string | null,
   role: 'admin' | 'member',
   secret: string
 ): Promise<{ accessToken: string; refreshToken: string }> {
@@ -81,7 +81,7 @@ auth.post('/login', async c => {
       .where(eq(users.email, email))
       .get();
 
-    if (!user) {
+    if (!user || !user.tenantId) {
       return c.json(
         {
           success: false,
@@ -367,7 +367,7 @@ auth.post('/refresh', async c => {
       .where(and(eq(users.id, payload.userId as string), eq(users.tenantId, payload.tenantId as string)))
       .get();
 
-    if (!user) {
+    if (!user || !user.tenantId) {
       return c.json(
         {
           success: false,
@@ -410,6 +410,110 @@ auth.post('/refresh', async c => {
         error: { code: 'INVALID_TOKEN', message: 'Invalid or expired refresh token' },
       },
       401
+    );
+  }
+});
+
+/**
+ * POST /api/auth/global-admin/login
+ * Global admin login (bypasses tenant isolation)
+ */
+auth.post('/global-admin/login', async (c) => {
+  try {
+    const { email, password } = await c.req.json();
+
+    if (!email || !password) {
+      return c.json(
+        {
+          success: false,
+          error: { code: 'VALIDATION_ERROR', message: 'Email and password are required' },
+        },
+        400
+      );
+    }
+
+    const db = getDb(c.env.DB);
+
+    // Find user by email and check if they're a global admin
+    const user = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email))
+      .get();
+
+    if (!user || !user.isGlobalAdmin) {
+      return c.json(
+        {
+          success: false,
+          error: { code: 'UNAUTHORIZED', message: 'Invalid global admin credentials' },
+        },
+        401
+      );
+    }
+
+    const isValidPassword = await bcrypt.compare(password, user.passwordHash);
+    if (!isValidPassword) {
+      return c.json(
+        {
+          success: false,
+          error: { code: 'UNAUTHORIZED', message: 'Invalid global admin credentials' },
+        },
+        401
+      );
+    }
+
+    // Generate special global admin tokens (no tenantId)
+    const secretKey = new TextEncoder().encode(c.env.JWT_SECRET);
+
+    const accessToken = await new jose.SignJWT({
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      isGlobalAdmin: true,
+    })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('1h')
+      .sign(secretKey);
+
+    const refreshToken = await new jose.SignJWT({
+      userId: user.id,
+      isGlobalAdmin: true,
+    })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('7d')
+      .sign(secretKey);
+
+    // Store refresh token in KV
+    const refreshTokenId = crypto.randomUUID();
+    await c.env.SESSIONS.put(`refresh_token:${refreshTokenId}`, refreshToken, {
+      expirationTtl: 7 * 24 * 60 * 60, // 7 days
+    });
+
+    return c.json({
+      success: true,
+      data: {
+        accessToken,
+        refreshToken: refreshTokenId,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          isGlobalAdmin: true,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Global admin login error:', error);
+    return c.json(
+      {
+        success: false,
+        error: { code: 'INTERNAL_ERROR', message: 'Login failed' },
+      },
+      500
     );
   }
 });

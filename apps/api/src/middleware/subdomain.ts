@@ -36,13 +36,22 @@ export async function subdomainMiddleware(c: AppContext, next: Next): Promise<Re
       return;
     }
     
-    // Check if this is the app subdomain by examining the host
+    // Check if this is a system subdomain by examining the host
     const hostWithoutPort = host.split(':')[0];
     const isAppSubdomain = hostWithoutPort.startsWith('app.');
+    const isAdminSubdomain = hostWithoutPort.startsWith('admin.');
     
     if (isAppSubdomain) {
       // For app.finhome360.com, allow access but set a special context
       c.set('isAppDomain', true);
+      await next();
+      return;
+    }
+    
+    if (isAdminSubdomain) {
+      // For admin.finhome360.com, allow access for global admin operations
+      // No tenant context is set - this bypasses tenant isolation
+      c.set('isAdminDomain', true);
       await next();
       return;
     }

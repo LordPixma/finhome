@@ -1,0 +1,110 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+
+export default function GlobalAdminLogin() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const router = useRouter();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+
+    try {
+      // This would be replaced with actual global admin authentication
+      // For now, we'll simulate the login
+      if (email === 'admin@finhome360.com' && password === 'admin123') {
+        // Simulate successful login
+        localStorage.setItem('globalAdminToken', 'mock-token');
+        router.push('/admin');
+      } else {
+        setError('Invalid global admin credentials');
+      }
+    } catch (err) {
+      setError('Login failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
+            Finhome360 Global Admin
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Sign in to access the global administration dashboard
+          </p>
+        </div>
+        
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                Email address
+              </label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin@finhome360.com"
+              />
+            </div>
+            
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                Password
+              </label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+              />
+            </div>
+          </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-md p-3">
+              <div className="text-red-800 text-sm">{error}</div>
+            </div>
+          )}
+
+          <div>
+            <Button
+              type="submit"
+              isLoading={isLoading}
+              className="w-full"
+              size="lg"
+            >
+              {isLoading ? 'Signing in...' : 'Sign in'}
+            </Button>
+          </div>
+          
+          <div className="text-center">
+            <p className="text-xs text-gray-500">
+              Global admin access required. For regular tenant access, use your tenant subdomain.
+            </p>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
