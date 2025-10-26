@@ -40,7 +40,6 @@ export async function testMailChannelsVerification() {
     console.log('📧 MailChannels test response:', {
       status: response.status,
       statusText: response.statusText,
-      headers: Object.fromEntries(response.headers),
     });
 
     const responseText = await response.text();

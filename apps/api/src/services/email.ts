@@ -90,7 +90,6 @@ export class EmailService {
       console.log('📧 MailChannels response:', {
         status: response.status,
         statusText: response.statusText,
-        headers: Object.fromEntries(response.headers),
         timestamp: new Date().toISOString(),
       });
 

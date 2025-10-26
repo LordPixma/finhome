@@ -148,7 +148,7 @@ filesRouter.post('/upload', async c => {
     }
 
     // Create transactions in database
-    const createdTransactions = [];
+    const createdTransactions: any[] = [];
     let importedCount = 0;
     let skippedCount = 0;
     const errors: string[] = [];

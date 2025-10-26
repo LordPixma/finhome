@@ -426,7 +426,7 @@ transactionsRouter.post('/auto-categorize-batch', async c => {
 
     // Apply high-confidence suggestions if autoApply is true
     let appliedCount = 0;
-    const suggestions = [];
+    const suggestions: any[] = [];
 
     for (const [transactionId, result] of results.entries()) {
       if (autoApply && result.action === 'auto-assign' && result.suggestedCategoryId) {
