@@ -3,7 +3,7 @@ import type { ApiResponse } from '@finhome360/shared';
 // Use the environment variable if available, otherwise fallback to production API
 const API_URL = process.env.NODE_ENV === 'production' 
   ? 'https://finhome.samuel-1e5.workers.dev'
-  : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787');
+  : (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8787');
 
 // Token management
 export const tokenManager = {
@@ -237,7 +237,7 @@ export const api = {
 
   // Global Admin
   globalAdminLogin: (email: string, password: string) =>
-    apiClient('/api/auth/global-admin-login', {
+    apiClient('/api/auth/global-admin/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
       headers: {}, // No auth header for login
