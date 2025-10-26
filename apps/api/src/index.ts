@@ -18,6 +18,9 @@ import tenant from './routes/tenant';
 import aiRouter from './routes/ai';
 import banking from './routes/banking';
 import globalAdmin from './routes/global-admin';
+import { mfaRouter } from './routes/admin-mfa';
+import { adminAnalyticsRouter } from './routes/admin-analytics';
+import { adminTenantRouter } from './routes/admin-tenants';
 import { getDb, billReminders, users, userSettings } from './db';
 import { createEmailService } from './services/email';
 import type { Env } from './types';
@@ -51,6 +54,9 @@ app.route('/api/tenant', tenant);
 app.route('/api/ai', aiRouter);
 app.route('/api/banking', banking);
 app.route('/api/global-admin', globalAdmin);
+app.route('/api/admin/mfa', mfaRouter);
+app.route('/api/admin/analytics', adminAnalyticsRouter);
+app.route('/api/admin/tenants', adminTenantRouter);
 
 // 404 handler
 app.notFound(c => {

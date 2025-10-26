@@ -372,3 +372,135 @@ export const globalAdminSettings = sqliteTable('global_admin_settings', {
 }, (table) => ({
   keyIdx: index('idx_global_admin_settings_key').on(table.key),
 }));
+
+// MFA for Global Admins
+export const globalAdminMFA = sqliteTable('global_admin_mfa', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id),
+  secret: text('secret').notNull(),
+  isEnabled: integer('is_enabled', { mode: 'boolean' }).notNull().default(false),
+  backupCodes: text('backup_codes'), // JSON array
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  userIdx: index('idx_global_admin_mfa_user').on(table.userId),
+}));
+
+// Tenant Analytics
+export const tenantAnalytics = sqliteTable('tenant_analytics', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull().references(() => tenants.id),
+  date: text('date').notNull(), // YYYY-MM-DD
+  activeUsers: integer('active_users').default(0),
+  totalTransactions: integer('total_transactions').default(0),
+  totalAmount: real('total_amount').default(0.0),
+  apiRequests: integer('api_requests').default(0),
+  storageUsed: integer('storage_used').default(0),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  tenantDateIdx: index('idx_tenant_analytics_tenant_date').on(table.tenantId, table.date),
+}));
+
+// Tenant Feature Flags
+export const tenantFeatures = sqliteTable('tenant_features', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull().references(() => tenants.id),
+  featureKey: text('feature_key').notNull(),
+  isEnabled: integer('is_enabled', { mode: 'boolean' }).notNull().default(false),
+  config: text('config'), // JSON
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  tenantFeatureIdx: index('idx_tenant_features_tenant_feature').on(table.tenantId, table.featureKey),
+}));
+
+// Global Feature Flags
+export const globalFeatures = sqliteTable('global_features', {
+  id: text('id').primaryKey(),
+  featureKey: text('feature_key').notNull().unique(),
+  isEnabled: integer('is_enabled', { mode: 'boolean' }).notNull().default(false),
+  rolloutPercentage: integer('rollout_percentage').default(100),
+  config: text('config'), // JSON
+  description: text('description'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  featureKeyIdx: index('idx_global_features_key').on(table.featureKey),
+}));
+
+// Admin Sessions
+export const adminSessions = sqliteTable('admin_sessions', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id),
+  ipAddress: text('ip_address'),
+  userAgent: text('user_agent'),
+  locationInfo: text('location_info'), // JSON
+  loginAt: integer('login_at', { mode: 'timestamp' }).notNull(),
+  logoutAt: integer('logout_at', { mode: 'timestamp' }),
+  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+  mfaVerified: integer('mfa_verified', { mode: 'boolean' }).notNull().default(false),
+}, (table) => ({
+  userActiveIdx: index('idx_admin_sessions_user_active').on(table.userId, table.isActive),
+}));
+
+// Security Incidents
+export const securityIncidents = sqliteTable('security_incidents', {
+  id: text('id').primaryKey(),
+  type: text('type').notNull(),
+  severity: text('severity').notNull(),
+  tenantId: text('tenant_id').references(() => tenants.id),
+  userId: text('user_id').references(() => users.id),
+  description: text('description').notNull(),
+  metadata: text('metadata'), // JSON
+  status: text('status').notNull().default('open'),
+  assignedTo: text('assigned_to').references(() => users.id),
+  resolvedAt: integer('resolved_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  severityStatusIdx: index('idx_security_incidents_severity_status').on(table.severity, table.status),
+}));
+
+// System Metrics
+export const systemMetrics = sqliteTable('system_metrics', {
+  id: text('id').primaryKey(),
+  metricName: text('metric_name').notNull(),
+  metricValue: real('metric_value').notNull(),
+  metricType: text('metric_type').notNull(),
+  tags: text('tags'), // JSON
+  timestamp: integer('timestamp', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  nameTimestampIdx: index('idx_system_metrics_name_timestamp').on(table.metricName, table.timestamp),
+}));
+
+// Tenant Billing
+export const tenantBilling = sqliteTable('tenant_billing', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull().unique().references(() => tenants.id),
+  planType: text('plan_type').notNull().default('free'),
+  billingEmail: text('billing_email'),
+  stripeCustomerId: text('stripe_customer_id'),
+  stripeSubscriptionId: text('stripe_subscription_id'),
+  currentPeriodStart: integer('current_period_start', { mode: 'timestamp' }),
+  currentPeriodEnd: integer('current_period_end', { mode: 'timestamp' }),
+  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+// Data Export Requests
+export const dataExportRequests = sqliteTable('data_export_requests', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').references(() => tenants.id),
+  userId: text('user_id').references(() => users.id),
+  requestType: text('request_type').notNull(),
+  email: text('email').notNull(),
+  status: text('status').notNull().default('pending'),
+  fileUrl: text('file_url'),
+  expiresAt: integer('expires_at', { mode: 'timestamp' }),
+  requestedBy: text('requested_by').notNull().references(() => users.id),
+  processedAt: integer('processed_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  statusIdx: index('idx_data_export_status').on(table.status, table.createdAt),
+}));
