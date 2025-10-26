@@ -3,11 +3,92 @@ import { eq, desc } from 'drizzle-orm';
 import { getDb, tenants, users, globalAdminActions, globalAdminSettings } from '../db';
 import { globalAdminMiddleware, logGlobalAdminAction } from '../middleware/global-admin';
 import type { AppContext } from '../types';
+import bcrypt from 'bcryptjs';
+import { randomUUID } from 'node:crypto';
 
 const app = new Hono<{ Bindings: any; Variables: any }>();
 
-// Apply global admin middleware to all routes
-app.use('*', globalAdminMiddleware);
+/**
+ * POST /api/global-admin/create-first-admin
+ * Create the first global admin user (no auth required)
+ */
+app.post('/create-first-admin', async (c: AppContext) => {
+  try {
+    const db = getDb(c.env.DB);
+    const { email, name, password } = await c.req.json();
+
+    // Check if any global admin already exists
+    const existingAdmin = await db
+      .select()
+      .from(users)
+      .where(eq(users.isGlobalAdmin, true))
+      .get();
+
+    if (existingAdmin) {
+      return c.json(
+        {
+          success: false,
+          error: {
+            code: 'ADMIN_EXISTS',
+            message: 'A global admin already exists',
+          },
+        },
+        400
+      );
+    }
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, 10);
+    const userId = randomUUID();
+
+    // Create global admin user (no tenant_id)
+    await db.insert(users).values({
+      id: userId,
+      tenantId: null, // Global admin has no tenant
+      email,
+      name,
+      passwordHash,
+      role: 'admin',
+      isGlobalAdmin: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    return c.json({
+      success: true,
+      data: {
+        message: 'First global admin created successfully',
+        user: {
+          id: userId,
+          email,
+          name,
+          isGlobalAdmin: true,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Create first global admin error:', error);
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to create global admin',
+        },
+      },
+      500
+    );
+  }
+});
+
+// Apply global admin middleware to all routes except create-first-admin
+app.use('/stats', globalAdminMiddleware);
+app.use('/tenants', globalAdminMiddleware);
+app.use('/tenants/*', globalAdminMiddleware);
+app.use('/users/*', globalAdminMiddleware);
+app.use('/audit-log', globalAdminMiddleware);
+app.use('/settings', globalAdminMiddleware);
+app.use('/settings/*', globalAdminMiddleware);
 
 /**
  * GET /api/global-admin/stats
