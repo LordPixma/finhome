@@ -27,23 +27,33 @@ export async function authMiddleware(c: AppContext, next: Next): Promise<Respons
       algorithms: ['HS256'],
     });
 
-    if (!payload.userId || !payload.tenantId) {
+    if (!payload.userId) {
       return c.json({ success: false, error: { code: 'INVALID_TOKEN', message: 'Invalid token payload' } }, 401);
     }
 
-    // Verify that JWT tenantId matches subdomain tenantId (if subdomain is present)
-    const subdomainTenantId = c.get('tenantId');
-    if (subdomainTenantId && subdomainTenantId !== payload.tenantId) {
-      return c.json(
-        {
-          success: false,
-          error: {
-            code: 'TENANT_MISMATCH',
-            message: 'Your account does not have access to this tenant. Please log in to the correct subdomain.',
+    // For global admins, allow access regardless of subdomain
+    const isGlobalAdmin = payload.isGlobalAdmin as boolean;
+    
+    if (!isGlobalAdmin) {
+      // Regular users must have a tenantId
+      if (!payload.tenantId) {
+        return c.json({ success: false, error: { code: 'INVALID_TOKEN', message: 'Invalid token payload' } }, 401);
+      }
+
+      // Verify that JWT tenantId matches subdomain tenantId (if subdomain is present)
+      const subdomainTenantId = c.get('tenantId');
+      if (subdomainTenantId && subdomainTenantId !== payload.tenantId) {
+        return c.json(
+          {
+            success: false,
+            error: {
+              code: 'TENANT_MISMATCH',
+              message: 'Your account does not have access to this tenant. Please log in to the correct subdomain.',
+            },
           },
-        },
-        403
-      );
+          403
+        );
+      }
     }
 
     // Set user context
@@ -51,12 +61,14 @@ export async function authMiddleware(c: AppContext, next: Next): Promise<Respons
       id: payload.userId as string,
       email: payload.email as string,
       name: payload.name as string,
-      tenantId: payload.tenantId as string,
+      tenantId: payload.tenantId as string | null,
       role: payload.role as 'admin' | 'member',
+      isGlobalAdmin: isGlobalAdmin,
     });
     
-    // Set tenantId from JWT if not already set by subdomain middleware
-    if (!subdomainTenantId) {
+    // Set tenantId from JWT if not already set by subdomain middleware (and if not global admin)
+    const subdomainTenantId = c.get('tenantId');
+    if (!subdomainTenantId && payload.tenantId) {
       c.set('tenantId', payload.tenantId as string);
     }
 
@@ -71,7 +83,14 @@ export async function authMiddleware(c: AppContext, next: Next): Promise<Respons
 }
 
 export async function tenantMiddleware(c: AppContext, next: Next): Promise<Response | void> {
+  const user = c.get('user');
   const tenantId = c.get('tenantId');
+
+  // Global admins can bypass tenant requirement
+  if (user?.isGlobalAdmin) {
+    await next();
+    return;
+  }
 
   if (!tenantId) {
     return c.json(

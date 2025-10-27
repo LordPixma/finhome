@@ -10,6 +10,7 @@ interface User {
   name: string;
   role: 'admin' | 'member';
   tenantId: string;
+  isGlobalAdmin?: boolean;
 }
 
 interface AuthContextType {
@@ -56,6 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             name: payload.name || '',
             role: payload.role || 'member',
             tenantId: payload.tenantId,
+            isGlobalAdmin: payload.isGlobalAdmin || payload.is_global_admin,
           });
         } catch (error) {
           console.error('Failed to parse token:', error);
@@ -77,13 +79,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { accessToken, refreshToken, user: userData } = response.data as AuthResponse;
         
         tokenManager.setTokens(accessToken, refreshToken);
-        setUser(userData);
         
-        // Redirect to tenant subdomain if on app domain, otherwise to dashboard
+        // Decode token to check if user is a global admin
+        const payload = JSON.parse(atob(accessToken.split('.')[1]));
+        const isGlobalAdmin = payload.isGlobalAdmin || payload.is_global_admin;
+        
+        // Update user data with global admin flag
+        const updatedUserData = {
+          ...userData,
+          isGlobalAdmin
+        };
+        
+        setUser(updatedUserData);
+        
+        // Redirect based on user type
         if (typeof window !== 'undefined') {
-          if (isAppDomain()) {
+          if (isGlobalAdmin) {
+            // Global admins go directly to admin portal
+            window.location.href = '/admin';
+          } else if (isAppDomain()) {
+            // Regular users go to their tenant subdomain
             await redirectToTenantSubdomain();
           } else {
+            // Or to dashboard if already on subdomain
             window.location.href = '/dashboard';
           }
         }

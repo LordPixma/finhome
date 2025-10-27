@@ -80,8 +80,9 @@ export interface AuthUser {
   id: string;
   email: string;
   name: string;
-  tenantId: string;
+  tenantId: string | null;
   role: 'admin' | 'member';
+  isGlobalAdmin?: boolean;
 }
 
 // AI Categorization Types

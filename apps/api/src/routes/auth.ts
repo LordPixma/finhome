@@ -20,6 +20,7 @@ async function generateTokens(
   name: string,
   tenantId: string | null,
   role: 'admin' | 'member',
+  isGlobalAdmin: boolean,
   secret: string
 ): Promise<{ accessToken: string; refreshToken: string }> {
   const secretKey = new TextEncoder().encode(secret);
@@ -31,6 +32,7 @@ async function generateTokens(
     name,
     tenantId,
     role,
+    isGlobalAdmin,
   })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
@@ -81,7 +83,18 @@ auth.post('/login', async c => {
       .where(eq(users.email, email))
       .get();
 
-    if (!user || !user.tenantId) {
+    if (!user) {
+      return c.json(
+        {
+          success: false,
+          error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' },
+        },
+        401
+      );
+    }
+
+    // For regular users, require tenantId. For global admins, allow null tenantId
+    if (!user.isGlobalAdmin && !user.tenantId) {
       return c.json(
         {
           success: false,
@@ -111,6 +124,7 @@ auth.post('/login', async c => {
       user.name,
       user.tenantId,
       user.role,
+      user.isGlobalAdmin || false,
       c.env.JWT_SECRET
     );
 
@@ -133,6 +147,7 @@ auth.post('/login', async c => {
           name: user.name,
           tenantId: user.tenantId,
           role: user.role,
+          isGlobalAdmin: user.isGlobalAdmin || false,
         },
       },
     });
@@ -241,7 +256,7 @@ auth.post('/register', async c => {
       .run();
 
     // Generate tokens
-    const tokens = await generateTokens(userId, email, name, tenantId, 'admin', c.env.JWT_SECRET);
+    const tokens = await generateTokens(userId, email, name, tenantId, 'admin', false, c.env.JWT_SECRET);
 
     // Store refresh token in KV
     if (c.env.SESSIONS) {
@@ -384,6 +399,7 @@ auth.post('/refresh', async c => {
       user.name,
       user.tenantId,
       user.role,
+      user.isGlobalAdmin || false,
       c.env.JWT_SECRET
     );
 
