@@ -534,4 +534,75 @@ auth.post('/global-admin/login', async (c) => {
   }
 });
 
+// TEMPORARY DEBUG ENDPOINT - Remove after fixing global admin
+auth.post('/debug/fix-global-admin', async (c) => {
+  try {
+    const { secretKey } = await c.req.json();
+    
+    // Security check - only allow with a secret key
+    if (secretKey !== 'fix-global-admin-2025') {
+      return c.json(
+        {
+          success: false,
+          error: { code: 'UNAUTHORIZED', message: 'Invalid secret key' },
+        },
+        401
+      );
+    }
+
+    const db = getDb(c.env.DB);
+
+    // Find the admin user
+    const user = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, 'admin@finhome360.com'))
+      .get();
+
+    if (!user) {
+      return c.json(
+        {
+          success: false,
+          error: { code: 'USER_NOT_FOUND', message: 'Admin user not found' },
+        },
+        404
+      );
+    }
+
+    // Update the user to be a global admin with null tenant
+    await db
+      .update(users)
+      .set({
+        isGlobalAdmin: true,
+        tenantId: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.email, 'admin@finhome360.com'))
+      .run();
+
+    return c.json({
+      success: true,
+      data: {
+        message: 'Global admin user fixed successfully',
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          wasGlobalAdmin: user.isGlobalAdmin,
+          wasTestTenant: user.tenantId,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Fix global admin error:', error);
+    return c.json(
+      {
+        success: false,
+        error: { code: 'INTERNAL_ERROR', message: 'Failed to fix global admin' },
+      },
+      500
+    );
+  }
+});
+
 export default auth;
