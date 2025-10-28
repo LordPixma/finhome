@@ -3,15 +3,31 @@ const API_BASE = 'https://api.finhome360.com';
 async function fixGlobalAdminInProduction() {
   try {
     console.log('🔧 Fixing Global Admin in Production Database...\n');
-    
-    // We'll need to use the Cloudflare D1 HTTP API directly
-    // For now, let's check if we can hit a debug endpoint we can create
-    
-    console.log('Method 1: Try creating a debug endpoint in the API to fix the database');
-    console.log('We need to add a temporary endpoint to fix the global admin user');
-    
-    // Create a test request to see current user status
-    const response = await fetch(`${API_BASE}/api/auth/login`, {
+
+    // Step 1: Hit the temporary fix endpoint
+    console.log('Calling /api/global-admin/fix-database-user ...');
+    const fixResponse = await fetch(`${API_BASE}/api/global-admin/fix-database-user`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        secretKey: 'fix-global-admin-2025'
+      })
+    });
+
+    const fixData = await fixResponse.json();
+    console.log('Fix status:', fixResponse.status);
+    console.log('Fix response:', JSON.stringify(fixData, null, 2));
+
+    if (!fixData.success) {
+      console.error('❌ Fix endpoint failed. Aborting.');
+      return;
+    }
+
+    // Step 2: Log in again to verify token payload
+    console.log('\nRe-testing login to verify token payload...');
+    const loginResponse = await fetch(`${API_BASE}/api/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -21,15 +37,17 @@ async function fixGlobalAdminInProduction() {
         password: 'Admin123!@#'
       })
     });
-    
-    const data = await response.json();
-    console.log('Current login response:', JSON.stringify(data, null, 2));
-    
-    // The issue is that the user doesn't have isGlobalAdmin flag
-    console.log('\n🎯 Issue identified:');
-    console.log('- User exists but isGlobalAdmin flag is not being included in JWT');
-    console.log('- Either the database field is not set to 1, or the auth code is not using it');
-    
+
+    const loginData = await loginResponse.json();
+    console.log('Login status:', loginResponse.status);
+    console.log('Login response:', JSON.stringify(loginData, null, 2));
+
+    if (!loginData.success) {
+      console.error('❌ Login still failing.');
+      return;
+    }
+
+    console.log('\n✅ Fix script completed.');
   } catch (error) {
     console.error('Error:', error);
   }
