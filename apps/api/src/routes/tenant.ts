@@ -20,6 +20,13 @@ router.get('/info', async (c) => {
       );
     }
 
+    if (!user.tenantId) {
+      return c.json(
+        { success: false, error: { code: 'INVALID_TENANT_ID', message: 'Tenant ID is missing' } },
+        400
+      );
+    }
+
     const db = getDb(c.env.DB);
     const tenant = await db
       .select({
