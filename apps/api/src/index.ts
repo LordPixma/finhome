@@ -17,7 +17,6 @@ import profile from './routes/profile';
 import tenant from './routes/tenant';
 import aiRouter from './routes/ai';
 import banking from './routes/banking';
-import testRoute from './routes/test';
 import globalAdmin from './routes/global-admin';
 import { mfaRouter } from './routes/admin-mfa';
 import { adminAnalyticsRouter } from './routes/admin-analytics';
