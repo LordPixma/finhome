@@ -94,19 +94,16 @@ export class TrueLayerService {
    * Generate authorization URL for user to connect their bank
    */
   getAuthorizationUrl(state?: string): string {
-    const params = new URLSearchParams({
-      response_type: 'code',
-      client_id: this.config.clientId,
-      redirect_uri: this.config.redirectUri,
-      scope: 'info accounts balance transactions offline_access',
-      // Include TrueLayer providers including the mock bank
-      providers: 'uk-oauth-all uk-ob-all uk-cs-mock', // Include mock provider along with default providers
-            ...(state && { state }),
-      
-    });
-
-    return `${TRUELAYER_AUTH_URL}/?${params.toString()}`;
-  }
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: this.config.clientId,
+    redirect_uri: this.config.redirectUri,
+    scope: 'info accounts balance transactions offline_access',
+    providers: 'uk-oauth-all uk-ob-all uk-cs-mock',
+    ...(state ? { state } : {}),
+  });
+  return `${TRUELAYER_AUTH_URL}/?${params.toString()}`;
+}
 
   /**
    * Exchange authorization code for access token
