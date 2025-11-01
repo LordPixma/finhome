@@ -6,8 +6,8 @@
 import { Env } from '../types';
 
 // TrueLayer API Configuration
-const TRUELAYER_AUTH_URL = 'https://auth.truelayer-sandbox.com';
-const TRUELAYER_API_URL = 'https://api.truelayer-sandbox.com';
+const TRUELAYER_AUTH_URL = 'https://auth.truelayer.com';
+const TRUELAYER_API_URL = 'https://api.truelayer.com';
 
 // Types
 export interface TrueLayerConfig {

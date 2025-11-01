@@ -52,8 +52,8 @@ ENVIRONMENT = "production"
 JWT_SECRET = "gBk9Lm3Np2Qr5Ts8Wv1Yx4Za7Cd0Ef3Hi6Jl9Mo2Pr5Su8Vx1Za4Cd7Ff0Hi3"
 FRONTEND_URL = "https://app.finhome360.com"
 RESEND_API_KEY = "re_joNCiaUb_4q5et1qJxxfpNbXPhUbq2pFL"
-TRUELAYER_CLIENT_ID = "sandbox-finhome360-366caa"
-TRUELAYER_CLIENT_SECRET = "170f41bf-afe8-46dd-857d-df0eb28a615d"
+TRUELAYER_CLIENT_ID = "finhome360-366caa"
+TRUELAYER_CLIENT_SECRET = "4ffa4688-ded1-42b1-a059-7db5f3339b9f"
 # TEMPORARY: Using workers.dev domain due to custom domain cache issue
 TRUELAYER_REDIRECT_URI = "https://finhome.samuel-1e5.workers.dev/api/banking/callback"
 # Durable Objects (for future use)
