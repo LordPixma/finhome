@@ -98,6 +98,22 @@ banking.get('/callback', async c => {
       }).run();
     }
 
+    // Start automatic transaction sync for the new connection
+    try {
+      const { TransactionSyncService } = await import('../services/transactionSync');
+      const syncService = new TransactionSyncService(db, c.env, tenantId);
+      
+      // Sync in background (don't await to avoid blocking the redirect)
+      syncService.forceSyncConnection(connectionId).catch(error => {
+        console.error('Auto-sync after connection failed:', error);
+      });
+      
+      console.log(`Started automatic transaction sync for connection: ${connectionId}`);
+    } catch (error) {
+      console.warn('Failed to start automatic sync:', error);
+      // Don't fail the connection process if sync fails
+    }
+
     return c.redirect(`${frontendUrl}/dashboard/banking?success=true`);
   } catch (error: any) {
     console.error('Banking callback error:', error);
@@ -223,6 +239,56 @@ banking.delete('/connections/:connectionId', async c => {
     return c.json({ 
       success: false, 
       error: { code: 'INTERNAL_ERROR', message: 'Failed to disconnect bank' } 
+    }, 500);
+  }
+});
+
+// Sync transactions for all connections
+banking.post('/sync', async (c) => {
+  try {
+    const db = getDb(c.env.DB);
+    const tenantId = c.get('tenantId')!;
+    
+    const { TransactionSyncService } = await import('../services/transactionSync');
+    const syncService = new TransactionSyncService(db, c.env, tenantId);
+    
+    // Start sync in background
+    await syncService.syncAllConnections();
+    
+    return c.json({ 
+      success: true, 
+      data: { message: 'Transaction sync started successfully' } 
+    });
+  } catch (error: any) {
+    console.error('Transaction sync error:', error);
+    return c.json({ 
+      success: false, 
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to sync transactions' } 
+    }, 500);
+  }
+});
+
+// Sync transactions for a specific connection
+banking.post('/sync/:connectionId', async (c) => {
+  try {
+    const db = getDb(c.env.DB);
+    const tenantId = c.get('tenantId')!;
+    const connectionId = c.req.param('connectionId');
+    
+    const { TransactionSyncService } = await import('../services/transactionSync');
+    const syncService = new TransactionSyncService(db, c.env, tenantId);
+    
+    await syncService.forceSyncConnection(connectionId);
+    
+    return c.json({ 
+      success: true, 
+      data: { message: 'Connection sync completed successfully' } 
+    });
+  } catch (error: any) {
+    console.error('Connection sync error:', error);
+    return c.json({ 
+      success: false, 
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to sync connection' } 
     }, 500);
   }
 });

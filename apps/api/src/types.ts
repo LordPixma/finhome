@@ -8,6 +8,7 @@ export interface Env {
     CACHE: KVNamespace;
     FILES: R2Bucket;
     BILL_REMINDERS: Queue;
+    TRANSACTION_SYNC: Queue;
     AI: any; // Cloudflare Workers AI binding
     JWT_SECRET: string;
     FRONTEND_URL: string;
