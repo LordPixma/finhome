@@ -33,85 +33,45 @@ npm run dev
 # Database operations (API app)
 cd apps/api
 npm run db:generate    # Generate migrations from schema changes
-npm run db:migrate     # Apply migrations to D1
+## Copilot Instructions for Finhome
 
-# Deploy to production
-npm run build
-npm run deploy --workspace=@finhome/api
+Purpose: get AI coding agents productive fast — understand architecture, conventions, and common edit paths.
 
-# Testing
-npm test              # Run all tests via Turbo
-cd apps/api && npm test  # API-specific Vitest tests
-```
+Quick architecture
+- Monorepo (Turborepo): apps/api (Hono Cloudflare Worker + Drizzle + D1), apps/web (Next.js 14 + App Router), packages/shared (Zod schemas/types).
 
-### Cloudflare Services Integration
-The API (`apps/api/wrangler.toml`) is configured for:
-- **D1**: Primary SQLite database (binding: `DB`)
-- **KV**: Session storage (`SESSIONS`) and caching (`CACHE`)
-- **R2**: File storage for CSV/OFX uploads (`FILES`)  
-- **Queues**: Bill reminders processing (`BILL_REMINDERS`)
-- **Workers AI**: AI-powered categorization and insights (binding: `AI`)
-- **Custom Domains**: API at `api.finhome360.com`, Web at `app.finhome360.com`
+Essential files to read first
+- `apps/api/src/index.ts` — worker entry, route registration, and queue consumer.
+- `apps/api/src/middleware/auth.ts` and `subdomain.ts` — tenant & JWT enforcement.
+- `apps/api/src/db/schema.ts` — Drizzle schema (run migrations after edits).
+- `apps/api/wrangler.toml` & `wrangler-subdomain.toml` — Cloudflare bindings (DB, KV, R2, QUEUE, AI).
+- `packages/shared/src/schemas.ts` — canonical Zod schemas used across API + web.
+- `apps/web/src/lib/api.ts` — frontend apiClient (auto-refresh tokens, handles 401→refresh).
 
-### File Structure Patterns
-- Route handlers in `apps/api/src/routes/` export Hono router instances
-- Middleware in `apps/api/src/middleware/` (auth, validation, rate limiting, CORS)
-- All routes use `authMiddleware` and `tenantMiddleware` for protection
-- Frontend components use Tailwind utility classes
-- Shared validation schemas prevent duplication between API/frontend
+Project-specific conventions (do not invent alternatives)
+- Multi-tenancy: every persistent entity includes `tenantId`. Use `subdomain` middleware to resolve tenant context.
+- API envelope: responses use { success: boolean, data?: any, error?: { code, message } }.
+- Auth: JWT via `jose`; refresh tokens stored in KV `SESSIONS` for revocation. Respect token lifetimes (access 1h, refresh ~7d).
+- Validation: use Zod from `packages/shared` and `validateRequest()` middleware to keep parity between client/server.
+- Rate-limits: implemented using KV; keep same limits when adding endpoints (auth stricter than general API).
 
-### Common Tasks
-- **Add new API endpoint**: Create route in `apps/api/src/routes/`, add to `src/index.ts`, apply auth middleware
-- **Database changes**: Modify `apps/api/src/db/schema.ts`, run `db:generate`, then `db:migrate`
-- **New shared types**: Add to `packages/shared/src/`, export from `index.ts`
-- **Frontend features**: Use Next.js App Router in `apps/web/src/app/`
-- **Add validation**: Create schema in `packages/shared/src/schemas.ts`, use `validateRequest()` middleware
+Common developer tasks (concrete steps)
+- Add API route: create file under `apps/api/src/routes/`, export router and register it in `apps/api/src/index.ts`.
+- DB schema change: edit `apps/api/src/db/schema.ts` then run:
+	- `cd apps/api; npm run db:generate` (create migration)
+	- `npm run db:migrate` (apply to D1)
+- Run locally / tests:
+	- Root development: `npm run dev` (Turborepo handles apps)
+	- Run all tests: `npm test` (Turbo)
+	- API tests: `cd apps/api && npm test` (Vitest)
 
-### API Routes (Complete CRUD)
-- `/api/auth` - Login, register, refresh (with rate limiting)
-- `/api/accounts` - Account management
-- `/api/categories` - Category management
-- `/api/transactions` - Transaction management (includes AI auto-categorization)
-- `/api/budgets` - Budget management
-- `/api/bill-reminders` - Bill reminder management (auto-queues notifications)
-- `/api/analytics` - Spending analytics with 6-month trends
-- `/api/files` - CSV/OFX file upload for transaction import
-- `/api/recurring-transactions` - Recurring transaction management
-- `/api/goals` - Financial goal tracking with contributions
-- `/api/settings` - User settings (currency, timezone, etc.)
-- `/api/tenant-members` - Multi-user tenant management
-- `/api/ai` - AI-powered features (categorization, insights, financial advice)
-- `/api/banking` - Open Banking integration with TrueLayer
-- `/api/profile` - User profile management with picture uploads
-- `/api/tenant` - Tenant information and settings
+Integration notes
+- Cloudflare bindings (DB, KV, R2, QUEUE, AI) are declared in `apps/api/wrangler.toml` — ensure env secrets/bindings are available when running locally or in CI.
+- Queue consumers: `queue()` in `apps/api/src/index.ts` processes bill reminders — follow existing pattern when adding queued work.
 
-### Queue Consumer Pattern
-The `queue()` export in `apps/api/src/index.ts` processes bill reminder notifications. It fetches reminder details, sends notifications, updates statuses, and stores notifications in KV cache.
+When editing please:
+- Keep tenant isolation (always thread tenantId into queries).
+- Reuse shared Zod schemas, and export new types from `packages/shared`.
+- Preserve the standardized API envelope and error codes (`VALIDATION_ERROR`, `UNAUTHORIZED`, `NOT_FOUND`, `INTERNAL_ERROR`, `RATE_LIMIT_EXCEEDED`).
 
-### API Client Pattern
-Frontend uses `apps/web/src/lib/api.ts` with automatic token refresh on 401. All API calls go through `apiClient()` which handles JWT tokens, automatic refresh, and redirects to login on failure.
-
-### Error Handling
-All routes wrap logic in try-catch blocks with standardized error responses. Use specific error codes: `VALIDATION_ERROR`, `UNAUTHORIZED`, `NOT_FOUND`, `INTERNAL_ERROR`, `RATE_LIMIT_EXCEEDED`.
-
-### AI-Powered Features
-- **Transaction Categorization**: `apps/api/src/services/categorization.ts` with 200+ keywords and confidence scoring
-- **Workers AI Integration**: `apps/api/src/services/workersai.service.ts` for insights and financial advice
-- **Dual Email System**: `apps/api/src/services/hybridEmail.ts` - Resend (primary) + MailChannels (fallback)
-- **Auto-categorization Algorithm**: Confidence-based (auto ≥0.8, suggest ≥0.5, manual <0.5)
-
-### Banking Integration
-- **TrueLayer**: Open Banking API integration in `apps/api/src/services/banking.ts`
-- **Bank Connections**: Secure OAuth flow with refresh tokens stored in KV
-- **Account Sync**: Automatic transaction import from connected bank accounts
-
-### Email Notifications
-- **Welcome Emails**: Sent on user registration with tenant-specific dashboard links
-- **Bill Reminders**: Queue-processed notifications with HTML templates
-- **Member Invitations**: Admin-triggered invites for multi-user tenants
-- **Failover System**: Resend → MailChannels with DNS verification
-
-### Transaction Categories & Data Model
-The core entities are: `tenants` → `users`, `accounts`, `categories`, `transactions`, `budgets`, `billReminders`. All transactions link to accounts and categories with proper foreign key relationships. Extended with `recurringTransactions`, `goals`, `goalContributions`, `userSettings`, `tenantMembers`.
-
-When implementing features, always consider tenant isolation and use the established Zod validation patterns from the shared package.
+If anything here is unclear or you want more prescriptive examples (route skeleton, migration example, or a small test), tell me which area and I will expand.
