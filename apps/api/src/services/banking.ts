@@ -101,6 +101,7 @@ export class TrueLayerService {
       scope: 'info accounts balance transactions offline_access',
       // Include TrueLayer providers including the mock bank
       providers: 'uk-oauth-all uk-ob-all uk-cs-mock', // Include mock provider along with default providers
+            ...(state && { state }),
       
     });
 
