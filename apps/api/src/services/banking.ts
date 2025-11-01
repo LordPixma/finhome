@@ -99,9 +99,9 @@ export class TrueLayerService {
       client_id: this.config.clientId,
       redirect_uri: this.config.redirectUri,
       scope: 'info accounts balance transactions offline_access',
-      // Don't specify providers - let TrueLayer show all available sandbox banks
-      enable_mock: 'true', // Enable sandbox mock banks
-      ...(state && { state }),
+      // Include TrueLayer providers including the mock bank
+      providers: 'uk-oauth-all uk-ob-all uk-cs-mock', // Include mock provider along with default providers
+      
     });
 
     return `${TRUELAYER_AUTH_URL}/?${params.toString()}`;
