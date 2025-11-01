@@ -1,8 +1,9 @@
 import type { ApiResponse } from '@finhome360/shared';
 
 // Use the environment variable if available, otherwise fallback to production API
+// TEMPORARY: Using workers.dev domain due to custom domain cache issue
 const API_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://api.finhome360.com'
+  ? 'https://finhome.samuel-1e5.workers.dev'
   : (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8787');
 
 // Token management
