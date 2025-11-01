@@ -17,6 +17,7 @@ import profile from './routes/profile';
 import tenant from './routes/tenant';
 import aiRouter from './routes/ai';
 import banking from './routes/banking';
+import testRoute from './routes/test';
 import globalAdmin from './routes/global-admin';
 import { mfaRouter } from './routes/admin-mfa';
 import { adminAnalyticsRouter } from './routes/admin-analytics';
@@ -129,6 +130,7 @@ app.route('/api/tenant-members', tenantMembers);
 app.route('/api/profile', profile);
 app.route('/api/tenant', tenant);
 app.route('/api/ai', aiRouter);
+
 app.route('/api/banking', banking);
 app.route('/api/global-admin', globalAdmin);
 app.route('/api/admin/mfa', mfaRouter);
