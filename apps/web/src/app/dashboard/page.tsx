@@ -17,6 +17,7 @@ import {
   ChartBarIcon,
   BellIcon,
   ArrowUpTrayIcon,
+  ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 
 interface Account {
@@ -47,6 +48,7 @@ export default function DashboardPage() {
   const [monthlyIncome, setMonthlyIncome] = useState(0);
   const [monthlyExpenses, setMonthlyExpenses] = useState(0);
   const [timeRange, setTimeRange] = useState<'30days' | 'alltime'>('30days');
+  const [syncingAccounts, setSyncingAccounts] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadDashboardData();
@@ -106,7 +108,34 @@ export default function DashboardPage() {
     }
   };
 
+  const syncAccount = async (accountId: string) => {
+    try {
+      // Add account to syncing set
+      setSyncingAccounts(prev => new Set(prev).add(accountId));
 
+      // Trigger sync via API
+      const response = await api.syncAccount(accountId) as any;
+      
+      if (response.success) {
+        // Reload dashboard data to show updated balances and transactions
+        await loadDashboardData();
+        
+        // Show success notification (optional - you can add a toast notification here)
+        console.log('Account synced successfully');
+      } else {
+        console.error('Failed to sync account:', response.error);
+      }
+    } catch (error) {
+      console.error('Error syncing account:', error);
+    } finally {
+      // Remove account from syncing set
+      setSyncingAccounts(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(accountId);
+        return newSet;
+      });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -209,12 +238,33 @@ export default function DashboardPage() {
                   <h2 className="text-2xl font-bold text-gray-900">Accounts</h2>
                   <p className="text-sm text-gray-600 mt-1">Your financial accounts overview</p>
                 </div>
-                <a href="/dashboard/accounts" className="text-primary-600 hover:text-primary-700 font-medium text-sm flex items-center gap-1 transition-colors">
-                  View all 
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </a>
+                <div className="flex items-center gap-3">
+                  {accounts.length > 0 && (
+                    <button
+                      onClick={() => accounts.forEach(account => syncAccount(account.id))}
+                      disabled={syncingAccounts.size > 0}
+                      className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
+                        syncingAccounts.size > 0
+                          ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
+                          : 'border-primary-200 bg-primary-50 text-primary-700 hover:bg-primary-100 hover:border-primary-300'
+                      }`}
+                      title="Sync all accounts"
+                    >
+                      <ArrowPathIcon 
+                        className={`w-4 h-4 ${
+                          syncingAccounts.size > 0 ? 'animate-spin' : ''
+                        }`} 
+                      />
+                      Sync All
+                    </button>
+                  )}
+                  <a href="/dashboard/accounts" className="text-primary-600 hover:text-primary-700 font-medium text-sm flex items-center gap-1 transition-colors">
+                    View all 
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </a>
+                </div>
               </div>
             
             {accounts.length === 0 ? (
@@ -247,12 +297,30 @@ export default function DashboardPage() {
                         <p className="text-sm text-gray-500 capitalize">{account.type} Account</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className={`text-lg font-semibold tabular-nums ${
-                        account.balance >= 0 ? 'text-gray-900' : 'text-error-600'
-                      }`}>
-                        {formatCurrency(account.balance)}
-                      </p>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <p className={`text-lg font-semibold tabular-nums ${
+                          account.balance >= 0 ? 'text-gray-900' : 'text-error-600'
+                        }`}>
+                          {formatCurrency(account.balance)}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => syncAccount(account.id)}
+                        disabled={syncingAccounts.has(account.id)}
+                        className={`p-2 rounded-lg border transition-all duration-200 ${
+                          syncingAccounts.has(account.id)
+                            ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
+                            : 'border-primary-200 bg-primary-50 hover:bg-primary-100 hover:border-primary-300'
+                        }`}
+                        title="Sync account"
+                      >
+                        <ArrowPathIcon 
+                          className={`w-4 h-4 text-primary-600 ${
+                            syncingAccounts.has(account.id) ? 'animate-spin' : ''
+                          }`} 
+                        />
+                      </button>
                     </div>
                   </div>
                 ))}

@@ -119,6 +119,7 @@ export const api = {
   createAccount: (data: any) => apiClient('/api/accounts', { method: 'POST', body: JSON.stringify(data) }),
   updateAccount: (id: string, data: any) => apiClient(`/api/accounts/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteAccount: (id: string) => apiClient(`/api/accounts/${id}`, { method: 'DELETE' }),
+  syncAccount: (id: string) => apiClient(`/api/accounts/${id}/sync`, { method: 'POST' }),
 
   // Categories
   getCategories: () => apiClient('/api/categories'),
