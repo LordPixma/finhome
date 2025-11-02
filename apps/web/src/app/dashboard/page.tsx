@@ -260,148 +260,150 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Recent Transactions - Enhanced Design */}
-          <div className="bg-white rounded-2xl shadow-card border border-gray-100 p-6 hover:shadow-card-hover transition-shadow duration-300">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">Recent Transactions</h2>
-                <p className="text-sm text-gray-600 mt-1">Your latest financial activity</p>
+          {/* Right Column */}
+          <div className="space-y-8">
+            {/* Quick Actions - Moved to right side */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-1 flex items-center gap-2">
+                  <div className="p-1.5 bg-primary-100 rounded-lg">
+                    <PlusIcon className="w-4 h-4 text-primary-600" />
+                  </div>
+                  Quick Actions
+                </h2>
+                <p className="text-sm text-gray-600">Common tasks to manage your finances</p>
               </div>
-              <a href="/dashboard/transactions" className="text-primary-600 hover:text-primary-700 font-medium text-sm flex items-center gap-1 transition-colors">
-                View all 
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </a>
-            </div>
-            
-            {recentTransactions.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
-                  <CreditCardIcon className="w-8 h-8 text-gray-400" />
-                </div>
-                <p className="text-gray-500 mb-6">No transactions yet</p>
+              
+              <div className="space-y-3">
                 <a
                   href="/dashboard/transactions"
-                  className="btn-primary"
+                  className="group flex items-center p-4 rounded-lg border border-gray-200 hover:border-success-300 hover:bg-success-50 transition-all duration-200 w-full"
                 >
-                  Add your first transaction
+                  <div className="w-10 h-10 rounded-lg bg-success-100 group-hover:bg-success-200 flex items-center justify-center transition-colors">
+                    <PlusIcon className="w-5 h-5 text-success-600" />
+                  </div>
+                  <div className="ml-4">
+                    <h3 className="text-base font-semibold text-gray-900">Add Transaction</h3>
+                    <p className="text-sm text-gray-600">Record income or expense</p>
+                  </div>
+                </a>
+                
+                <a
+                  href="/dashboard/budgets"
+                  className="group flex items-center p-4 rounded-lg border border-gray-200 hover:border-warning-300 hover:bg-warning-50 transition-all duration-200 w-full"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-warning-100 group-hover:bg-warning-200 flex items-center justify-center transition-colors">
+                    <ChartBarIcon className="w-5 h-5 text-warning-600" />
+                  </div>
+                  <div className="ml-4">
+                    <h3 className="text-base font-semibold text-gray-900">Set Budget</h3>
+                    <p className="text-sm text-gray-600">Plan your spending</p>
+                  </div>
+                </a>
+                
+                <a
+                  href="/dashboard/bill-reminders"
+                  className="group flex items-center p-4 rounded-lg border border-gray-200 hover:border-error-300 hover:bg-error-50 transition-all duration-200 w-full"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-error-100 group-hover:bg-error-200 flex items-center justify-center transition-colors">
+                    <BellIcon className="w-5 h-5 text-error-600" />
+                  </div>
+                  <div className="ml-4">
+                    <h3 className="text-base font-semibold text-gray-900">Add Reminder</h3>
+                    <p className="text-sm text-gray-600">Never miss bills</p>
+                  </div>
+                </a>
+                
+                <a
+                  href="/dashboard/import"
+                  className="group flex items-center p-4 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-primary-50 transition-all duration-200 w-full"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-primary-100 group-hover:bg-primary-200 flex items-center justify-center transition-colors">
+                    <ArrowUpTrayIcon className="w-5 h-5 text-primary-600" />
+                  </div>
+                  <div className="ml-4">
+                    <h3 className="text-base font-semibold text-gray-900">Import File</h3>
+                    <p className="text-sm text-gray-600">Upload statements</p>
+                  </div>
                 </a>
               </div>
-            ) : (
-              <div className="space-y-2">
-                {recentTransactions.map((transaction, index) => (
-                  <div 
-                    key={transaction.id} 
-                    className="flex items-center p-4 border border-gray-100 rounded-xl hover:shadow-card transition-all duration-200 animate-slide-in"
-                    style={{ '--index': index } as any}
-                  >
-                    <div className="flex items-center flex-1">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-4 shadow-sm ${
-                        transaction.type === 'income' 
-                          ? 'bg-success-50 text-success-600'
-                          : 'bg-error-50 text-error-600'
-                      }`}>
-                        {transaction.type === 'income' ? <ArrowTrendingUpIcon className="w-5 h-5" /> : <ArrowTrendingDownIcon className="w-5 h-5" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-gray-900 truncate" title={transaction.description}>
-                          {transaction.description}
-                        </p>
-                        <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
-                          <span>{formatDate(transaction.date)}</span>
-                          {transaction.category?.name && (
-                            <>
-                              <span>•</span>
-                              <span className="italic">{transaction.category.name}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right ml-4 flex-shrink-0">
-                      <p className={`currency ${transaction.type === 'income' ? 'currency-positive' : 'currency-negative'}`}>
-                        {transaction.type === 'income' ? '+' : ''}{formatCurrency(transaction.amount)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            </div>
+
+            {/* AI Categorization Stats - Now below Quick Actions */}
+            <div>
+              <CategorizationStatsWidget />
+            </div>
           </div>
-
         </div>
 
-        {/* AI Categorization Stats */}
-        <div className="mb-8">
-          <CategorizationStatsWidget />
-        </div>
-
-        {/* Quick Actions - Redesigned */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-1 flex items-center gap-2">
-              <div className="p-1.5 bg-primary-100 rounded-lg">
-                <PlusIcon className="w-4 h-4 text-primary-600" />
-              </div>
-              Quick Actions
-            </h2>
-            <p className="text-sm text-gray-600">Common tasks to manage your finances</p>
+        {/* Recent Transactions - Full Width */}
+        <div className="bg-white rounded-2xl shadow-card border border-gray-100 p-6 hover:shadow-card-hover transition-shadow duration-300 mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Recent Transactions</h2>
+              <p className="text-sm text-gray-600 mt-1">Your latest financial activity</p>
+            </div>
+            <a href="/dashboard/transactions" className="text-primary-600 hover:text-primary-700 font-medium text-sm flex items-center gap-1 transition-colors">
+              View all 
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </a>
           </div>
           
-          <div className="space-y-3">
-            <a
-              href="/dashboard/transactions"
-              className="group flex items-center p-4 rounded-lg border border-gray-200 hover:border-success-300 hover:bg-success-50 transition-all duration-200 w-full"
-            >
-              <div className="w-10 h-10 rounded-lg bg-success-100 group-hover:bg-success-200 flex items-center justify-center transition-colors">
-                <PlusIcon className="w-5 h-5 text-success-600" />
+          {recentTransactions.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                <CreditCardIcon className="w-8 h-8 text-gray-400" />
               </div>
-              <div className="ml-4">
-                <h3 className="text-base font-semibold text-gray-900">Add Transaction</h3>
-                <p className="text-sm text-gray-600">Record income or expense</p>
-              </div>
-            </a>
-            
-            <a
-              href="/dashboard/budgets"
-              className="group flex items-center p-4 rounded-lg border border-gray-200 hover:border-warning-300 hover:bg-warning-50 transition-all duration-200 w-full"
-            >
-              <div className="w-10 h-10 rounded-lg bg-warning-100 group-hover:bg-warning-200 flex items-center justify-center transition-colors">
-                <ChartBarIcon className="w-5 h-5 text-warning-600" />
-              </div>
-              <div className="ml-4">
-                <h3 className="text-base font-semibold text-gray-900">Set Budget</h3>
-                <p className="text-sm text-gray-600">Plan your spending</p>
-              </div>
-            </a>
-            
-            <a
-              href="/dashboard/bill-reminders"
-              className="group flex items-center p-4 rounded-lg border border-gray-200 hover:border-error-300 hover:bg-error-50 transition-all duration-200 w-full"
-            >
-              <div className="w-10 h-10 rounded-lg bg-error-100 group-hover:bg-error-200 flex items-center justify-center transition-colors">
-                <BellIcon className="w-5 h-5 text-error-600" />
-              </div>
-              <div className="ml-4">
-                <h3 className="text-base font-semibold text-gray-900">Add Reminder</h3>
-                <p className="text-sm text-gray-600">Never miss bills</p>
-              </div>
-            </a>
-            
-            <a
-              href="/dashboard/import"
-              className="group flex items-center p-4 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-primary-50 transition-all duration-200 w-full"
-            >
-              <div className="w-10 h-10 rounded-lg bg-primary-100 group-hover:bg-primary-200 flex items-center justify-center transition-colors">
-                <ArrowUpTrayIcon className="w-5 h-5 text-primary-600" />
-              </div>
-              <div className="ml-4">
-                <h3 className="text-base font-semibold text-gray-900">Import File</h3>
-                <p className="text-sm text-gray-600">Upload statements</p>
-              </div>
-            </a>
-          </div>
+              <p className="text-gray-500 mb-6">No transactions yet</p>
+              <a
+                href="/dashboard/transactions"
+                className="btn-primary"
+              >
+                Add your first transaction
+              </a>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {recentTransactions.map((transaction, index) => (
+                <div 
+                  key={transaction.id} 
+                  className="flex items-center p-4 border border-gray-100 rounded-xl hover:shadow-card transition-all duration-200 animate-slide-in"
+                  style={{ '--index': index } as any}
+                >
+                  <div className="flex items-center flex-1">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-4 shadow-sm ${
+                      transaction.type === 'income' 
+                        ? 'bg-success-50 text-success-600'
+                        : 'bg-error-50 text-error-600'
+                    }`}>
+                      {transaction.type === 'income' ? <ArrowTrendingUpIcon className="w-5 h-5" /> : <ArrowTrendingDownIcon className="w-5 h-5" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-900 truncate" title={transaction.description}>
+                        {transaction.description}
+                      </p>
+                      <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
+                        <span>{formatDate(transaction.date)}</span>
+                        {transaction.category?.name && (
+                          <>
+                            <span>•</span>
+                            <span className="italic">{transaction.category.name}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right ml-4 flex-shrink-0">
+                    <p className={`currency ${transaction.type === 'income' ? 'currency-positive' : 'currency-negative'}`}>
+                      {transaction.type === 'income' ? '+' : ''}{formatCurrency(transaction.amount)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         </div>
