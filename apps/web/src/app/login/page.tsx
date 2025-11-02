@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
-import Image from 'next/image';
 import Footer from '@/components/Footer';
+import TextLogo from '@/components/TextLogo';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -36,13 +36,7 @@ export default function LoginPage() {
         <div className="relative z-10 flex flex-col justify-center px-12 lg:px-16 xl:px-24 text-white w-full">
           <div className="max-w-xl mx-auto">
             <div className="mb-6">
-              <Image
-                src="/logo.png"
-                alt="Finhome360"
-                width={200}
-                height={60}
-                className="h-16 w-auto filter brightness-0 invert"
-              />
+              <TextLogo size="xl" variant="light" />
             </div>
             <p className="text-2xl mb-8 text-blue-100">
               Your Family's Financial Command Center
@@ -102,13 +96,7 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
           <div className="lg:hidden text-center mb-8">
-            <Image
-              src="/logo.png"
-              alt="Finhome360"
-              width={200}
-              height={60}
-              className="h-12 w-auto mx-auto mb-2"
-            />
+            <TextLogo size="lg" variant="dark" className="mx-auto mb-2" />
             <p className="text-gray-600">Family Financial Management</p>
           </div>
 

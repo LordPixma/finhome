@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import TextLogo from '@/components/TextLogo';
 import {
   HomeIcon,
   UserGroupIcon,
@@ -61,14 +62,9 @@ export default function AdminLayout({
             </button>
           </div>
           <div className="flex-shrink-0 flex items-center px-4">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">F</span>
-              </div>
-              <div className="flex flex-col">
-                <h1 className="text-gray-900 text-lg font-semibold">Finhome360</h1>
-                <span className="text-xs text-red-600 font-medium">Admin Portal</span>
-              </div>
+            <div className="flex flex-col">
+              <TextLogo size="md" variant="dark" />
+              <span className="text-xs text-red-600 font-medium mt-1">Admin Portal</span>
             </div>
           </div>
           <div className="mt-5 flex-1 h-0 overflow-y-auto">
@@ -98,14 +94,9 @@ export default function AdminLayout({
         <div className="flex flex-col w-64">
           <div className="flex flex-col flex-grow pt-5 pb-4 overflow-y-auto bg-white border-r border-gray-200">
             <div className="flex items-center flex-shrink-0 px-4">
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">F</span>
-                </div>
-                <div className="flex flex-col">
-                  <h1 className="text-gray-900 text-lg font-semibold">Finhome360</h1>
-                  <span className="text-xs text-red-600 font-medium">Admin Portal</span>
-                </div>
+              <div className="flex flex-col">
+                <TextLogo size="md" variant="dark" />
+                <span className="text-xs text-red-600 font-medium mt-1">Admin Portal</span>
               </div>
             </div>
             <div className="mt-5 flex-1 flex flex-col">

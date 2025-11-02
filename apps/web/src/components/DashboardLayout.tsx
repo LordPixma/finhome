@@ -4,8 +4,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import Image from 'next/image';
 import Footer from './Footer';
+import TextLogo from './TextLogo';
 import { TenantIndicator } from './TenantIndicator';
 import {
   HomeIcon,
@@ -66,13 +66,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             >
               <Bars3Icon className="w-6 h-6" />
             </button>
-            <Image
-              src="/logo.png"
-              alt="Finhome360"
-              width={120}
-              height={32}
-              className="h-8 w-auto"
-            />
+            <TextLogo size="sm" variant="dark" />
           </div>
           <button
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
@@ -90,13 +84,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="flex flex-col flex-grow bg-white shadow-sidebar overflow-y-auto">
           {/* Logo Section */}
           <div className="flex items-center flex-shrink-0 px-6 py-6 border-b border-gray-200">
-            <Image
-              src="/logo.png"
-              alt="Finhome360"
-              width={160}
-              height={40}
-              className="h-10 w-auto"
-            />
+            <TextLogo size="lg" variant="dark" />
           </div>
 
           {/* Navigation */}
@@ -149,13 +137,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <div className="flex flex-col h-full">
               {/* Header */}
               <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
-                <Image
-                  src="/logo.png"
-                  alt="Finhome360"
-                  width={120}
-                  height={32}
-                  className="h-8 w-auto"
-                />
+                <TextLogo size="sm" variant="dark" />
                 <button 
                   onClick={() => setIsMobileMenuOpen(false)} 
                   className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"

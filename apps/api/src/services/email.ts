@@ -456,7 +456,7 @@ If you have any questions, feel free to reach out to ${data.inviterName}.
         <body>
           <div class="container">
             <div class="header">
-              <div class="logo">💰 Finhome360</div>
+              <div class="logo"><strong style="color: #1e40af;">FINHOME</strong><strong style="color: #3b82f6;">360</strong></div>
               <h1>Welcome to Your Financial Journey!</h1>
               <p>Hi ${data.userName}, you've successfully created your ${data.tenantName} account</p>
             </div>

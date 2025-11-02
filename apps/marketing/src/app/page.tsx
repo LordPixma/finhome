@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import Image from 'next/image'
+import TextLogo from '@/components/TextLogo'
 import { 
   ChartBarIcon, 
   CurrencyPoundIcon, 
@@ -17,13 +17,7 @@ export default function Home() {
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex justify-between items-center">
             <div className="flex items-center">
-              <Image
-                src="/logo.png"
-                alt="Finhome360"
-                width={180}
-                height={60}
-                className="h-12 w-auto filter brightness-0 invert drop-shadow-lg"
-              />
+              <TextLogo size="lg" variant="light" className="drop-shadow-lg" />
             </div>
             <Link 
               href="https://app.finhome360.com"
@@ -295,13 +289,7 @@ export default function Home() {
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div className="col-span-2">
               <div className="flex items-center mb-4">
-                <Image
-                  src="/logo.png"
-                  alt="Finhome360"
-                  width={160}
-                  height={50}
-                  className="h-10 w-auto filter brightness-0 invert"
-                />
+                <TextLogo size="lg" variant="light" />
               </div>
               <p className="text-gray-400 max-w-md">
                 Your comprehensive financial management platform. Get a 360° view of your finances and 
