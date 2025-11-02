@@ -127,6 +127,48 @@ banking.get('/test', async c => {
   return c.json({ success: true, data: { message: 'Banking routes are working!' } });
 });
 
+// Debug endpoint to check TrueLayer configuration and connection status
+banking.get('/debug', async c => {
+  try {
+    const hasClientId = !!c.env.TRUELAYER_CLIENT_ID;
+    const hasClientSecret = !!c.env.TRUELAYER_CLIENT_SECRET;
+    const hasRedirectUri = !!c.env.TRUELAYER_REDIRECT_URI;
+    
+    // Test TrueLayer service initialization
+    let trueLayerInitialized = false;
+    let trueLayerError = null;
+    
+    try {
+      const truelayer = new TrueLayerService(c.env);
+      trueLayerInitialized = true;
+    } catch (error: any) {
+      trueLayerError = error.message;
+    }
+
+    return c.json({ 
+      success: true, 
+      data: { 
+        message: 'Banking debug info',
+        config: {
+          hasClientId,
+          hasClientSecret,
+          hasRedirectUri,
+          redirectUri: c.env.TRUELAYER_REDIRECT_URI,
+        },
+        trueLayer: {
+          initialized: trueLayerInitialized,
+          error: trueLayerError
+        }
+      } 
+    });
+  } catch (error: any) {
+    return c.json({ 
+      success: false, 
+      error: { code: 'DEBUG_ERROR', message: error.message } 
+    });
+  }
+});
+
 // Apply auth middleware to all other routes
 banking.use('*', authMiddleware, tenantMiddleware);
 
@@ -314,6 +356,71 @@ banking.post('/sync/:connectionId', async (c) => {
     return c.json({ 
       success: false, 
       error: { code: 'INTERNAL_ERROR', message: 'Failed to sync connection' } 
+    }, 500);
+  }
+});
+
+// Debug connection status for authenticated users
+banking.get('/debug/connections', async (c) => {
+  try {
+    const db = getDb(c.env.DB);
+    const tenantId = c.get('tenantId')!;
+    
+    // Get all connections with detailed info
+    const connections = await db
+      .select()
+      .from(bankConnections)
+      .where(eq(bankConnections.tenantId, tenantId))
+      .all();
+
+    // Get bank accounts for each connection
+    const connectionsWithAccounts = await Promise.all(
+      connections.map(async (connection) => {
+        const accounts = await db
+          .select()
+          .from(bankAccounts)
+          .where(eq(bankAccounts.connectionId, connection.id))
+          .all();
+        
+        // Test TrueLayer access token if connection is active
+        let tokenValid = false;
+        let tokenError = null;
+        
+        if (connection.status === 'active' && connection.accessToken) {
+          try {
+            const truelayer = new TrueLayerService(c.env);
+            await truelayer.getAccounts(connection.accessToken);
+            tokenValid = true;
+          } catch (error: any) {
+            tokenError = error.message;
+          }
+        }
+        
+        return {
+          ...connection,
+          accounts,
+          tokenStatus: {
+            valid: tokenValid,
+            error: tokenError,
+            expired: connection.tokenExpiresAt ? Date.now() > connection.tokenExpiresAt : null
+          }
+        };
+      })
+    );
+
+    return c.json({ 
+      success: true, 
+      data: { 
+        connections: connectionsWithAccounts,
+        totalConnections: connections.length,
+        activeConnections: connections.filter(c => c.status === 'active').length
+      } 
+    });
+  } catch (error: any) {
+    console.error('Debug connections error:', error);
+    return c.json({ 
+      success: false, 
+      error: { code: 'INTERNAL_ERROR', message: error.message } 
     }, 500);
   }
 });
