@@ -349,49 +349,57 @@ export default function DashboardPage() {
             <p className="text-sm text-gray-600">Common tasks to manage your finances</p>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="space-y-3">
             <a
               href="/dashboard/transactions"
-              className="group flex flex-col items-center p-6 rounded-xl border border-gray-200 hover:border-success-300 hover:bg-success-50 transition-all duration-200 min-h-[140px]"
+              className="group flex items-center p-4 rounded-lg border border-gray-200 hover:border-success-300 hover:bg-success-50 transition-all duration-200 w-full"
             >
-              <div className="w-14 h-14 rounded-xl bg-success-100 group-hover:bg-success-200 flex items-center justify-center mb-4 transition-colors">
-                <PlusIcon className="w-7 h-7 text-success-600" />
+              <div className="w-10 h-10 rounded-lg bg-success-100 group-hover:bg-success-200 flex items-center justify-center transition-colors">
+                <PlusIcon className="w-5 h-5 text-success-600" />
               </div>
-              <h3 className="text-base font-semibold text-gray-900 mb-2 text-center">Add Transaction</h3>
-              <p className="text-sm text-gray-600 text-center leading-relaxed">Record income or expense</p>
+              <div className="ml-4">
+                <h3 className="text-base font-semibold text-gray-900">Add Transaction</h3>
+                <p className="text-sm text-gray-600">Record income or expense</p>
+              </div>
             </a>
             
             <a
               href="/dashboard/budgets"
-              className="group flex flex-col items-center p-6 rounded-xl border border-gray-200 hover:border-warning-300 hover:bg-warning-50 transition-all duration-200 min-h-[140px]"
+              className="group flex items-center p-4 rounded-lg border border-gray-200 hover:border-warning-300 hover:bg-warning-50 transition-all duration-200 w-full"
             >
-              <div className="w-14 h-14 rounded-xl bg-warning-100 group-hover:bg-warning-200 flex items-center justify-center mb-4 transition-colors">
-                <ChartBarIcon className="w-7 h-7 text-warning-600" />
+              <div className="w-10 h-10 rounded-lg bg-warning-100 group-hover:bg-warning-200 flex items-center justify-center transition-colors">
+                <ChartBarIcon className="w-5 h-5 text-warning-600" />
               </div>
-              <h3 className="text-base font-semibold text-gray-900 mb-2 text-center">Set Budget</h3>
-              <p className="text-sm text-gray-600 text-center leading-relaxed">Plan your spending</p>
+              <div className="ml-4">
+                <h3 className="text-base font-semibold text-gray-900">Set Budget</h3>
+                <p className="text-sm text-gray-600">Plan your spending</p>
+              </div>
             </a>
             
             <a
               href="/dashboard/bill-reminders"
-              className="group flex flex-col items-center p-6 rounded-xl border border-gray-200 hover:border-error-300 hover:bg-error-50 transition-all duration-200 min-h-[140px]"
+              className="group flex items-center p-4 rounded-lg border border-gray-200 hover:border-error-300 hover:bg-error-50 transition-all duration-200 w-full"
             >
-              <div className="w-14 h-14 rounded-xl bg-error-100 group-hover:bg-error-200 flex items-center justify-center mb-4 transition-colors">
-                <BellIcon className="w-7 h-7 text-error-600" />
+              <div className="w-10 h-10 rounded-lg bg-error-100 group-hover:bg-error-200 flex items-center justify-center transition-colors">
+                <BellIcon className="w-5 h-5 text-error-600" />
               </div>
-              <h3 className="text-base font-semibold text-gray-900 mb-2 text-center">Add Reminder</h3>
-              <p className="text-sm text-gray-600 text-center leading-relaxed">Never miss bills</p>
+              <div className="ml-4">
+                <h3 className="text-base font-semibold text-gray-900">Add Reminder</h3>
+                <p className="text-sm text-gray-600">Never miss bills</p>
+              </div>
             </a>
             
             <a
               href="/dashboard/import"
-              className="group flex flex-col items-center p-6 rounded-xl border border-gray-200 hover:border-primary-300 hover:bg-primary-50 transition-all duration-200 min-h-[140px]"
+              className="group flex items-center p-4 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-primary-50 transition-all duration-200 w-full"
             >
-              <div className="w-14 h-14 rounded-xl bg-primary-100 group-hover:bg-primary-200 flex items-center justify-center mb-4 transition-colors">
-                <ArrowUpTrayIcon className="w-7 h-7 text-primary-600" />
+              <div className="w-10 h-10 rounded-lg bg-primary-100 group-hover:bg-primary-200 flex items-center justify-center transition-colors">
+                <ArrowUpTrayIcon className="w-5 h-5 text-primary-600" />
               </div>
-              <h3 className="text-base font-semibold text-gray-900 mb-2 text-center">Import File</h3>
-              <p className="text-sm text-gray-600 text-center leading-relaxed">Upload statements</p>
+              <div className="ml-4">
+                <h3 className="text-base font-semibold text-gray-900">Import File</h3>
+                <p className="text-sm text-gray-600">Upload statements</p>
+              </div>
             </a>
           </div>
         </div>
