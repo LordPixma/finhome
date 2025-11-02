@@ -238,27 +238,15 @@ export default function TransactionsPage() {
 
     try {
       setIsBulkOperating(true);
-      const response = await fetch('/api/transactions/bulk', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-        },
-        body: JSON.stringify({ transactionIds: selectedTransactions })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete transactions');
-      }
-
-      const result = await response.json();
+      const result = await api.bulkDeleteTransactions(selectedTransactions);
+      
       if (result.success) {
-        setNotification({ message: result.data.message, type: 'success' });
+        setNotification({ message: (result.data as any)?.message || 'Transactions deleted successfully', type: 'success' });
         setSelectedTransactions([]);
         setIsSelectMode(false);
         await loadData();
       } else {
-        throw new Error(result.error?.message || 'Failed to delete transactions');
+        throw new Error((result.error as any)?.message || 'Failed to delete transactions');
       }
     } catch (error) {
       console.error('Bulk delete error:', error);
@@ -273,27 +261,15 @@ export default function TransactionsPage() {
 
     try {
       setIsBulkOperating(true);
-      const response = await fetch('/api/transactions/bulk/archive', {
-        method: 'PATCH', 
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-        },
-        body: JSON.stringify({ transactionIds: selectedTransactions })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to archive transactions');
-      }
-
-      const result = await response.json();
+      const result = await api.bulkArchiveTransactions(selectedTransactions);
+      
       if (result.success) {
-        setNotification({ message: result.data.message, type: 'success' });
+        setNotification({ message: (result.data as any)?.message || 'Transactions archived successfully', type: 'success' });
         setSelectedTransactions([]);
         setIsSelectMode(false);
         await loadData();
       } else {
-        throw new Error(result.error?.message || 'Failed to archive transactions');
+        throw new Error((result.error as any)?.message || 'Failed to archive transactions');
       }
     } catch (error) {
       console.error('Bulk archive error:', error);
@@ -306,28 +282,16 @@ export default function TransactionsPage() {
   const handleClearAll = async () => {
     try {
       setIsBulkOperating(true);
-      const response = await fetch('/api/transactions/clear', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-        },
-        body: JSON.stringify({ confirm: 'DELETE_ALL_TRANSACTIONS' })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to clear all transactions');
-      }
-
-      const result = await response.json();
+      const result = await api.clearAllTransactions();
+      
       if (result.success) {
-        setNotification({ message: result.data.message, type: 'success' });
+        setNotification({ message: (result.data as any)?.message || 'All transactions cleared successfully', type: 'success' });
         setSelectedTransactions([]);
         setIsSelectMode(false);
         setShowClearConfirm(false);
         await loadData();
       } else {
-        throw new Error(result.error?.message || 'Failed to clear transactions');
+        throw new Error((result.error as any)?.message || 'Failed to clear transactions');
       }
     } catch (error) {
       console.error('Clear all error:', error);

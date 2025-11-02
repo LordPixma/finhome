@@ -134,6 +134,23 @@ export const api = {
   updateTransaction: (id: string, data: any) => apiClient(`/api/transactions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteTransaction: (id: string) => apiClient(`/api/transactions/${id}`, { method: 'DELETE' }),
   
+  // Bulk Operations
+  bulkDeleteTransactions: (transactionIds: string[]) => 
+    apiClient('/api/transactions/bulk', { 
+      method: 'DELETE', 
+      body: JSON.stringify({ transactionIds }) 
+    }),
+  bulkArchiveTransactions: (transactionIds: string[]) => 
+    apiClient('/api/transactions/bulk/archive', { 
+      method: 'PATCH', 
+      body: JSON.stringify({ transactionIds }) 
+    }),
+  clearAllTransactions: () => 
+    apiClient('/api/transactions/clear', { 
+      method: 'DELETE', 
+      body: JSON.stringify({ confirm: 'DELETE_ALL_TRANSACTIONS' }) 
+    }),
+  
   // AI Categorization
   autoCategorizeTransaction: (id: string) => 
     apiClient(`/api/transactions/${id}/auto-categorize`, { method: 'POST' }),
