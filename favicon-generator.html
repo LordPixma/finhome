@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Favicon Generator</title>
+</head>
+<body>
+    <canvas id="favicon" width="32" height="32"></canvas>
+    <script>
+        const canvas = document.getElementById('favicon');
+        const ctx = canvas.getContext('2d');
+        
+        // Background circle
+        ctx.fillStyle = '#1e40af';
+        ctx.beginPath();
+        ctx.arc(16, 16, 16, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // F letter
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('F', 16, 12);
+        
+        // 360 text
+        ctx.fillStyle = '#93c5fd';
+        ctx.font = 'bold 8px Arial';
+        ctx.fillText('360', 16, 24);
+        
+        // Convert to data URL and log it
+        const dataURL = canvas.toDataURL('image/png');
+        console.log('Use this as favicon:', dataURL);
+    </script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+<svg width="180" height="180" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="90" cy="90" r="90" fill="#1e40af"/>
+  
+  <!-- F360 text -->
+  <text x="90" y="70" text-anchor="middle" font-family="Arial, sans-serif" font-size="60" font-weight="bold" fill="white">F</text>
+  <text x="90" y="130" text-anchor="middle" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="#93c5fd">360</text>
+</svg>
