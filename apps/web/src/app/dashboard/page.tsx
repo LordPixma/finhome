@@ -337,92 +337,61 @@ export default function DashboardPage() {
           <CategorizationStatsWidget />
         </div>
 
-        {/* Professional Quick Actions */}
-        <div className="bg-gradient-to-br from-white via-white to-blue-50/20 rounded-2xl shadow-card-hover border border-gray-100 p-8 mb-8">
-          <div className="mb-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-3">
-                  <div className="p-2.5 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl shadow-sm">
-                    <PlusIcon className="w-5 h-5 text-white" />
-                  </div>
-                  Quick Actions
-                </h2>
-                <p className="text-gray-600">Common tasks to manage your finances efficiently</p>
+        {/* Quick Actions - Redesigned */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-1 flex items-center gap-2">
+              <div className="p-1.5 bg-primary-100 rounded-lg">
+                <PlusIcon className="w-4 h-4 text-primary-600" />
               </div>
-              <div className="hidden sm:flex text-xs text-gray-500 bg-gray-50 px-3 py-1.5 rounded-full border">
-                Most Used Features
-              </div>
-            </div>
+              Quick Actions
+            </h2>
+            <p className="text-sm text-gray-600">Common tasks to manage your finances</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <a
               href="/dashboard/transactions"
-              className="group bg-white rounded-2xl border border-gray-200 p-6 text-center relative overflow-hidden hover:shadow-xl hover:border-success-300 transition-all duration-300 hover:-translate-y-2"
+              className="group flex flex-col items-center p-4 rounded-lg border border-gray-200 hover:border-success-300 hover:bg-success-50 transition-all duration-200"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-success-50/40 to-success-100/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="absolute top-0 right-0 w-24 h-24 bg-success-500/5 rounded-full -translate-y-12 translate-x-12 group-hover:scale-150 transition-transform duration-500"></div>
-              <div className="relative">
-                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-success-500 to-success-600 text-white flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg group-hover:shadow-2xl">
-                  <PlusIcon className="w-10 h-10" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">Add Transaction</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">Record income or expense quickly and easily</p>
-                <div className="mt-4 text-xs text-success-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-success-50 px-3 py-1.5 rounded-full inline-block">
-                  Get started →
-                </div>
+              <div className="w-12 h-12 rounded-lg bg-success-100 group-hover:bg-success-200 flex items-center justify-center mb-3 transition-colors">
+                <PlusIcon className="w-6 h-6 text-success-600" />
               </div>
+              <h3 className="text-sm font-medium text-gray-900 mb-1 text-center">Add Transaction</h3>
+              <p className="text-xs text-gray-600 text-center leading-tight">Record income or expense</p>
             </a>
+            
             <a
               href="/dashboard/budgets"
-              className="group bg-white rounded-2xl border border-gray-200 p-6 text-center relative overflow-hidden hover:shadow-xl hover:border-warning-300 transition-all duration-300 hover:-translate-y-2"
+              className="group flex flex-col items-center p-4 rounded-lg border border-gray-200 hover:border-warning-300 hover:bg-warning-50 transition-all duration-200"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-warning-50/40 to-warning-100/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="absolute top-0 right-0 w-24 h-24 bg-warning-500/5 rounded-full -translate-y-12 translate-x-12 group-hover:scale-150 transition-transform duration-500"></div>
-              <div className="relative">
-                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-warning-500 to-warning-600 text-white flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg group-hover:shadow-2xl">
-                  <ChartBarIcon className="w-10 h-10" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">Set Budget</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">Plan your spending and track progress</p>
-                <div className="mt-4 text-xs text-warning-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-warning-50 px-3 py-1.5 rounded-full inline-block">
-                  Create budget →
-                </div>
+              <div className="w-12 h-12 rounded-lg bg-warning-100 group-hover:bg-warning-200 flex items-center justify-center mb-3 transition-colors">
+                <ChartBarIcon className="w-6 h-6 text-warning-600" />
               </div>
+              <h3 className="text-sm font-medium text-gray-900 mb-1 text-center">Set Budget</h3>
+              <p className="text-xs text-gray-600 text-center leading-tight">Plan your spending</p>
             </a>
+            
             <a
               href="/dashboard/bill-reminders"
-              className="group bg-white rounded-2xl border border-gray-200 p-6 text-center relative overflow-hidden hover:shadow-xl hover:border-error-300 transition-all duration-300 hover:-translate-y-2"
+              className="group flex flex-col items-center p-4 rounded-lg border border-gray-200 hover:border-error-300 hover:bg-error-50 transition-all duration-200"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-error-50/40 to-error-100/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="absolute top-0 right-0 w-24 h-24 bg-error-500/5 rounded-full -translate-y-12 translate-x-12 group-hover:scale-150 transition-transform duration-500"></div>
-              <div className="relative">
-                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-error-500 to-error-600 text-white flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg group-hover:shadow-2xl">
-                  <BellIcon className="w-10 h-10" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">Add Reminder</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">Never miss a bill or payment due date</p>
-                <div className="mt-4 text-xs text-error-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-error-50 px-3 py-1.5 rounded-full inline-block">
-                  Set reminder →
-                </div>
+              <div className="w-12 h-12 rounded-lg bg-error-100 group-hover:bg-error-200 flex items-center justify-center mb-3 transition-colors">
+                <BellIcon className="w-6 h-6 text-error-600" />
               </div>
+              <h3 className="text-sm font-medium text-gray-900 mb-1 text-center">Add Reminder</h3>
+              <p className="text-xs text-gray-600 text-center leading-tight">Never miss bills</p>
             </a>
+            
             <a
               href="/dashboard/import"
-              className="group bg-white rounded-2xl border border-gray-200 p-6 text-center relative overflow-hidden hover:shadow-xl hover:border-primary-300 transition-all duration-300 hover:-translate-y-2"
+              className="group flex flex-col items-center p-4 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-primary-50 transition-all duration-200"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-primary-50/40 to-primary-100/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="absolute top-0 right-0 w-24 h-24 bg-primary-500/5 rounded-full -translate-y-12 translate-x-12 group-hover:scale-150 transition-transform duration-500"></div>
-              <div className="relative">
-                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 text-white flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg group-hover:shadow-2xl">
-                  <ArrowUpTrayIcon className="w-10 h-10" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">Import File</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">Upload bank statements and CSV files</p>
-                <div className="mt-4 text-xs text-primary-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-primary-50 px-3 py-1.5 rounded-full inline-block">
-                  Upload now →
-                </div>
+              <div className="w-12 h-12 rounded-lg bg-primary-100 group-hover:bg-primary-200 flex items-center justify-center mb-3 transition-colors">
+                <ArrowUpTrayIcon className="w-6 h-6 text-primary-600" />
               </div>
+              <h3 className="text-sm font-medium text-gray-900 mb-1 text-center">Import File</h3>
+              <p className="text-xs text-gray-600 text-center leading-tight">Upload statements</p>
             </a>
           </div>
         </div>
