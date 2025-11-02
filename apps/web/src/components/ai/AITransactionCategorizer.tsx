@@ -108,7 +108,7 @@ export function AITransactionCategorizer() {
 
         {/* AI Suggestion */}
         {suggestion && (
-          <div className="bg-white rounded-lg p-4 border-l-4 border-green-500">
+          <div className="bg-gradient-to-r from-green-50 to-green-50/30 rounded-lg p-4 border border-green-100">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="font-semibold text-green-900">AI Recommendation</h4>

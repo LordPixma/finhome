@@ -65,7 +65,19 @@ if ($DryRun) {
         "goals",
         "goal_contributions",
         "user_settings",
-        "tenant_members"
+        "tenant_members",
+        "bank_connections",
+        "bank_accounts",
+        "transaction_sync_history",
+        "admin_sessions",
+        "global_admin_mfa",
+        "global_admin_actions",
+        "tenant_analytics",
+        "tenant_features",
+        "tenant_billing",
+        "security_incidents",
+        "data_export_requests",
+        "system_metrics"
     )
     
     foreach ($table in $tables) {

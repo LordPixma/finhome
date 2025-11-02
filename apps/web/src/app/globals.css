@@ -155,17 +155,17 @@
   
   .stat-card-success {
     @apply card hover:shadow-card-hover;
-    @apply border-l-4 border-l-success-500;
+    @apply bg-gradient-to-r from-success-50 to-success-50/30 border-success-100;
   }
   
   .stat-card-error {
     @apply card hover:shadow-card-hover;
-    @apply border-l-4 border-l-error-500;
+    @apply bg-gradient-to-r from-error-50 to-error-50/30 border-error-100;
   }
   
   .stat-card-warning {
     @apply card hover:shadow-card-hover;
-    @apply border-l-4 border-l-warning-500;
+    @apply bg-gradient-to-r from-warning-50 to-warning-50/30 border-warning-100;
   }
   
   /* Navigation Components */

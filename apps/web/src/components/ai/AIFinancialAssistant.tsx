@@ -92,7 +92,7 @@ export function AIFinancialAssistant() {
 
         {/* AI Response */}
         {advice && (
-          <div className="bg-white rounded-lg p-4 border-l-4 border-purple-500">
+          <div className="bg-gradient-to-r from-purple-50 to-purple-50/30 rounded-lg p-4 border border-purple-100">
             <div className="flex items-start gap-3">
               <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0 mt-1">
                 🧠

@@ -62,7 +62,7 @@ export function AISpendingSummary() {
         {/* AI Summary */}
         {summary && !loading && (
           <div className="space-y-4">
-            <div className="bg-white rounded-lg p-4 border-l-4 border-blue-500">
+            <div className="bg-gradient-to-r from-blue-50 to-blue-50/30 rounded-lg p-4 border border-blue-100">
               <div className="flex items-start gap-3">
                 <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-1">
                   🧠
