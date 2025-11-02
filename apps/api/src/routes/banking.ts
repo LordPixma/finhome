@@ -1,6 +1,6 @@
 ﻿import { Hono } from 'hono';
-import { eq, and } from 'drizzle-orm';
-import { getDb, bankConnections, bankAccounts, accounts } from '../db';
+import { eq, and, sql } from 'drizzle-orm';
+import { getDb, bankConnections, bankAccounts, accounts, transactions } from '../db';
 import { authMiddleware, tenantMiddleware } from '../middleware/auth';
 import { TrueLayerService } from '../services/banking';
 import type { Env } from '../types';
@@ -220,19 +220,44 @@ banking.delete('/connections/:connectionId', async c => {
       }
     }
 
-    // Update connection status
+    // Get all bank accounts linked to this connection before deletion
+    const linkedBankAccounts = await db
+      .select({ accountId: bankAccounts.accountId })
+      .from(bankAccounts)
+      .where(eq(bankAccounts.connectionId, connectionId))
+      .all();
+
+    // Clear providerTransactionId from transactions to show they're no longer synced
+    // This preserves transaction history while indicating disconnection
+    for (const bankAccount of linkedBankAccounts) {
+      await db
+        .update(transactions)
+        .set({ 
+          providerTransactionId: null,
+          notes: sql`CASE 
+            WHEN ${transactions.notes} IS NULL THEN 'Bank disconnected - no longer syncing'
+            ELSE ${transactions.notes} || ' (Bank disconnected - no longer syncing)'
+          END`,
+          updatedAt: new Date()
+        })
+        .where(
+          and(
+            eq(transactions.accountId, bankAccount.accountId),
+            eq(transactions.tenantId, tenantId)
+          )
+        )
+        .run();
+    }
+
+    // Delete the bank connection (cascades to bankAccounts and sync history)
     await db
-      .update(bankConnections)
-      .set({ 
-        status: 'disconnected', 
-        updatedAt: new Date() 
-      })
+      .delete(bankConnections)
       .where(eq(bankConnections.id, connectionId))
       .run();
 
     return c.json({ 
       success: true, 
-      data: { message: 'Bank disconnected successfully' } 
+      data: { message: 'Bank connection deleted successfully. Transaction history preserved.' } 
     });
   } catch (error: any) {
     console.error('Banking disconnect error:', error);
