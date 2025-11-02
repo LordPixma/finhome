@@ -73,7 +73,7 @@ export function StatCard({
 
       {/* Value Section */}
       <div className="mb-4">
-        <p className={`text-currency-xl tabular-nums ${getTextColor()}`}>
+        <p className={`text-3xl font-bold font-mono ${getTextColor()}`}>
           {value}
         </p>
       </div>

@@ -99,11 +99,12 @@
 @layer components {
   /* Button Components */
   .btn-primary {
-    @apply bg-primary-500 hover:bg-primary-700 active:bg-primary-800 text-white;
+    @apply bg-primary-500 hover:bg-primary-600 active:bg-primary-700 text-white;
     @apply px-6 py-3 rounded-lg font-semibold text-base;
     @apply transition-all duration-200 ease-out;
     @apply focus:ring-2 focus:ring-primary-200 focus:ring-offset-2;
     @apply disabled:bg-primary-300 disabled:cursor-not-allowed;
+    @apply shadow-sm hover:shadow-md;
     @apply h-11; /* 44px - touch friendly */
   }
   
