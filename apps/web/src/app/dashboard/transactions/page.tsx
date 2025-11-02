@@ -7,6 +7,10 @@ import { Modal, Input, Select, Button } from '@/components/ui';
 import { api } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
 import { AutoCategorizeButton, BatchCategorizeButton } from '@/components/ai';
+import { 
+  TrashIcon, 
+  ArchiveBoxIcon
+} from '@heroicons/react/24/outline';
 
 interface Transaction {
   id: string;
@@ -67,6 +71,12 @@ export default function TransactionsPage() {
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  
+  // Bulk operations state
+  const [selectedTransactions, setSelectedTransactions] = useState<string[]>([]);
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [isBulkOperating, setIsBulkOperating] = useState(false);
 
   const itemsPerPage = 10;
 
@@ -200,6 +210,130 @@ export default function TransactionsPage() {
     } catch (error) {
       console.error('Failed to delete transaction:', error);
       alert('Failed to delete transaction');
+    }
+  };
+
+  // Bulk operation handlers
+  const handleSelectTransaction = (id: string) => {
+    setSelectedTransactions(prev => 
+      prev.includes(id) 
+        ? prev.filter(tid => tid !== id)
+        : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = () => {
+    const allIds = paginatedTransactions.map(t => t.id);
+    setSelectedTransactions(
+      selectedTransactions.length === allIds.length ? [] : allIds
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedTransactions.length === 0) return;
+    
+    if (!confirm(`Are you sure you want to delete ${selectedTransactions.length} selected transaction${selectedTransactions.length > 1 ? 's' : ''}?`)) {
+      return;
+    }
+
+    try {
+      setIsBulkOperating(true);
+      const response = await fetch('/api/transactions/bulk', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        },
+        body: JSON.stringify({ transactionIds: selectedTransactions })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete transactions');
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        setNotification({ message: result.data.message, type: 'success' });
+        setSelectedTransactions([]);
+        setIsSelectMode(false);
+        await loadData();
+      } else {
+        throw new Error(result.error?.message || 'Failed to delete transactions');
+      }
+    } catch (error) {
+      console.error('Bulk delete error:', error);
+      setNotification({ message: 'Failed to delete transactions', type: 'error' });
+    } finally {
+      setIsBulkOperating(false);
+    }
+  };
+
+  const handleBulkArchive = async () => {
+    if (selectedTransactions.length === 0) return;
+
+    try {
+      setIsBulkOperating(true);
+      const response = await fetch('/api/transactions/bulk/archive', {
+        method: 'PATCH', 
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        },
+        body: JSON.stringify({ transactionIds: selectedTransactions })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to archive transactions');
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        setNotification({ message: result.data.message, type: 'success' });
+        setSelectedTransactions([]);
+        setIsSelectMode(false);
+        await loadData();
+      } else {
+        throw new Error(result.error?.message || 'Failed to archive transactions');
+      }
+    } catch (error) {
+      console.error('Bulk archive error:', error);
+      setNotification({ message: 'Failed to archive transactions', type: 'error' });
+    } finally {
+      setIsBulkOperating(false);
+    }
+  };
+
+  const handleClearAll = async () => {
+    try {
+      setIsBulkOperating(true);
+      const response = await fetch('/api/transactions/clear', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        },
+        body: JSON.stringify({ confirm: 'DELETE_ALL_TRANSACTIONS' })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to clear all transactions');
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        setNotification({ message: result.data.message, type: 'success' });
+        setSelectedTransactions([]);
+        setIsSelectMode(false);
+        setShowClearConfirm(false);
+        await loadData();
+      } else {
+        throw new Error(result.error?.message || 'Failed to clear transactions');
+      }
+    } catch (error) {
+      console.error('Clear all error:', error);
+      setNotification({ message: 'Failed to clear all transactions', type: 'error' });
+    } finally {
+      setIsBulkOperating(false);
     }
   };
 
@@ -429,6 +563,68 @@ export default function TransactionsPage() {
           </div>
         </div>
 
+        {/* Bulk Operations Toolbar */}
+        {paginatedTransactions.length > 0 && (
+          <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-4 mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={() => setIsSelectMode(!isSelectMode)}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    isSelectMode 
+                      ? 'bg-blue-100 text-blue-700 border border-blue-200' 
+                      : 'bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200'
+                  }`}
+                >
+                  {isSelectMode ? 'Exit Select Mode' : 'Select Transactions'}
+                </button>
+                
+                {isSelectMode && (
+                  <>
+                    <button
+                      onClick={handleSelectAll}
+                      className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                    >
+                      {selectedTransactions.length === paginatedTransactions.length ? 'Deselect All' : 'Select All'}
+                    </button>
+                    
+                    {selectedTransactions.length > 0 && (
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-gray-600">
+                          {selectedTransactions.length} selected
+                        </span>
+                        <button
+                          onClick={handleBulkArchive}
+                          disabled={isBulkOperating}
+                          className="flex items-center px-3 py-2 text-sm bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 transition-colors disabled:opacity-50"
+                        >
+                          <ArchiveBoxIcon className="w-4 h-4 mr-1" />
+                          Archive
+                        </button>
+                        <button
+                          onClick={handleBulkDelete}
+                          disabled={isBulkOperating}
+                          className="flex items-center px-3 py-2 text-sm bg-red-100 text-red-800 rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50"
+                        >
+                          <TrashIcon className="w-4 h-4 mr-1" />
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+              
+              <button
+                onClick={() => setShowClearConfirm(true)}
+                className="px-4 py-2 bg-red-100 text-red-800 rounded-lg hover:bg-red-200 transition-colors font-medium"
+              >
+                Clear All Transactions
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Transactions Table */}
         {paginatedTransactions.length === 0 ? (
           <div className="bg-white rounded-xl shadow-lg p-12 text-center border border-gray-200">
@@ -444,6 +640,16 @@ export default function TransactionsPage() {
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
+                      {isSelectMode && (
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+                          <input
+                            type="checkbox"
+                            checked={selectedTransactions.length === paginatedTransactions.length && paginatedTransactions.length > 0}
+                            onChange={handleSelectAll}
+                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                        </th>
+                      )}
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Date
                       </th>
@@ -470,6 +676,16 @@ export default function TransactionsPage() {
                   <tbody className="divide-y divide-gray-200">
                     {paginatedTransactions.map((transaction) => (
                       <tr key={transaction.id} className="hover:bg-gray-50">
+                        {isSelectMode && (
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <input
+                              type="checkbox"
+                              checked={selectedTransactions.includes(transaction.id)}
+                              onChange={() => handleSelectTransaction(transaction.id)}
+                              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                            />
+                          </td>
+                        )}
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                           {formatDate(transaction.date)}
                         </td>
@@ -663,6 +879,43 @@ export default function TransactionsPage() {
               </Button>
             </div>
           </form>
+        </Modal>
+
+        {/* Clear All Confirmation Modal */}
+        <Modal isOpen={showClearConfirm} onClose={() => setShowClearConfirm(false)} title="Clear All Transactions">
+          <div className="space-y-4 text-center">
+            <div className="text-6xl">⚠️</div>
+            <div>
+              <h3 className="text-lg font-bold text-red-600 mb-2">Permanently Delete All Transactions?</h3>
+              <p className="text-gray-600 mb-4">
+                This will permanently delete <strong>all {filteredTransactions.length} transactions</strong> from your account. 
+                This action cannot be undone.
+              </p>
+              <p className="text-sm text-gray-500 bg-yellow-50 p-3 rounded-lg">
+                💡 Consider using the bulk select feature to delete specific transactions instead, 
+                or archive them first if you might need them later.
+              </p>
+            </div>
+            
+            <div className="flex gap-3 pt-4">
+              <Button 
+                type="button" 
+                variant="secondary" 
+                onClick={() => setShowClearConfirm(false)}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="button"
+                onClick={handleClearAll}
+                isLoading={isBulkOperating}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white border-red-600"
+              >
+                Yes, Delete All
+              </Button>
+            </div>
+          </div>
         </Modal>
       </DashboardLayout>
     </ProtectedRoute>
