@@ -127,7 +127,14 @@ banking.get('/test', async c => {
   return c.json({ success: true, data: { message: 'Banking routes are working!' } });
 });
 
-// Debug endpoint to check TrueLayer configuration and connection status
+// Apply auth middleware to most routes (but not debug endpoints)
+banking.use('/connect', authMiddleware, tenantMiddleware);
+banking.use('/connections', authMiddleware, tenantMiddleware);
+banking.use('/connections/*', authMiddleware, tenantMiddleware);  
+banking.use('/sync', authMiddleware, tenantMiddleware);
+banking.use('/sync/*', authMiddleware, tenantMiddleware);
+
+// Debug endpoint to check TrueLayer configuration and connection status (no auth required)
 banking.get('/debug', async c => {
   try {
     const hasClientId = !!c.env.TRUELAYER_CLIENT_ID;
@@ -168,9 +175,6 @@ banking.get('/debug', async c => {
     });
   }
 });
-
-// Apply auth middleware to all other routes
-banking.use('*', authMiddleware, tenantMiddleware);
 
 // Connect bank account
 banking.post('/connect', async c => {
@@ -361,7 +365,7 @@ banking.post('/sync/:connectionId', async (c) => {
 });
 
 // Debug connection status for authenticated users
-banking.get('/debug/connections', async (c) => {
+banking.get('/debug/connections', authMiddleware, tenantMiddleware, async (c) => {
   try {
     const db = getDb(c.env.DB);
     const tenantId = c.get('tenantId')!;
