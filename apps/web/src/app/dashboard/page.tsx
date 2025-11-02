@@ -6,6 +6,18 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { api } from '@/lib/api';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { CategorizationStatsWidget } from '@/components/ai';
+import StatCard from '@/components/StatCard';
+import {
+  CurrencyDollarIcon,
+  ArrowTrendingUpIcon,
+  ArrowTrendingDownIcon,
+  ScaleIcon,
+  CreditCardIcon,
+  PlusIcon,
+  ChartBarIcon,
+  BellIcon,
+  ArrowUpTrayIcon,
+} from '@heroicons/react/24/outline';
 
 interface Account {
   id: string;
@@ -145,86 +157,94 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {/* Total Balance */}
-          <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-blue-100 text-sm font-medium">Total Balance</p>
-              <span className="text-2xl">💰</span>
-            </div>
-            <p className="text-3xl font-bold">{formatCurrency(totalBalance)}</p>
-            <p className="text-blue-100 text-sm mt-2">{accounts.length} accounts</p>
-          </div>
+        {/* Professional Stats Cards Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 stagger">
+          {/* Total Balance - Primary Gradient */}
+          <StatCard
+            title="Total Balance"
+            value={formatCurrency(totalBalance)}
+            subtitle={`${accounts.length} accounts`}
+            icon={<CurrencyDollarIcon className="w-6 h-6 text-white" />}
+            variant="primary"
+            className="col-span-1"
+          />
 
-          {/* Monthly Income */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-gray-600 text-sm font-medium">Income</p>
-              <span className="text-2xl">📈</span>
-            </div>
-            <p className="text-3xl font-bold text-green-600">{formatCurrency(monthlyIncome)}</p>
-            <p className="text-gray-500 text-sm mt-2">{timeRange === '30days' ? 'Last 30 days' : 'All time'}</p>
-          </div>
+          {/* Monthly Income - Success */}
+          <StatCard
+            title="Income"
+            value={formatCurrency(monthlyIncome)}
+            subtitle={timeRange === '30days' ? 'Last 30 days' : 'All time'}
+            icon={<ArrowTrendingUpIcon className="w-6 h-6 text-success-600" />}
+            variant="success"
+            className="col-span-1"
+          />
 
-          {/* Monthly Expenses */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-gray-600 text-sm font-medium">Expenses</p>
-              <span className="text-2xl">📉</span>
-            </div>
-            <p className="text-3xl font-bold text-red-600">{formatCurrency(monthlyExpenses)}</p>
-            <p className="text-gray-500 text-sm mt-2">{timeRange === '30days' ? 'Last 30 days' : 'All time'}</p>
-          </div>
+          {/* Monthly Expenses - Error */}
+          <StatCard
+            title="Expenses"
+            value={formatCurrency(monthlyExpenses)}
+            subtitle={timeRange === '30days' ? 'Last 30 days' : 'All time'}
+            icon={<ArrowTrendingDownIcon className="w-6 h-6 text-error-600" />}
+            variant="error"
+            className="col-span-1"
+          />
 
-          {/* Net Savings */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-gray-600 text-sm font-medium">Net Savings</p>
-              <span className="text-2xl">🎯</span>
-            </div>
-            <p className={`text-3xl font-bold ${monthlyIncome - monthlyExpenses >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {formatCurrency(monthlyIncome - monthlyExpenses)}
-            </p>
-            <p className="text-gray-500 text-sm mt-2">{timeRange === '30days' ? 'Last 30 days' : 'All time'}</p>
-          </div>
+          {/* Net Savings - Warning */}
+          <StatCard
+            title="Net Savings"
+            value={formatCurrency(monthlyIncome - monthlyExpenses)}
+            subtitle={timeRange === '30days' ? 'Last 30 days' : 'All time'}
+            icon={<ScaleIcon className="w-6 h-6 text-warning-600" />}
+            variant={monthlyIncome - monthlyExpenses >= 0 ? 'success' : 'error'}
+            className="col-span-1"
+          />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Accounts */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Accounts</h2>
-              <a href="/dashboard/accounts" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+          {/* Accounts Section - Enhanced Design */}
+          <div className="lg:col-span-2">
+            <div className="card p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-semibold text-gray-900">Accounts</h2>
+                <a href="/dashboard/accounts" className="btn-text text-sm">
                 View all →
               </a>
             </div>
             
             {accounts.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500 mb-4">No accounts yet</p>
+              <div className="text-center py-12">
+                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                  <CurrencyDollarIcon className="w-8 h-8 text-gray-400" />
+                </div>
+                <p className="text-gray-500 mb-6">No accounts connected yet</p>
                 <a
                   href="/dashboard/accounts"
-                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="btn-primary"
                 >
                   Add your first account
                 </a>
               </div>
             ) : (
-              <div className="space-y-4">
-                {accounts.map((account) => (
-                  <div key={account.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+              <div className="space-y-3">
+                {accounts.map((account, index) => (
+                  <div 
+                    key={account.id} 
+                    className="flex items-center justify-between p-4 border border-gray-100 rounded-xl hover:shadow-card transition-all duration-200 animate-slide-in"
+                    style={{ '--index': index } as any}
+                  >
                     <div className="flex items-center">
-                      <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-2xl mr-4">
-                        {account.type === 'checking' ? '🏦' : account.type === 'savings' ? '💰' : account.type === 'credit' ? '💳' : '💵'}
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 shadow-card text-white flex items-center justify-center font-semibold text-lg mr-4">
+                        {account.name[0]?.toUpperCase() || 'A'}
                       </div>
                       <div>
-                        <p className="font-semibold text-gray-900">{account.name}</p>
-                        <p className="text-sm text-gray-500 capitalize">{account.type}</p>
+                        <p className="font-semibold text-gray-900 text-base">{account.name}</p>
+                        <p className="text-sm text-gray-500 capitalize">{account.type} Account</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className={`text-lg font-bold ${account.balance >= 0 ? 'text-gray-900' : 'text-red-600'}`}>
+                      <p className={`text-lg font-semibold tabular-nums ${
+                        account.balance >= 0 ? 'text-gray-900' : 'text-error-600'
+                      }`}>
                         {formatCurrency(account.balance)}
                       </p>
                     </div>
@@ -234,51 +254,62 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Recent Transactions */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+          {/* Recent Transactions - Enhanced Design */}
+          <div className="card p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Recent Transactions</h2>
-              <a href="/dashboard/transactions" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+              <h2 className="text-2xl font-semibold text-gray-900">Recent Transactions</h2>
+              <a href="/dashboard/transactions" className="btn-text text-sm">
                 View all →
               </a>
             </div>
             
             {recentTransactions.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500 mb-4">No transactions yet</p>
+              <div className="text-center py-12">
+                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                  <CreditCardIcon className="w-8 h-8 text-gray-400" />
+                </div>
+                <p className="text-gray-500 mb-6">No transactions yet</p>
                 <a
                   href="/dashboard/transactions"
-                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="btn-primary"
                 >
                   Add your first transaction
                 </a>
               </div>
             ) : (
-              <div className="space-y-3">
-                {recentTransactions.map((transaction) => (
-                  <div key={transaction.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors">
+              <div className="space-y-2">
+                {recentTransactions.map((transaction, index) => (
+                  <div 
+                    key={transaction.id} 
+                    className="flex items-center p-4 border border-gray-100 rounded-xl hover:shadow-card transition-all duration-200 animate-slide-in"
+                    style={{ '--index': index } as any}
+                  >
                     <div className="flex items-center flex-1">
-                      <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-lg mr-3 flex-shrink-0">
-                        {transaction.category?.icon || (transaction.type === 'income' ? '💰' : '💸')}
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-4 shadow-sm ${
+                        transaction.type === 'income' 
+                          ? 'bg-success-50 text-success-600'
+                          : 'bg-error-50 text-error-600'
+                      }`}>
+                        {transaction.type === 'income' ? <ArrowTrendingUpIcon className="w-5 h-5" /> : <ArrowTrendingDownIcon className="w-5 h-5" />}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 truncate" title={transaction.description}>
+                        <p className="font-semibold text-gray-900 truncate" title={transaction.description}>
                           {transaction.description}
                         </p>
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
                           <span>{formatDate(transaction.date)}</span>
                           {transaction.category?.name && (
                             <>
                               <span>•</span>
-                              <span>{transaction.category.name}</span>
+                              <span className="italic">{transaction.category.name}</span>
                             </>
                           )}
                         </div>
                       </div>
                     </div>
                     <div className="text-right ml-4 flex-shrink-0">
-                      <p className={`text-sm font-semibold ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                        {transaction.type === 'income' ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount))}
+                      <p className={`currency ${transaction.type === 'income' ? 'currency-positive' : 'currency-negative'}`}>
+                        {transaction.type === 'income' ? '+' : ''}{formatCurrency(transaction.amount)}
                       </p>
                     </div>
                   </div>
@@ -294,39 +325,47 @@ export default function DashboardPage() {
           <CategorizationStatsWidget />
         </div>
 
-        {/* Quick Actions */}
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Quick Actions</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* Professional Quick Actions */}
+        <div className="card p-8">
+          <h2 className="text-2xl font-semibold text-gray-900 mb-8">Quick Actions</h2>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
             <a
               href="/dashboard/transactions"
-              className="flex flex-col items-center justify-center p-6 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+              className="card-hover group p-6 text-center"
             >
-              <span className="text-3xl mb-2">💸</span>
-              <span className="text-sm font-medium text-gray-900">Add Transaction</span>
+              <div className="w-12 h-12 rounded-xl bg-success-500 text-white flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-200">
+                <PlusIcon className="w-6 h-6" />
+              </div>
+              <span className="text-base font-semibold text-gray-900">Add Transaction</span>
             </a>
-            <a
-              href="/dashboard/budgets"
-              className="flex flex-col items-center justify-center p-6 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
+              className="card-hover group p-6 text-center"
             >
-              <span className="text-3xl mb-2">🎯</span>
-              <span className="text-sm font-medium text-gray-900">Set Budget</span>
+              <div className="w-12 h-12 rounded-xl bg-warning-500 text-white flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-200">
+                <ChartBarIcon className="w-6 h-6" />
+              </div>
+              <span className="text-base font-semibold text-gray-900">Set Budget</span>
             </a>
             <a
               href="/dashboard/bill-reminders"
-              className="flex flex-col items-center justify-center p-6 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors"
+              className="card-hover group p-6 text-center"
             >
-              <span className="text-3xl mb-2">🔔</span>
-              <span className="text-sm font-medium text-gray-900">Add Reminder</span>
+              <div className="w-12 h-12 rounded-xl bg-error-500 text-white flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-200">
+                <BellIcon className="w-6 h-6" />
+              </div>
+              <span className="text-base font-semibold text-gray-900">Add Reminder</span>
             </a>
             <a
               href="/dashboard/import"
-              className="flex flex-col items-center justify-center p-6 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
+              className="card-hover group p-6 text-center"
             >
-              <span className="text-3xl mb-2">📥</span>
-              <span className="text-sm font-medium text-gray-900">Import File</span>
+              <div className="w-12 h-12 rounded-xl bg-primary-500 text-white flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-200">
+                <ArrowUpTrayIcon className="w-6 h-6" />
+              </div>
+              <span className="text-base font-semibold text-gray-900">Import File</span>
             </a>
           </div>
+        </div>
+
         </div>
       </DashboardLayout>
     </ProtectedRoute>
