@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import Footer from './Footer';
 import TextLogo from './TextLogo';
-import { TenantIndicator } from './TenantIndicator';
 import {
   HomeIcon,
   BanknotesIcon,
@@ -215,7 +214,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       <div className="lg:pl-64 flex flex-col min-h-screen pb-18 lg:pb-0">
         <main className="flex-1 pt-18 lg:pt-0">
           <div className="max-w-7xl mx-auto py-8 px-6 lg:px-8 animate-fade-in">
-            <TenantIndicator />
             {children}
           </div>
         </main>
