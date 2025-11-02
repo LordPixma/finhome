@@ -1,11 +1,20 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Modal, Input, Select, Button } from '@/components/ui';
 import { api } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
+import {
+  BanknotesIcon,
+  BuildingLibraryIcon,
+  CreditCardIcon,
+  ChartBarIcon,
+  PlusIcon,
+  PencilIcon,
+  TrashIcon,
+} from '@heroicons/react/24/outline';
 
 interface Account {
   id: string;
@@ -119,25 +128,25 @@ export default function AccountsPage() {
   };
 
   const getAccountIcon = (type: string) => {
-    const icons: Record<string, string> = {
-      checking: '🏦',
-      savings: '💰',
-      credit: '💳',
-      cash: '💵',
-      investment: '📈',
+    const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+      checking: BuildingLibraryIcon,
+      savings: BanknotesIcon,
+      credit: CreditCardIcon,
+      cash: BanknotesIcon,
+      investment: ChartBarIcon,
     };
-    return icons[type] || '🏦';
+    return iconMap[type] || BuildingLibraryIcon;
   };
 
   const getAccountColor = (type: string) => {
     const colors: Record<string, string> = {
-      checking: 'bg-blue-100 text-blue-600',
-      savings: 'bg-green-100 text-green-600',
-      credit: 'bg-purple-100 text-purple-600',
-      cash: 'bg-yellow-100 text-yellow-600',
-      investment: 'bg-indigo-100 text-indigo-600',
+      checking: 'bg-primary-50 text-primary-600 border-primary-200',
+      savings: 'bg-success-50 text-success-600 border-success-200',
+      credit: 'bg-purple-50 text-purple-600 border-purple-200',
+      cash: 'bg-warning-50 text-warning-600 border-warning-200',
+      investment: 'bg-indigo-50 text-indigo-600 border-indigo-200',
     };
-    return colors[type] || 'bg-blue-100 text-blue-600';
+    return colors[type] || 'bg-primary-50 text-primary-600 border-primary-200';
   };
 
   if (isLoading) {
@@ -163,55 +172,63 @@ export default function AccountsPage() {
             <h1 className="text-3xl font-bold text-gray-900">Accounts</h1>
             <p className="text-gray-600 mt-1">Manage your financial accounts</p>
           </div>
-          <Button onClick={() => handleOpenModal()} icon="➕">
+          <button
+            onClick={() => handleOpenModal()}
+            className="btn-primary flex items-center gap-2"
+          >
+            <PlusIcon className="w-5 h-5" />
             Add Account
-          </Button>
+          </button>
         </div>
 
         {/* Total Balance Card */}
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white mb-8">
-          <p className="text-blue-100 text-sm font-medium mb-2">Total Balance</p>
-          <p className="text-4xl font-bold">{formatCurrency(totalBalance)}</p>
-          <p className="text-blue-100 text-sm mt-2">{accounts.length} accounts</p>
+        <div className="bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl shadow-lg p-6 text-white mb-8 hover:shadow-xl transition-shadow">
+          <p className="text-primary-100 text-sm font-medium mb-2">Total Balance</p>
+          <p className="text-4xl font-bold font-mono">{formatCurrency(totalBalance)}</p>
+          <p className="text-primary-100 text-sm mt-2">{accounts.length} {accounts.length === 1 ? 'account' : 'accounts'}</p>
         </div>
 
         {/* Accounts Grid */}
         {accounts.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-lg p-12 text-center border border-gray-200">
-            <div className="text-6xl mb-4">🏦</div>
+          <div className="card p-12 text-center">
+            <div className="w-16 h-16 bg-primary-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <BuildingLibraryIcon className="w-8 h-8 text-primary-600" />
+            </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">No accounts yet</h3>
             <p className="text-gray-600 mb-6">Start by adding your first financial account</p>
-            <Button onClick={() => handleOpenModal()}>Add Your First Account</Button>
+            <button
+              onClick={() => handleOpenModal()}
+              className="btn-primary flex items-center gap-2 mx-auto"
+            >
+              <PlusIcon className="w-5 h-5" />
+              Add Your First Account
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {accounts.map((account) => (
               <div
                 key={account.id}
-                className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 hover:shadow-xl transition-shadow"
+                className="card-hover p-6 group"
               >
                 <div className="flex items-start justify-between mb-4">
-                  <div className={`w-14 h-14 rounded-full ${getAccountColor(account.type)} flex items-center justify-center text-3xl`}>
-                    {getAccountIcon(account.type)}
+                  <div className={`w-14 h-14 rounded-full ${getAccountColor(account.type)} flex items-center justify-center border-2`}>
+                    {React.createElement(getAccountIcon(account.type), { className: 'w-6 h-6' })}
                   </div>
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleOpenModal(account)}
-                      className="text-gray-400 hover:text-blue-600 transition-colors"
+                      className="text-gray-400 hover:text-primary-600 transition-colors p-2 rounded-lg hover:bg-primary-50"
                       title="Edit"
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
+                      <PencilIcon className="w-5 h-5" />
                     </button>
                     <button
                       onClick={() => handleDelete(account.id)}
-                      className="text-gray-400 hover:text-red-600 transition-colors"
+                      className="text-gray-400 hover:text-error-600 transition-colors p-2 rounded-lg hover:bg-error-50"
                       title="Delete"
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
+                      <TrashIcon className="w-5 h-5" />
                     </button>
                   </div>
                 </div>
@@ -219,9 +236,9 @@ export default function AccountsPage() {
                 <h3 className="text-lg font-bold text-gray-900 mb-1">{account.name}</h3>
                 <p className="text-sm text-gray-500 capitalize mb-4">{account.type}</p>
 
-                <div className="border-t border-gray-200 pt-4">
-                  <p className="text-sm text-gray-600 mb-1">Balance</p>
-                  <p className={`text-2xl font-bold ${account.balance >= 0 ? 'text-gray-900' : 'text-red-600'}`}>
+                <div className="border-t border-gray-100 pt-4">
+                  <p className="text-sm text-gray-500 mb-1 font-medium">Balance</p>
+                  <p className={`text-2xl font-bold font-mono ${account.balance >= 0 ? 'text-gray-900' : 'text-error-600'}`}>
                     {formatCurrency(account.balance)}
                   </p>
                 </div>

@@ -30,15 +30,15 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             className={`
-              w-full px-4 py-3 border rounded-lg transition-colors
+              w-full px-4 py-3 border rounded-lg transition-all duration-200
               text-gray-900 placeholder:text-gray-400
               ${icon ? 'pl-10' : ''}
               ${error 
-                ? 'border-red-300 focus:border-red-500 focus:ring-red-500' 
-                : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                ? 'border-error-300 focus:border-error-500 focus:ring-error-500/20' 
+                : 'border-gray-300 focus:border-primary-500 focus:ring-primary-500/20 hover:border-gray-400'
               }
               focus:ring-2 focus:outline-none
-              disabled:bg-gray-100 disabled:cursor-not-allowed
+              disabled:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-500
               ${className}
             `}
             {...props}
@@ -46,7 +46,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         </div>
 
         {error && (
-          <p className="mt-2 text-sm text-red-600 flex items-center">
+          <p className="mt-2 text-sm text-error-600 flex items-center">
             <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
@@ -84,21 +84,21 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
         <textarea
           ref={ref}
           className={`
-            w-full px-4 py-3 border rounded-lg transition-colors resize-none
+            w-full px-4 py-3 border rounded-lg transition-all duration-200 resize-none
             text-gray-900 placeholder:text-gray-400
             ${error 
-              ? 'border-red-300 focus:border-red-500 focus:ring-red-500' 
-              : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+              ? 'border-error-300 focus:border-error-500 focus:ring-error-500/20' 
+              : 'border-gray-300 focus:border-primary-500 focus:ring-primary-500/20 hover:border-gray-400'
             }
             focus:ring-2 focus:outline-none
-            disabled:bg-gray-100 disabled:cursor-not-allowed
+            disabled:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-500
             ${className}
           `}
           {...props}
         />
 
         {error && (
-          <p className="mt-2 text-sm text-red-600 flex items-center">
+          <p className="mt-2 text-sm text-error-600 flex items-center">
             <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>

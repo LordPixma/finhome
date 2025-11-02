@@ -9,7 +9,16 @@ import { formatCurrency } from '@/lib/utils';
 import { AutoCategorizeButton, BatchCategorizeButton } from '@/components/ai';
 import { 
   TrashIcon, 
-  ArchiveBoxIcon
+  ArchiveBoxIcon,
+  PlusIcon,
+  PencilIcon,
+  ArrowUpIcon,
+  ArrowDownIcon,
+  FunnelIcon,
+  MagnifyingGlassIcon,
+  BanknotesIcon,
+  ReceiptPercentIcon,
+  CalendarDaysIcon
 } from '@heroicons/react/24/outline';
 
 interface Transaction {
@@ -339,7 +348,12 @@ export default function TransactionsPage() {
   };
 
   const getCategoryIcon = (type: string) => {
-    return type === 'income' ? '💰' : '💸';
+    const iconClass = "w-4 h-4";
+    if (type === 'income') {
+      return <ArrowUpIcon className={`${iconClass} text-success-600`} />;
+    } else {
+      return <ArrowDownIcon className={`${iconClass} text-error-600`} />;
+    }
   };
 
   const showNotification = (message: string, type: 'success' | 'error') => {
@@ -410,66 +424,76 @@ export default function TransactionsPage() {
               onSuccess={handleBatchCategorizeSuccess}
               onError={(error) => showNotification(error, 'error')}
             />
-            <Button onClick={() => handleOpenModal()} icon="➕">
+            <button
+              onClick={() => handleOpenModal()}
+              className="btn-primary flex items-center gap-2"
+            >
+              <PlusIcon className="w-5 h-5" />
               Add Transaction
-            </Button>
+            </button>
           </div>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+          <div className="card p-6 hover:shadow-lg transition-all group">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Total Income</p>
-                <p className="text-2xl font-bold text-green-600">{formatCurrency(totalIncome)}</p>
+                <p className="text-sm text-gray-500 mb-1 font-medium">Total Income</p>
+                <p className="text-2xl font-bold text-success-600 font-mono">{formatCurrency(totalIncome)}</p>
               </div>
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-2xl">
-                💰
+              <div className="w-12 h-12 bg-success-50 rounded-full flex items-center justify-center border-2 border-success-200 group-hover:bg-success-100 transition-colors">
+                <ArrowUpIcon className="w-6 h-6 text-success-600" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+          <div className="card p-6 hover:shadow-lg transition-all group">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Total Expenses</p>
-                <p className="text-2xl font-bold text-red-600">{formatCurrency(totalExpenses)}</p>
+                <p className="text-sm text-gray-500 mb-1 font-medium">Total Expenses</p>
+                <p className="text-2xl font-bold text-error-600 font-mono">{formatCurrency(totalExpenses)}</p>
               </div>
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-2xl">
-                💸
+              <div className="w-12 h-12 bg-error-50 rounded-full flex items-center justify-center border-2 border-error-200 group-hover:bg-error-100 transition-colors">
+                <ArrowDownIcon className="w-6 h-6 text-error-600" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+          <div className="card p-6 hover:shadow-lg transition-all group">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Net</p>
-                <p className={`text-2xl font-bold ${totalIncome - totalExpenses >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <p className="text-sm text-gray-500 mb-1 font-medium">Net</p>
+                <p className={`text-2xl font-bold font-mono ${totalIncome - totalExpenses >= 0 ? 'text-success-600' : 'text-error-600'}`}>
                   {formatCurrency(totalIncome - totalExpenses)}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-2xl">
-                📊
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 group-hover:opacity-80 transition-colors ${
+                totalIncome - totalExpenses >= 0 
+                  ? 'bg-primary-50 border-primary-200' 
+                  : 'bg-warning-50 border-warning-200'
+              }`}>
+                <ReceiptPercentIcon className={`w-6 h-6 ${
+                  totalIncome - totalExpenses >= 0 ? 'text-primary-600' : 'text-warning-600'
+                }`} />
               </div>
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 mb-6">
+        <div className="card p-6 mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <FunnelIcon className="w-5 h-5 text-gray-500" />
+            <h3 className="text-sm font-medium text-gray-700">Filter Transactions</h3>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Input
               type="text"
               placeholder="Search transactions..."
               value={filters.search}
               onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-              icon={
-                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              }
+              icon={<MagnifyingGlassIcon className="w-5 h-5 text-gray-400" />}
             />
 
             <Select
@@ -477,8 +501,8 @@ export default function TransactionsPage() {
               onChange={(e) => setFilters({ ...filters, type: e.target.value })}
               options={[
                 { value: 'all', label: 'All Types' },
-                { value: 'income', label: '💰 Income' },
-                { value: 'expense', label: '💸 Expense' },
+                { value: 'income', label: 'Income' },
+                { value: 'expense', label: 'Expense' },
               ]}
             />
 
@@ -501,27 +525,40 @@ export default function TransactionsPage() {
             />
           </div>
 
-          <div className="flex items-center gap-4 mt-4 pt-4 border-t border-gray-200">
-            <span className="text-sm text-gray-600">Sort by:</span>
+          <div className="flex items-center gap-4 mt-4 pt-4 border-t border-gray-100">
+            <div className="flex items-center gap-2">
+              <CalendarDaysIcon className="w-4 h-4 text-gray-500" />
+              <span className="text-sm text-gray-600 font-medium">Sort by:</span>
+            </div>
             <button
               onClick={() => setSortBy('date')}
-              className={`text-sm px-3 py-1 rounded-lg ${sortBy === 'date' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}
+              className={`text-sm px-3 py-1 rounded-lg transition-colors ${sortBy === 'date' ? 'bg-primary-100 text-primary-700' : 'text-gray-600 hover:bg-gray-100'}`}
             >
               Date
             </button>
             <button
               onClick={() => setSortBy('amount')}
-              className={`text-sm px-3 py-1 rounded-lg ${sortBy === 'amount' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}
+              className={`text-sm px-3 py-1 rounded-lg transition-colors ${sortBy === 'amount' ? 'bg-primary-100 text-primary-700' : 'text-gray-600 hover:bg-gray-100'}`}
             >
               Amount
             </button>
             <button
               onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              className="text-sm text-gray-600 hover:text-gray-900"
+              className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1"
             >
-              {sortOrder === 'asc' ? '↑ Ascending' : '↓ Descending'}
+              {sortOrder === 'asc' ? (
+                <>
+                  <ArrowUpIcon className="w-4 h-4" />
+                  Ascending
+                </>
+              ) : (
+                <>
+                  <ArrowDownIcon className="w-4 h-4" />
+                  Descending
+                </>
+              )}
             </button>
-            <span className="text-sm text-gray-500 ml-auto">
+            <span className="text-sm text-gray-500 ml-auto font-medium">
               {filteredTransactions.length} transactions
             </span>
           </div>
@@ -529,7 +566,7 @@ export default function TransactionsPage() {
 
         {/* Bulk Operations Toolbar */}
         {paginatedTransactions.length > 0 && (
-          <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-4 mb-6">
+          <div className="card p-4 mb-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <button
@@ -591,18 +628,26 @@ export default function TransactionsPage() {
 
         {/* Transactions Table */}
         {paginatedTransactions.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-lg p-12 text-center border border-gray-200">
-            <div className="text-6xl mb-4">💸</div>
+          <div className="card p-12 text-center">
+            <div className="w-16 h-16 bg-primary-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <BanknotesIcon className="w-8 h-8 text-primary-600" />
+            </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">No transactions found</h3>
             <p className="text-gray-600 mb-6">Start tracking your finances by adding your first transaction</p>
-            <Button onClick={() => handleOpenModal()}>Add Your First Transaction</Button>
+            <button
+              onClick={() => handleOpenModal()}
+              className="btn-primary flex items-center gap-2 mx-auto"
+            >
+              <PlusIcon className="w-5 h-5" />
+              Add Your First Transaction
+            </button>
           </div>
         ) : (
           <>
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+            <div className="card overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
+                  <thead className="bg-gray-50 border-b border-gray-100">
                     <tr>
                       {isSelectMode && (
                         <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
@@ -639,7 +684,7 @@ export default function TransactionsPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {paginatedTransactions.map((transaction) => (
-                      <tr key={transaction.id} className="hover:bg-gray-50">
+                      <tr key={transaction.id} className="hover:bg-gray-25 transition-colors border-b border-gray-50">
                         {isSelectMode && (
                           <td className="px-6 py-4 whitespace-nowrap text-center">
                             <input
@@ -660,16 +705,16 @@ export default function TransactionsPage() {
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <span className="inline-flex items-center gap-1">
-                            <span>{getCategoryIcon(transaction.category?.type || transaction.type)}</span>
-                            <span className="text-gray-900">{transaction.category?.name || 'Uncategorized'}</span>
+                          <span className="inline-flex items-center gap-2">
+                            {getCategoryIcon(transaction.category?.type || transaction.type)}
+                            <span className="text-gray-900 font-medium">{transaction.category?.name || 'Uncategorized'}</span>
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                           {transaction.account?.name || 'Unknown'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                          <span className={`font-semibold ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                          <span className={`font-bold font-mono ${transaction.type === 'income' ? 'text-success-600' : 'text-error-600'}`}>
                             {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
                           </span>
                         </td>
@@ -686,20 +731,22 @@ export default function TransactionsPage() {
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                          <button
-                            onClick={() => handleOpenModal(transaction)}
-                            className="text-blue-600 hover:text-blue-800 mr-3"
-                            title="Edit"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDelete(transaction.id)}
-                            className="text-red-600 hover:text-red-800"
-                            title="Delete"
-                          >
-                            Delete
-                          </button>
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => handleOpenModal(transaction)}
+                              className="text-gray-400 hover:text-primary-600 transition-colors p-2 rounded-lg hover:bg-primary-50"
+                              title="Edit"
+                            >
+                              <PencilIcon className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(transaction.id)}
+                              className="text-gray-400 hover:text-error-600 transition-colors p-2 rounded-lg hover:bg-error-50"
+                              title="Delete"
+                            >
+                              <TrashIcon className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}

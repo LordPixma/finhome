@@ -230,7 +230,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       )}
 
       {/* Professional Main Content Container */}
-      <div className="lg:pl-64 flex flex-col min-h-screen">
+      <div className="lg:pl-64 flex flex-col min-h-screen pb-18 lg:pb-0">
         <main className="flex-1 pt-18 lg:pt-0">
           <div className="max-w-7xl mx-auto py-8 px-6 lg:px-8 animate-fade-in">
             <TenantIndicator />
@@ -238,6 +238,29 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
         </main>
         <Footer />
+      </div>
+
+      {/* Professional Mobile Bottom Navigation */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white shadow-bottom-nav border-t border-gray-200">
+        <div className="grid grid-cols-5 h-18">
+          {navigation.slice(0, 5).map((item) => {
+            const IconComponent = item.icon;
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`flex flex-col items-center justify-center py-2 px-1 transition-all duration-200 ${
+                  isActive(item.href)
+                    ? 'text-primary-600 bg-primary-50'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50 active:bg-gray-100'
+                }`}
+              >
+                <IconComponent className="w-6 h-6 mb-1" />
+                <span className="text-xs font-medium truncate">{item.name}</span>
+              </Link>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

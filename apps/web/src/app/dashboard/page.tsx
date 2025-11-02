@@ -327,41 +327,62 @@ export default function DashboardPage() {
 
         {/* Professional Quick Actions */}
         <div className="card p-8">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-8">Quick Actions</h2>
+          <div className="mb-8">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Quick Actions</h2>
+            <p className="text-gray-600">Common tasks to manage your finances</p>
+          </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
             <a
               href="/dashboard/transactions"
-              className="card-hover group p-6 text-center"
+              className="card-hover group p-6 text-center relative overflow-hidden"
             >
-              <div className="w-12 h-12 rounded-xl bg-success-500 text-white flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-200">
-                <PlusIcon className="w-6 h-6" />
+              <div className="absolute inset-0 bg-gradient-to-br from-success-400/5 to-success-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative">
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-success-500 to-success-600 text-white flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                  <PlusIcon className="w-7 h-7" />
+                </div>
+                <h3 className="text-base font-semibold text-gray-900 mb-1">Add Transaction</h3>
+                <p className="text-sm text-gray-500">Record income or expense</p>
               </div>
-              <span className="text-base font-semibold text-gray-900">Add Transaction</span>
             </a>
-              className="card-hover group p-6 text-center"
+            <a
+              href="/dashboard/budgets"
+              className="card-hover group p-6 text-center relative overflow-hidden"
             >
-              <div className="w-12 h-12 rounded-xl bg-warning-500 text-white flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-200">
-                <ChartBarIcon className="w-6 h-6" />
+              <div className="absolute inset-0 bg-gradient-to-br from-warning-400/5 to-warning-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative">
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-warning-500 to-warning-600 text-white flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                  <ChartBarIcon className="w-7 h-7" />
+                </div>
+                <h3 className="text-base font-semibold text-gray-900 mb-1">Set Budget</h3>
+                <p className="text-sm text-gray-500">Plan your spending</p>
               </div>
-              <span className="text-base font-semibold text-gray-900">Set Budget</span>
             </a>
             <a
               href="/dashboard/bill-reminders"
-              className="card-hover group p-6 text-center"
+              className="card-hover group p-6 text-center relative overflow-hidden"
             >
-              <div className="w-12 h-12 rounded-xl bg-error-500 text-white flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-200">
-                <BellIcon className="w-6 h-6" />
+              <div className="absolute inset-0 bg-gradient-to-br from-error-400/5 to-error-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative">
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-error-500 to-error-600 text-white flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                  <BellIcon className="w-7 h-7" />
+                </div>
+                <h3 className="text-base font-semibold text-gray-900 mb-1">Add Reminder</h3>
+                <p className="text-sm text-gray-500">Never miss a bill</p>
               </div>
-              <span className="text-base font-semibold text-gray-900">Add Reminder</span>
             </a>
             <a
               href="/dashboard/import"
-              className="card-hover group p-6 text-center"
+              className="card-hover group p-6 text-center relative overflow-hidden"
             >
-              <div className="w-12 h-12 rounded-xl bg-primary-500 text-white flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-200">
-                <ArrowUpTrayIcon className="w-6 h-6" />
+              <div className="absolute inset-0 bg-gradient-to-br from-primary-400/5 to-primary-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative">
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 text-white flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                  <ArrowUpTrayIcon className="w-7 h-7" />
+                </div>
+                <h3 className="text-base font-semibold text-gray-900 mb-1">Import File</h3>
+                <p className="text-sm text-gray-500">Upload bank statements</p>
               </div>
-              <span className="text-base font-semibold text-gray-900">Import File</span>
             </a>
           </div>
         </div>
