@@ -1,5 +1,10 @@
 # ✅ AUTOMATIC TRANSACTION SYNC - IMPLEMENTATION VERIFICATION
 
+> DEPRECATED — Bankless Edition (Nov 2025)
+>
+> Automatic transaction sync (Open Banking) has been removed. This document describes a previous phase and is kept for archive purposes only.
+> The current edition supports manual entry and file uploads. Ignore the endpoints and flows described here until Phase 2.
+
 ## 🔍 **Current Implementation Status: FULLY IMPLEMENTED & READY**
 
 Your automatic transaction sync system is **COMPLETE** and properly implemented. Here's the comprehensive verification:

@@ -38,7 +38,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
     { name: 'Accounts', href: '/dashboard/accounts', icon: BanknotesIcon },
-    { name: 'Banking', href: '/dashboard/banking', icon: LinkIcon },
     { name: 'Transactions', href: '/dashboard/transactions', icon: CreditCardIcon },
     { name: 'Recurring', href: '/dashboard/recurring', icon: ArrowPathIcon },
     { name: 'Budgets', href: '/dashboard/budgets', icon: ChartBarIcon },

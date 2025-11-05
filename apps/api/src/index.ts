@@ -16,7 +16,6 @@ import tenantMembers from './routes/tenantMembers';
 import profile from './routes/profile';
 import tenant from './routes/tenant';
 import aiRouter from './routes/ai';
-import banking from './routes/banking';
 import globalAdmin from './routes/global-admin';
 import { mfaRouter } from './routes/admin-mfa';
 import { adminAnalyticsRouter } from './routes/admin-analytics';
@@ -130,7 +129,6 @@ app.route('/api/profile', profile);
 app.route('/api/tenant', tenant);
 app.route('/api/ai', aiRouter);
 
-app.route('/api/banking', banking);
 app.route('/api/global-admin', globalAdmin);
 app.route('/api/admin/mfa', mfaRouter);
 app.route('/api/admin/analytics', adminAnalyticsRouter);
@@ -166,27 +164,6 @@ export async function queue(batch: MessageBatch<any>, env: Env['Bindings']): Pro
 
   for (const message of batch.messages) {
     try {
-      // Handle transaction sync messages
-      if (message.body.type === 'transaction-sync') {
-        const { tenantId, connectionId } = message.body;
-        console.log(`Processing transaction sync: tenant=${tenantId}, connection=${connectionId || 'all'}`);
-
-        const { TransactionSyncService } = await import('./services/transactionSync');
-        const syncService = new TransactionSyncService(db, env, tenantId);
-
-        if (connectionId) {
-          // Sync specific connection
-          await syncService.forceSyncConnection(connectionId);
-        } else {
-          // Sync all connections for tenant
-          await syncService.syncAllConnections();
-        }
-
-        console.log(`Transaction sync completed: tenant=${tenantId}`);
-        message.ack();
-        continue;
-      }
-
       // Handle bill reminder messages (existing logic)
       const { billReminderId, tenantId, dueDate } = message.body;
       console.log(`Processing bill reminder: ${billReminderId} for tenant: ${tenantId}`);
@@ -288,28 +265,9 @@ export async function queue(batch: MessageBatch<any>, env: Env['Bindings']): Pro
 }
 
 // Scheduled handler (cron) for periodic transaction sync
-export async function scheduled(_event: any, env: Env['Bindings'], _ctx: any): Promise<void> {
-  console.log('Running scheduled transaction sync for all tenants');
-  
-  const db = getDb(env.DB);
-  
-  try {
-    // Get all tenants with active bank connections
-    const { bankConnections } = await import('./db/schema');
-    const tenantsWithBanking = await db
-      .select({ tenantId: bankConnections.tenantId })
-      .from(bankConnections)
-      .where(eq(bankConnections.status, 'active'))
-      .groupBy(bankConnections.tenantId)
-      .all();
-
-    console.log(`Found ${tenantsWithBanking.length} tenants with active banking connections`);
-
-    // For now, trigger sync via API instead of queue (queue needs to be created first)
-    console.log('Scheduled transaction sync completed');
-  } catch (error) {
-    console.error('Scheduled transaction sync failed:', error);
-  }
+export async function scheduled(_event: any, _env: Env['Bindings'], _ctx: any): Promise<void> {
+  // No-op (bank connection sync disabled in Bankless edition)
+  console.log('Scheduled handler running (no scheduled banking tasks in Bankless edition)');
 }
 
 // Worker export with queue and scheduled handlers

@@ -1,77 +1,71 @@
-# Copilot Instructions for Finhome
+# Copilot instructions — Finhome (Family Budgeting SaaS)
 
-## Architecture Overview
-This is a multi-tenant SaaS budgeting app built on Cloudflare's edge stack with a Turborepo monorepo structure:
-- **API** (`apps/api`): Hono-based Cloudflare Workers API with Drizzle ORM + D1 SQLite
-- **Web** (`apps/web`): Next.js 14 frontend with App Router and Tailwind CSS  
-- **Marketing** (`apps/marketing`): Static marketing site deployed to root domain
-- **Shared** (`packages/shared`): Common Zod schemas and TypeScript types
+This repository is a Turborepo monorepo for a multi-tenant **Family Budgeting & Financial Analysis SaaS** built entirely on Cloudflare's edge stack. Key services:
+- `apps/api` — Hono Cloudflare Worker using Drizzle ORM + D1 (server API, file processing, queue consumers, AI categorization)
+- `apps/web` — Next.js 14 (App Router) frontend with AI-powered categorization UI
+- `packages/shared` — shared Zod schemas and TypeScript types
 
-## Key Patterns & Conventions
+**Architecture**: Manual transaction entry + file uploads (CSV/OFX/QIF) → categorization engine → budgets/goals/bills → analytics & forecasting.
 
-### Multi-tenancy
-All database entities include `tenantId` for tenant isolation. The API expects subdomain-based tenant routing (e.g., `acme.finhome360.com`). The `subdomain.ts` middleware extracts tenant context from subdomains, and `auth.ts` verifies JWT tokens contain matching tenantId.
+Read these first:
+- `apps/api/src/index.ts` (worker entry, route registration, queue consumers)
+- `apps/api/src/db/schema.ts` (Drizzle schema with 31 optimized indexes - core entities: tenants, users, accounts, transactions, categories, budgets, goals, billReminders)
+- `apps/api/src/middleware/auth.ts` (JWT + tenant checks)
+- `apps/api/src/services/categorization.ts` (AI/ML transaction categorization engine with merchant patterns & keyword matching)
+- `apps/api/src/routes/files.ts` (file upload processing, CSV/OFX parsing, R2 storage)
+- `packages/shared/src/schemas.ts` & `types.ts` (canonical Zod schemas & TypeScript types for batch categorization, stats, etc.)
 
-### Authentication & Security
-- JWT authentication using `jose` library (access tokens: 1h, refresh tokens: 7d)
-- Passwords hashed with `bcryptjs` (10 rounds)
-- Rate limiting via KV: auth endpoints (5/15min), API endpoints (100/15min)
-- Refresh tokens stored in `SESSIONS` KV for revocation capability
-- Auth middleware in `apps/api/src/middleware/auth.ts` verifies JWT and sets user context
+Critical conventions (follow these exactly)
+- **Multi-tenancy**: every persisted entity includes `tenantId`. Requests are scoped by subdomain. Use subdomain middleware (`subdomain.ts` / `subdomain-router.js`) to resolve tenant context and enforce tenantId in queries.
+- **API envelope**: responses must be `{ success: boolean, data?: any, error?: { code: string, message: string } }`.
+- **Auth**: JWT via `jose`. Access tokens are short-lived (~1h); refresh tokens are stored in KV (`SESSIONS`) for revocation. See `apps/api/src/middleware/auth.ts`.
+- **Validation**: use Zod schemas from `packages/shared/src/schemas.ts` and the project `validateRequest()` pattern for body validation.
+- **File processing**: Upload to R2 → Queue job → Parse CSV/OFX → Dedupe → Auto-categorize → Persist transactions. See `apps/api/src/routes/files.ts` and `apps/api/src/utils/fileParser.ts`.
+- **Categorization**: Rule-based (keywords + merchant history) with confidence scoring (0-1). Auto-apply >0.8, suggest 0.5-0.8, manual <0.5. See `apps/api/src/services/categorization.ts`.
 
-### Type Safety & Validation
-- Use Zod schemas from `packages/shared/src/schemas.ts` for all validation
-- `validateRequest()` middleware validates request bodies against schemas
-- Database schema in `apps/api/src/db/schema.ts` uses Drizzle ORM with SQLite
-- All API responses follow `{ success: boolean, data?: any, error?: { code: string, message: string } }` format
-
-### Development Workflow
+Common tasks (copyable examples)
 ```bash
-# Start all services
+# Start development (root)
 npm run dev
 
-# Database operations (API app)
+# Add API route
+# 1) create apps/api/src/routes/<name>.ts exporting a router
+# 2) import and register it in apps/api/src/index.ts
+
+# DB schema change
 cd apps/api
-npm run db:generate    # Generate migrations from schema changes
-## Copilot Instructions for Finhome
+npm run db:generate   # generate migration
+npm run db:migrate    # apply to D1
 
-Purpose: get AI coding agents productive fast — understand architecture, conventions, and common edit paths.
+# Tests
+npm test              # runs across repo (turbo)
+cd apps/api && npm test    # API unit tests (Vitest)
+```
 
-Quick architecture
-- Monorepo (Turborepo): apps/api (Hono Cloudflare Worker + Drizzle + D1), apps/web (Next.js 14 + App Router), packages/shared (Zod schemas/types).
+Key architectural patterns
+- **File uploads**: `multipart/form-data` → R2 storage → queue-based parsing → transaction creation with categorization
+- **AI categorization**: Batch processing with merchant pattern caching, keyword matching (423 lines), confidence scoring
+- **Queue consumers**: Bill reminders, notification delivery, file processing jobs via `apps/api/src/index.ts` queue handlers
+- **Analytics**: Pre-aggregated spending trends, category breakdowns, goal progress via `apps/api/src/routes/analytics.ts`
+- **R2 storage**: Profile pictures, uploaded files, export jobs with signed URL access
 
-Essential files to read first
-- `apps/api/src/index.ts` — worker entry, route registration, and queue consumer.
-- `apps/api/src/middleware/auth.ts` and `subdomain.ts` — tenant & JWT enforcement.
-- `apps/api/src/db/schema.ts` — Drizzle schema (run migrations after edits).
-- `apps/api/wrangler.toml` & `wrangler-subdomain.toml` — Cloudflare bindings (DB, KV, R2, QUEUE, AI).
-- `packages/shared/src/schemas.ts` — canonical Zod schemas used across API + web.
-- `apps/web/src/lib/api.ts` — frontend apiClient (auto-refresh tokens, handles 401→refresh).
+Integration & implementation notes
+- **Cloudflare bindings**: (D1, KV, R2, QUEUE, AI) configured in `apps/api/wrangler.toml` and `wrangler-subdomain.toml` — ensure env/secret values are available locally/CI
+- **Queue pattern**: Declare consumers in `apps/api/src/index.ts` using `queue()`, follow existing bill reminder pattern for new async jobs
+- **Performance**: 31 database indexes deployed, batch categorization, merchant pattern caching, efficient SQLite queries with composite indexes
 
-Project-specific conventions (do not invent alternatives)
-- Multi-tenancy: every persistent entity includes `tenantId`. Use `subdomain` middleware to resolve tenant context.
-- API envelope: responses use { success: boolean, data?: any, error?: { code, message } }.
-- Auth: JWT via `jose`; refresh tokens stored in KV `SESSIONS` for revocation. Respect token lifetimes (access 1h, refresh ~7d).
-- Validation: use Zod from `packages/shared` and `validateRequest()` middleware to keep parity between client/server.
-- Rate-limits: implemented using KV; keep same limits when adding endpoints (auth stricter than general API).
+Data model highlights
+- **Core entities**: Tenant → Users → Accounts → Transactions (with categoryId, providerTransactionId for deduping)
+- **Budgeting**: Category-based budgets with period rollover (weekly/monthly/yearly)
+- **Goals**: Target amount/date tracking with contribution history
+- **Bills**: Recurring bill registry with reminder cadence and status tracking
+- Bank connections: Phase 2 (future). Current edition is bankless; remove/avoid banking code, routes, env vars.
 
-Common developer tasks (concrete steps)
-- Add API route: create file under `apps/api/src/routes/`, export router and register it in `apps/api/src/index.ts`.
-- DB schema change: edit `apps/api/src/db/schema.ts` then run:
-	- `cd apps/api; npm run db:generate` (create migration)
-	- `npm run db:migrate` (apply to D1)
-- Run locally / tests:
-	- Root development: `npm run dev` (Turborepo handles apps)
-	- Run all tests: `npm test` (Turbo)
-	- API tests: `cd apps/api && npm test` (Vitest)
+Quick rules-of-thumb
+- Never drop `tenantId` from persistent entities or queries
+- Reuse `packages/shared` Zod schemas and types for API/web parity
+- Maintain standardized error codes: `VALIDATION_ERROR`, `UNAUTHORIZED`, `NOT_FOUND`, `INTERNAL_ERROR`, `RATE_LIMIT_EXCEEDED`
+- For file processing, always store in R2 first, then queue parsing job
+- Use batch categorization for efficiency when processing multiple transactions
 
-Integration notes
-- Cloudflare bindings (DB, KV, R2, QUEUE, AI) are declared in `apps/api/wrangler.toml` — ensure env secrets/bindings are available when running locally or in CI.
-- Queue consumers: `queue()` in `apps/api/src/index.ts` processes bill reminders — follow existing pattern when adding queued work.
-
-When editing please:
-- Keep tenant isolation (always thread tenantId into queries).
-- Reuse shared Zod schemas, and export new types from `packages/shared`.
-- Preserve the standardized API envelope and error codes (`VALIDATION_ERROR`, `UNAUTHORIZED`, `NOT_FOUND`, `INTERNAL_ERROR`, `RATE_LIMIT_EXCEEDED`).
-
-If anything here is unclear or you want more prescriptive examples (route skeleton, migration example, or a small test), tell me which area and I will expand.
+Need examples? I can expand with: route template, migration example, categorization service pattern, queue consumer setup, or file processing workflow.

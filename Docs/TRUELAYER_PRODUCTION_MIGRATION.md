@@ -1,3 +1,9 @@
+# TRUELAYER PRODUCTION MIGRATION
+
+> DEPRECATED — Bankless Edition (Nov 2025)
+>
+> Open Banking via TrueLayer has been removed from this codebase for the Bankless Edition. This document is retained for historical reference only.
+> Do not follow these steps in current environments. Bank connections will return in a future phase.
 # TrueLayer Production Migration Checklist
 
 ## Step 1: TrueLayer Production Application Setup

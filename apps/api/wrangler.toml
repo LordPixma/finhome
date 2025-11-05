@@ -16,7 +16,7 @@ custom_domain = true
 binding = "DB"
 database_name = "finhome-db"
 database_id = "1115b8c7-85fd-4ce8-a553-8fe85fb5b629"
-migrations_dir = "drizzle"
+migrations_dir = "drizzle/migrations"
 
 # KV Namespaces (production)
 [[kv_namespaces]]
@@ -42,18 +42,9 @@ queue = "finhome-bill-reminders"
 max_batch_size = 10
 max_batch_timeout = 30
 
-[[queues.producers]]
-binding = "TRANSACTION_SYNC"
-queue = "finhome-transaction-sync"
+# Transaction sync queues removed for Bankless edition
 
-[[queues.consumers]]
-queue = "finhome-transaction-sync"
-max_batch_size = 5
-max_batch_timeout = 60
-
-# Cron triggers
-[triggers]
-crons = ["0 */4 * * *"]  # Every 4 hours
+# Cron triggers removed (no scheduled banking sync tasks in Bankless edition)
 
 # AI Binding
 [ai]
@@ -65,10 +56,7 @@ ENVIRONMENT = "production"
 JWT_SECRET = "gBk9Lm3Np2Qr5Ts8Wv1Yx4Za7Cd0Ef3Hi6Jl9Mo2Pr5Su8Vx1Za4Cd7Ff0Hi3"
 FRONTEND_URL = "https://app.finhome360.com"
 RESEND_API_KEY = "re_joNCiaUb_4q5et1qJxxfpNbXPhUbq2pFL"
-TRUELAYER_CLIENT_ID = "finhome360-366caa"
-TRUELAYER_CLIENT_SECRET = "4ffa4688-ded1-42b1-a059-7db5f3339b9f"
-# TEMPORARY: Using workers.dev domain due to custom domain cache issue
-TRUELAYER_REDIRECT_URI = "https://finhome.samuel-1e5.workers.dev/api/banking/callback"
+# TrueLayer variables removed for Bankless edition
 # Durable Objects (for future use)
 # [[durable_objects.bindings]]
 # name = "ANALYTICS"

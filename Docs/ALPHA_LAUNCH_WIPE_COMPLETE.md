@@ -34,6 +34,8 @@ All user data tables have been successfully wiped:
 - `tenant_members`: 0 records
 
 #### Banking Integration
+
+> Note: Banking-related items in this section are deprecated in the Bankless Edition and can be skipped. See Docs/TRUELAYER_PRODUCTION_MIGRATION.md for legacy context.
 - `bank_connections`: 0 records
 - `bank_accounts`: 0 records
 - `transaction_sync_history`: 0 records
