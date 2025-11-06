@@ -606,3 +606,75 @@ auth.post('/debug/fix-global-admin', async (c) => {
 });
 
 export default auth;
+
+// Password reset routes
+const password = new Hono<Env>();
+
+// Request password reset
+password.post('/forgot-password', async (c) => {
+  try {
+    const { email } = await c.req.json();
+    if (!email || typeof email !== 'string') {
+      return c.json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Email is required' } }, 400);
+    }
+
+    const db = getDb(c.env.DB);
+    const user = await db.select().from(users).where(eq(users.email, email)).get();
+
+    // Always return success to avoid email enumeration
+    if (!user) {
+      return c.json({ success: true, data: { message: 'If the email exists, a reset link has been sent.' } });
+    }
+
+    // Generate token and store in KV (1 hour TTL)
+    const token = crypto.randomUUID();
+    const resetData = { userId: user.id, email: user.email };
+    await c.env.SESSIONS.put(`reset:${token}`, JSON.stringify(resetData), { expirationTtl: 60 * 60 });
+
+    // Send email
+    const frontendUrl = c.env.FRONTEND_URL || 'https://app.finhome360.com';
+    const emailService = createHybridEmailService(c.env.RESEND_API_KEY, 'noreply@finhome360.com', frontendUrl);
+    await emailService.sendPasswordResetEmail(user.email, token, user.name);
+
+    return c.json({ success: true, data: { message: 'If the email exists, a reset link has been sent.' } });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    return c.json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to process request' } }, 500);
+  }
+});
+
+// Confirm password reset
+password.post('/reset-password', async (c) => {
+  try {
+    const { token, password } = await c.req.json();
+    if (!token || typeof token !== 'string' || !password || typeof password !== 'string') {
+      return c.json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Token and password are required' } }, 400);
+    }
+
+    const dataJson = await c.env.SESSIONS.get(`reset:${token}`);
+    if (!dataJson) {
+      return c.json({ success: false, error: { code: 'INVALID_TOKEN', message: 'Invalid or expired token' } }, 400);
+    }
+
+    const { userId } = JSON.parse(dataJson) as { userId: string };
+    const db = getDb(c.env.DB);
+    const user = await db.select().from(users).where(eq(users.id, userId)).get();
+    if (!user) {
+      return c.json({ success: false, error: { code: 'USER_NOT_FOUND', message: 'User not found' } }, 404);
+    }
+
+    // Update password
+    const passwordHash = await bcrypt.hash(password, 10);
+    await db.update(users).set({ passwordHash, updatedAt: new Date() }).where(eq(users.id, user.id)).run();
+
+    // Invalidate token
+    await c.env.SESSIONS.delete(`reset:${token}`);
+
+    return c.json({ success: true, data: { message: 'Password reset successfully' } });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    return c.json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to reset password' } }, 500);
+  }
+});
+
+export { password };

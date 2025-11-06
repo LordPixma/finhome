@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { eq, and } from 'drizzle-orm';
 import { corsMiddleware } from './middleware/cors';
-import auth from './routes/auth';
+import auth, { password as passwordRoutes } from './routes/auth';
 import transactions from './routes/transactions';
 import budgets from './routes/budgets';
 import analytics from './routes/analytics';
@@ -26,7 +26,7 @@ import adminMetrics from './routes/admin-metrics';
 import { getDb, billReminders, users, userSettings } from './db';
 import { createEmailService } from './services/email';
 import type { Env } from './types';
-import type { MessageBatch } from '@cloudflare/workers-types';
+// Note: Avoid direct dependency on '@cloudflare/workers-types' here for portability
 
 const app = new Hono<Env>();
 
@@ -114,6 +114,7 @@ app.post('/api/fix-global-admin-database', async (c) => {
 
 // Routes
 app.route('/api/auth', auth);
+app.route('/api/auth', passwordRoutes);
 app.route('/api/accounts', accounts);
 app.route('/api/categories', categories);
 app.route('/api/transactions', transactions);
@@ -158,7 +159,7 @@ app.onError((err, c) => {
 });
 
 // Queue consumer for bill reminders and transaction sync
-export async function queue(batch: MessageBatch<any>, env: Env['Bindings']): Promise<void> {
+export async function queue(batch: any, env: Env['Bindings']): Promise<void> {
   const db = getDb(env.DB);
   const emailService = createEmailService('noreply@finhome360.com', env.FRONTEND_URL || 'https://app.finhome360.com');
 
@@ -275,4 +276,4 @@ export default {
   fetch: app.fetch,
   queue,
   scheduled,
-} as ExportedHandler<Env['Bindings']>;
+};

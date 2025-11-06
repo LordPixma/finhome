@@ -175,5 +175,6 @@ export class HybridEmailService {
 
 // Export factory function
 export const createHybridEmailService = (resendApiKey?: string, fromEmail?: string, appUrl?: string) => {
-  return new HybridEmailService(resendApiKey, fromEmail, appUrl);
+  // Constructor expects (fromEmail, appUrl, resendApiKey)
+  return new HybridEmailService(fromEmail, appUrl, resendApiKey);
 };

@@ -113,6 +113,20 @@ export const api = {
       headers: {}, // No auth header for refresh
     }),
 
+  // Password Reset
+  requestPasswordReset: (email: string) =>
+    apiClient('/api/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+      headers: {}, // No auth header
+    }),
+  resetPassword: (token: string, password: string) =>
+    apiClient('/api/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, password }),
+      headers: {}, // No auth header
+    }),
+
   // Accounts
   getAccounts: () => apiClient('/api/accounts'),
   getAccount: (id: string) => apiClient(`/api/accounts/${id}`),
