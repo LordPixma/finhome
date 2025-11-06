@@ -98,6 +98,20 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+      - name: Check D1 database visibility for account/token
+        run: |
+          set -e
+          DB_ID=$(grep -E 'database_id\s*=\s*"([a-f0-9-]+)"' -o apps/api/wrangler.toml | head -1 | sed -E 's/.*"([a-f0-9-]+)"/\1/')
+          echo "Expecting D1 database_id: $DB_ID"
+          npx wrangler d1 list --json | tee /tmp/d1_list.json
+          if ! grep -q "$DB_ID" /tmp/d1_list.json; then
+            echo "D1 database ($DB_ID) not visible to this token/account. Verify CLOUDFLARE_ACCOUNT_ID and token scopes (Account: D1 Database - Edit)." >&2
+            exit 1
+          fi
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
       - name: Apply D1 migrations (remote)
         run: |
           yes | npx wrangler d1 migrations apply finhome-db --config apps/api/wrangler.toml --remote
@@ -151,6 +165,20 @@ jobs:
           if [ -z "$CLOUDFLARE_API_TOKEN" ]; then echo "Missing CLOUDFLARE_API_TOKEN" >&2; exit 1; fi
           if [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then echo "Missing CLOUDFLARE_ACCOUNT_ID" >&2; exit 1; fi
           npx wrangler whoami || true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Check D1 database visibility for account/token
+        run: |
+          set -e
+          DB_ID=$(grep -E 'database_id\s*=\s*"([a-f0-9-]+)"' -o apps/api/wrangler.toml | head -1 | sed -E 's/.*"([a-f0-9-]+)"/\1/')
+          echo "Expecting D1 database_id: $DB_ID"
+          npx wrangler d1 list --json | tee /tmp/d1_list.json
+          if ! grep -q "$DB_ID" /tmp/d1_list.json; then
+            echo "D1 database ($DB_ID) not visible to this token/account. Verify CLOUDFLARE_ACCOUNT_ID and token scopes (Account: D1 Database - Edit)." >&2
+            exit 1
+          fi
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
