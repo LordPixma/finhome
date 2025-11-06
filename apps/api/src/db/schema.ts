@@ -315,6 +315,7 @@ export const userSettings = sqliteTable('user_settings', {
   language: text('language').notNull().default('en'),
   timezone: text('timezone').notNull().default('Europe/London'),
   dateFormat: text('date_format').notNull().default('DD/MM/YYYY'),
+  onboardingComplete: integer('onboarding_complete', { mode: 'boolean' }).notNull().default(false),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 }, (table) => ({

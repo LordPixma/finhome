@@ -203,11 +203,14 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
         }
       }
 
-      // Update user preferences
+      // Update user preferences and mark onboarding as complete
       await fetch('/api/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data.preferences),
+        body: JSON.stringify({
+          ...data.preferences,
+          onboardingComplete: true
+        }),
       });
 
       setCurrentStep(ONBOARDING_STEPS.length - 1);

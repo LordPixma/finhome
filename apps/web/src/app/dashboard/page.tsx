@@ -57,7 +57,8 @@ export default function DashboardPage() {
     try {
       setIsLoading(true);
       
-      // Load user settings for currency
+      // Load user settings for currency and onboarding status
+      let shouldShowOnboarding = false;
       try {
         const settingsRes = await api.getSettings() as any;
         if (settingsRes.success && settingsRes.data) {
@@ -65,24 +66,30 @@ export default function DashboardPage() {
             currency: settingsRes.data.currency || 'GBP',
             currencySymbol: settingsRes.data.currencySymbol || '£'
           });
+          // Check if onboarding is complete
+          shouldShowOnboarding = !settingsRes.data.onboardingComplete;
+        } else {
+          // If no settings exist, user hasn't completed onboarding
+          shouldShowOnboarding = true;
         }
       } catch (error) {
         console.error('Failed to load user settings:', error);
         // Use defaults if settings fail to load
         setUserSettings({ currency: 'GBP', currencySymbol: '£' });
+        // If settings fail to load, assume onboarding not complete
+        shouldShowOnboarding = true;
       }
       
+      // Show onboarding if not completed (regardless of account status)
+      if (shouldShowOnboarding) {
+        setShowOnboarding(true);
+      }
+
       // Load accounts
       const accountsRes = await api.getAccounts() as any;
       if (accountsRes.success) {
         const accountsList = accountsRes.data;
         setAccounts(accountsList);
-        
-        // Check if user is new (no accounts = new user)
-        const hasNoAccounts = !accountsList || accountsList.length === 0;
-        if (hasNoAccounts) {
-          setShowOnboarding(true);
-        }
         
         // Calculate total balance
         const total = accountsList.reduce((sum: number, acc: Account) => sum + acc.balance, 0);

@@ -278,6 +278,7 @@ export const UserSettingsSchema = z.object({
   language: z.string().default('en'),
   timezone: z.string().default('Europe/London'),
   dateFormat: z.string().default('DD/MM/YYYY'),
+  onboardingComplete: z.boolean().default(false),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
@@ -290,6 +291,7 @@ export const UpdateUserSettingsSchema = UserSettingsSchema.pick({
   language: true,
   timezone: true,
   dateFormat: true,
+  onboardingComplete: true,
 }).partial();
 
 export type UpdateUserSettingsRequest = z.infer<typeof UpdateUserSettingsSchema>;

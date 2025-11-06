@@ -37,6 +37,7 @@ router.get('/', async (c) => {
         language: 'en',
         timezone: 'Europe/London',
         dateFormat: 'DD/MM/YYYY',
+        onboardingComplete: false,
         createdAt: now,
         updatedAt: now,
       };
@@ -86,6 +87,7 @@ router.put('/', validateRequest(UpdateUserSettingsSchema), async (c) => {
         language: body.language || 'en',
         timezone: body.timezone || 'Europe/London',
         dateFormat: body.dateFormat || 'DD/MM/YYYY',
+        onboardingComplete: body.onboardingComplete || false,
         createdAt: now,
         updatedAt: now,
       };
