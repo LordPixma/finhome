@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
-import { eq } from 'drizzle-orm';
-import { authMiddleware } from '../middleware/auth';
+import { eq, and } from 'drizzle-orm';
+import { authMiddleware, tenantMiddleware } from '../middleware/auth';
 import { validateRequest } from '../middleware/validation';
 import { getDb, userSettings } from '../db';
 import { UpdateUserSettingsSchema } from '@finhome360/shared';
@@ -9,19 +9,20 @@ import type { Env } from '../types';
 const router = new Hono<Env>();
 
 // Apply auth middleware to all routes
-router.use('/*', authMiddleware);
+router.use('/*', authMiddleware, tenantMiddleware);
 
 // Get user settings
 router.get('/', async (c) => {
   try {
     const db = getDb(c.env.DB);
     const user = c.get('user');
+    const tenantId = c.get('tenantId');
     const userId = user!.id;
 
     let settings = await db
       .select()
       .from(userSettings)
-      .where(eq(userSettings.userId, userId))
+      .where(and(eq(userSettings.tenantUserId, userId), eq(userSettings.tenantId, tenantId!)))
       .get();
 
     // Create default settings if they don't exist
@@ -29,7 +30,8 @@ router.get('/', async (c) => {
       const now = new Date();
       settings = {
         id: crypto.randomUUID(),
-        userId,
+        tenantUserId: userId,
+        tenantId: tenantId!,
         currency: 'GBP',
         currencySymbol: '£',
         language: 'en',
@@ -60,6 +62,7 @@ router.put('/', validateRequest(UpdateUserSettingsSchema), async (c) => {
   try {
     const db = getDb(c.env.DB);
     const user = c.get('user');
+    const tenantId = c.get('tenantId');
     const userId = user!.id;
     const body = await c.req.json();
 
@@ -67,7 +70,7 @@ router.put('/', validateRequest(UpdateUserSettingsSchema), async (c) => {
     let settings = await db
       .select()
       .from(userSettings)
-      .where(eq(userSettings.userId, userId))
+      .where(and(eq(userSettings.tenantUserId, userId), eq(userSettings.tenantId, tenantId!)))
       .get();
 
     const now = new Date();
@@ -76,7 +79,8 @@ router.put('/', validateRequest(UpdateUserSettingsSchema), async (c) => {
       // Create new settings
       settings = {
         id: crypto.randomUUID(),
-        userId,
+        tenantUserId: userId,
+        tenantId: tenantId!,
         currency: body.currency || 'GBP',
         currencySymbol: body.currencySymbol || '£',
         language: body.language || 'en',
@@ -97,7 +101,7 @@ router.put('/', validateRequest(UpdateUserSettingsSchema), async (c) => {
       await db
         .update(userSettings)
         .set(updated)
-        .where(eq(userSettings.userId, userId))
+        .where(and(eq(userSettings.tenantUserId, userId), eq(userSettings.tenantId, tenantId!)))
         .run();
 
       settings = { ...settings, ...updated };

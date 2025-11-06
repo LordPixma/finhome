@@ -207,7 +207,7 @@ export async function queue(batch: any, env: Env['Bindings']): Promise<void> {
       const userSettingsData = await db
         .select()
         .from(userSettings)
-        .where(eq(userSettings.userId, tenantUsers[0]?.id || ''))
+        .where(eq(userSettings.tenantUserId, tenantUsers[0]?.id || ''))
         .get();
 
       const currencySymbol = userSettingsData?.currencySymbol || '£';

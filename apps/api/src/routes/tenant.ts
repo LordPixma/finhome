@@ -161,9 +161,16 @@ router.delete('/delete', tenantMiddleware, async (c) => {
     ]);
 
     // Delete all tenant data in correct order (respecting foreign key constraints)
+    
+    // First get all goal IDs for this tenant
+    const tenantGoalIds = await db.select({ id: goals.id }).from(goals).where(eq(goals.tenantId, tenantId)).all();
+    const goalIds = tenantGoalIds.map(g => g.id);
+    
     await Promise.all([
-      // Delete goal contributions first
-      db.delete(goalContributions).where(eq(goalContributions.tenantId, tenantId)).run(),
+      // Delete goal contributions first (using goalId relationship)
+      ...goalIds.map(goalId => 
+        db.delete(goalContributions).where(eq(goalContributions.goalId, goalId)).run()
+      ),
       // Delete transactions
       db.delete(transactions).where(eq(transactions.tenantId, tenantId)).run(),
       // Delete recurring transactions

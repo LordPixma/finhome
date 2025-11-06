@@ -34,8 +34,8 @@ export class MultiTenantAuthService {
   private jwtSecret: string;
 
   constructor(env: Env) {
-    this.db = getDb(env.DB);
-    this.jwtSecret = env.JWT_SECRET;
+    this.db = getDb(env.Bindings.DB);
+    this.jwtSecret = env.Bindings.JWT_SECRET;
   }
 
   async createGlobalUser(userData: {
@@ -248,7 +248,8 @@ export class MultiTenantAuthService {
       let tenantUser: TenantUser | undefined;
 
       if (tenantId) {
-        tenantUser = await this.getTenantUser(globalUser.id, tenantId);
+        const result = await this.getTenantUser(globalUser.id, tenantId);
+        tenantUser = result || undefined;
       }
 
       return {

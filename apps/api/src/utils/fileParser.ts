@@ -468,7 +468,7 @@ export function parseXML(xmlContent: string): ParsedTransaction[] {
 }
 
 // PDF Parser (basic text extraction for bank statements)
-export function parsePDF(pdfContent: ArrayBuffer): ParsedTransaction[] {
+export function parsePDF(_pdfContent: ArrayBuffer): ParsedTransaction[] {
   // Note: This is a basic implementation. In production, you'd want to use
   // a proper PDF parsing library like pdf-parse or pdf2pic with OCR
   
