@@ -1,8 +1,8 @@
 -- Migration: User Settings and Tenant Members
 -- Created: 2025-10-03
 
--- User Settings Table
-CREATE TABLE user_settings (
+-- Idempotent create: User Settings Table
+CREATE TABLE IF NOT EXISTS user_settings (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL UNIQUE REFERENCES users(id),
   currency TEXT NOT NULL DEFAULT 'GBP',
@@ -14,8 +14,8 @@ CREATE TABLE user_settings (
   updated_at INTEGER NOT NULL
 );
 
--- Tenant Members Table
-CREATE TABLE tenant_members (
+-- Idempotent create: Tenant Members Table
+CREATE TABLE IF NOT EXISTS tenant_members (
   id TEXT PRIMARY KEY,
   tenant_id TEXT NOT NULL REFERENCES tenants(id),
   user_id TEXT NOT NULL REFERENCES users(id),
@@ -28,11 +28,10 @@ CREATE TABLE tenant_members (
   updated_at INTEGER NOT NULL
 );
 
--- Create indexes for better query performance
-CREATE INDEX idx_user_settings_user_id ON user_settings(user_id);
-CREATE INDEX idx_tenant_members_tenant_id ON tenant_members(tenant_id);
-CREATE INDEX idx_tenant_members_user_id ON tenant_members(user_id);
-CREATE INDEX idx_tenant_members_status ON tenant_members(status);
+CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON user_settings(user_id);
+CREATE INDEX IF NOT EXISTS idx_tenant_members_tenant_id ON tenant_members(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_tenant_members_user_id ON tenant_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_tenant_members_status ON tenant_members(status);
 
 -- Update default currency for accounts table
 -- Note: This only affects new accounts. Existing accounts will keep their currency.

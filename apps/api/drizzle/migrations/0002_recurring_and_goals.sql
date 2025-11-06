@@ -1,8 +1,8 @@
 -- Migration: Add Recurring Transactions and Goals features
 -- Created: 2025-10-03
 
--- Recurring Transactions Table
-CREATE TABLE `recurring_transactions` (
+-- Idempotent create: Recurring Transactions Table
+CREATE TABLE IF NOT EXISTS `recurring_transactions` (
 	`id` text PRIMARY KEY NOT NULL,
 	`tenant_id` text NOT NULL,
 	`account_id` text NOT NULL,
@@ -24,8 +24,8 @@ CREATE TABLE `recurring_transactions` (
 	FOREIGN KEY (`category_id`) REFERENCES `categories`(`id`) ON UPDATE no action ON DELETE no action
 );
 
--- Goals Table
-CREATE TABLE `goals` (
+-- Idempotent create: Goals Table
+CREATE TABLE IF NOT EXISTS `goals` (
 	`id` text PRIMARY KEY NOT NULL,
 	`tenant_id` text NOT NULL,
 	`name` text NOT NULL,
@@ -43,8 +43,8 @@ CREATE TABLE `goals` (
 	FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE no action
 );
 
--- Goal Contributions Table
-CREATE TABLE `goal_contributions` (
+-- Idempotent create: Goal Contributions Table
+CREATE TABLE IF NOT EXISTS `goal_contributions` (
 	`id` text PRIMARY KEY NOT NULL,
 	`goal_id` text NOT NULL,
 	`transaction_id` text,
