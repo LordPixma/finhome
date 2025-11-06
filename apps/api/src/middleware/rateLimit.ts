@@ -27,9 +27,11 @@ export function rateLimiter(options: {
     }
 
     // Get client identifier (IP or authenticated user)
-    const user = c.get('user');
-    const clientId = user?.id || c.req.header('cf-connecting-ip') || 'unknown';
-    const key = `${keyPrefix}:${clientId}`;
+  const user = c.get('user');
+  const clientId = user?.id || c.req.header('cf-connecting-ip') || 'unknown';
+  // Scope the rate limit key per-endpoint to avoid one route starving others
+  const pathKey = c.req.path || 'unknown_path';
+  const key = `${keyPrefix}:${clientId}:${pathKey}`;
 
     try {
       // Get current count from KV
@@ -98,8 +100,9 @@ export function rateLimiter(options: {
  * Strict rate limiter for authentication endpoints
  */
 export const authRateLimiter = rateLimiter({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  maxRequests: 5, // 5 attempts
+  // Be a bit more forgiving to reduce false 429s while staying safe
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  maxRequests: 15, // 15 attempts per 5 minutes per route per IP/user
   keyPrefix: 'auth_ratelimit',
 });
 

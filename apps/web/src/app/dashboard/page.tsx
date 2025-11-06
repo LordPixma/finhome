@@ -66,23 +66,29 @@ export default function DashboardPage() {
             currency: settingsRes.data.currency || 'GBP',
             currencySymbol: settingsRes.data.currencySymbol || '£'
           });
-          // Check if onboarding is complete
+          // Check if onboarding is complete on the server
           shouldShowOnboarding = !settingsRes.data.onboardingComplete;
         } else {
-          // If no settings exist, user hasn't completed onboarding
-          shouldShowOnboarding = true;
+          // If no settings exist, do NOT assume onboarding is needed to avoid loops
+          shouldShowOnboarding = false;
         }
       } catch (error) {
         console.error('Failed to load user settings:', error);
         // Use defaults if settings fail to load
         setUserSettings({ currency: 'GBP', currencySymbol: '£' });
-        // If settings fail to load, assume onboarding not complete
-        shouldShowOnboarding = true;
+        // Do not show onboarding on error to prevent loops
+        shouldShowOnboarding = false;
       }
       
-      // Show onboarding if not completed (regardless of account status)
-      if (shouldShowOnboarding) {
+      // Local guardrails to prevent loops: allow disabling via env and honoring local completion/dismissal
+      const DISABLE_ONBOARDING = process.env.NEXT_PUBLIC_DISABLE_ONBOARDING === '1';
+      const localCompleted = typeof window !== 'undefined' && window.localStorage.getItem('onboardingComplete') === '1';
+      const localDismissed = typeof window !== 'undefined' && window.localStorage.getItem('onboardingDismissed') === '1';
+
+      if (!DISABLE_ONBOARDING && !localCompleted && !localDismissed && shouldShowOnboarding) {
         setShowOnboarding(true);
+      } else {
+        setShowOnboarding(false);
       }
 
       // Load accounts
@@ -514,11 +520,13 @@ export default function DashboardPage() {
           isOpen={showOnboarding}
           onClose={() => {
             setShowOnboarding(false);
+            try { window.localStorage.setItem('onboardingDismissed', '1'); } catch {}
             // Reload dashboard data after onboarding
             loadDashboardData();
           }}
           onComplete={() => {
             setShowOnboarding(false);
+            try { window.localStorage.setItem('onboardingComplete', '1'); } catch {}
             // Reload dashboard data after onboarding completion
             loadDashboardData();
           }}
