@@ -88,6 +88,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify Cloudflare credentials (whoami)
+        run: |
+          set -e
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then echo "Missing CLOUDFLARE_API_TOKEN" >&2; exit 1; fi
+          if [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then echo "Missing CLOUDFLARE_ACCOUNT_ID" >&2; exit 1; fi
+          npx wrangler whoami || true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
       - name: Apply D1 migrations (remote)
         run: |
           yes | npx wrangler d1 migrations apply finhome-db --config apps/api/wrangler.toml --remote
@@ -134,6 +144,16 @@ jobs:
       
       - name: Install dependencies
         run: npm ci
+
+      - name: Verify Cloudflare credentials (whoami)
+        run: |
+          set -e
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then echo "Missing CLOUDFLARE_API_TOKEN" >&2; exit 1; fi
+          if [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then echo "Missing CLOUDFLARE_ACCOUNT_ID" >&2; exit 1; fi
+          npx wrangler whoami || true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Apply D1 migrations (remote)
         run: |
