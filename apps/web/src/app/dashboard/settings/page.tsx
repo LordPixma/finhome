@@ -5,6 +5,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button, Input, Select } from '@/components/ui';
 import { api } from '@/lib/api';
+import TenantDeletionModal from '@/components/TenantDeletionModal';
 
 interface UserSettings {
   id: string;
@@ -63,6 +64,10 @@ export default function SettingsPage() {
     confirmPassword: ''
   });
   
+  // Tenant deletion states
+  const [showDeletionModal, setShowDeletionModal] = useState(false);
+  const [tenantInfo, setTenantInfo] = useState<{ id: string; name: string; subdomain: string } | null>(null);
+  
   // Loading states
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
@@ -85,6 +90,7 @@ export default function SettingsPage() {
     loadSettings();
     loadProfile();
     loadMembers();
+    loadTenantInfo();
   }, []);
 
   const loadSettings = async () => {
@@ -127,6 +133,17 @@ export default function SettingsPage() {
       console.error('Failed to load members:', error);
     } finally {
       setIsLoadingMembers(false);
+    }
+  };
+
+  const loadTenantInfo = async () => {
+    try {
+      const response = await api.getTenantInfo() as any;
+      if (response.success) {
+        setTenantInfo(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to load tenant info:', error);
     }
   };
 
@@ -638,6 +655,44 @@ export default function SettingsPage() {
                   </Button>
                 </div>
               </form>
+
+              {/* Danger Zone */}
+              <div className="mt-12 border-t border-gray-200 pt-8">
+                <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+                  <h3 className="text-lg font-bold text-red-900 mb-4 flex items-center gap-2">
+                    <span className="text-2xl">⚠️</span> Danger Zone
+                  </h3>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="font-semibold text-red-900 mb-2">Delete Tenant</h4>
+                      <p className="text-sm text-red-700 mb-4">
+                        Permanently delete your tenant "{tenantInfo?.name || 'Unknown'}" and all associated data. 
+                        This action cannot be undone and will remove all transactions, accounts, budgets, and family members.
+                      </p>
+                      
+                      <div className="bg-red-100 border border-red-300 rounded-lg p-4 mb-4">
+                        <h5 className="font-semibold text-red-900 mb-2">What will be deleted:</h5>
+                        <ul className="text-sm text-red-800 space-y-1">
+                          <li>• All financial transactions and account data</li>
+                          <li>• All budgets, goals, and bill reminders</li>
+                          <li>• All categories and recurring transactions</li>
+                          <li>• All family members and their access</li>
+                          <li>• All user settings and preferences</li>
+                          <li>• The entire tenant account</li>
+                        </ul>
+                      </div>
+
+                      <Button
+                        onClick={() => setShowDeletionModal(true)}
+                        className="bg-red-600 hover:bg-red-700 text-white border-red-600 hover:border-red-700"
+                      >
+                        Delete Tenant
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -811,6 +866,15 @@ export default function SettingsPage() {
                   </div>
                 ))}
         </div>
+        
+        {/* Tenant Deletion Modal */}
+        {showDeletionModal && tenantInfo && (
+          <TenantDeletionModal
+            isOpen={showDeletionModal}
+            onClose={() => setShowDeletionModal(false)}
+            tenantName={tenantInfo.name}
+          />
+        )}
       </DashboardLayout>
     </ProtectedRoute>
   );

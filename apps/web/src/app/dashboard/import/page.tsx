@@ -97,11 +97,11 @@ export default function ImportPage() {
     setPreviewData([]);
 
     // Validate file type
-    const validExtensions = ['.csv', '.ofx'];
+    const validExtensions = ['.csv', '.ofx', '.qfx', '.json', '.xml', '.xls', '.xlsx', '.txt', '.mt940', '.pdf'];
     const fileExtension = selectedFile.name.substring(selectedFile.name.lastIndexOf('.')).toLowerCase();
 
     if (!validExtensions.includes(fileExtension)) {
-      setError('Invalid file type. Please upload a CSV or OFX file.');
+      setError('Invalid file type. Supported formats: CSV, Excel (XLS/XLSX), JSON, XML, OFX/QFX, MT940 (TXT), and PDF.');
       return;
     }
 
@@ -254,7 +254,7 @@ export default function ImportPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Import Transactions</h1>
-          <p className="text-gray-600 mt-1">Upload CSV or OFX files to import transactions</p>
+          <p className="text-gray-600 mt-1">Upload bank statements in multiple formats to import transactions</p>
         </div>
 
         {/* Instructions */}
@@ -262,29 +262,39 @@ export default function ImportPage() {
           <h2 className="text-lg font-bold text-blue-900 mb-3 flex items-center gap-2">
             <span className="text-2xl">📋</span> File Format Requirements
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <h3 className="font-semibold text-blue-900 mb-2">CSV Format</h3>
-              <p className="text-sm text-blue-800 mb-2">Supported formats:</p>
+              <h3 className="font-semibold text-blue-900 mb-2">Text Formats</h3>
+              <p className="text-sm text-blue-800 mb-2">Structured data files:</p>
               <ul className="text-sm text-blue-700 space-y-1 list-disc list-inside">
-                <li>Standard CSV with Date, Description, Amount columns</li>
-                <li>Monzo format with Money In / Money Out columns</li>
-                <li>Most UK and US bank statement formats</li>
-                <li>Automatic field detection and category matching</li>
+                <li><strong>CSV:</strong> Standard format with auto field detection</li>
+                <li><strong>JSON:</strong> Structured transaction data</li>
+                <li><strong>XML:</strong> Bank XML export files</li>
+                <li><strong>MT940:</strong> SWIFT banking format (.txt)</li>
               </ul>
             </div>
             <div>
-              <h3 className="font-semibold text-blue-900 mb-2">OFX Format</h3>
-              <p className="text-sm text-blue-800 mb-2">Standard OFX/QFX files from banks:</p>
+              <h3 className="font-semibold text-blue-900 mb-2">Bank Formats</h3>
+              <p className="text-sm text-blue-800 mb-2">Standard bank exports:</p>
               <ul className="text-sm text-blue-700 space-y-1 list-disc list-inside">
-                <li>Automatically extracts transaction data</li>
-                <li>Supports most banking formats</li>
-                <li>Date, amount, and description parsed automatically</li>
+                <li><strong>OFX/QFX:</strong> Quicken and bank formats</li>
+                <li><strong>Excel:</strong> .xls and .xlsx spreadsheets</li>
+                <li><strong>PDF:</strong> Bank statements (limited support)</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-semibold text-blue-900 mb-2">Auto-Detection</h3>
+              <p className="text-sm text-blue-800 mb-2">Smart processing:</p>
+              <ul className="text-sm text-blue-700 space-y-1 list-disc list-inside">
+                <li>Automatic field detection</li>
+                <li>Category matching and creation</li>
+                <li>Currency symbol support</li>
+                <li>Date format recognition</li>
               </ul>
             </div>
           </div>
           <div className="mt-4 text-sm text-blue-800">
-            <strong>Note:</strong> Maximum file size is 5MB. Categories from your CSV will be automatically created if they don't exist.
+            <strong>Note:</strong> Maximum file size is 5MB. Categories from your files will be automatically created if they don't exist. PDF support is limited - please use CSV or Excel for best results.
           </div>
         </div>
 
@@ -368,7 +378,7 @@ export default function ImportPage() {
                 <p className="text-gray-600 mb-6">or click to browse files</p>
                 <input
                   type="file"
-                  accept=".csv,.ofx,.qfx"
+                  accept=".csv,.ofx,.qfx,.json,.xml,.xls,.xlsx,.txt,.mt940,.pdf"
                   onChange={handleFileInputChange}
                   className="hidden"
                   id="file-input"

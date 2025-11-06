@@ -489,7 +489,7 @@ If you have any questions, feel free to reach out to ${data.inviterName}.
 
               <h3>💡 Quick Start Tips:</h3>
               <p>
-                1. <strong>Add your first account</strong> - Start by adding your main checking or savings account<br>
+                1. <strong>Add your first account</strong> - Start by adding your main current or savings account<br>
                 2. <strong>Create categories</strong> - Set up spending categories that match your lifestyle<br>
                 3. <strong>Import transactions</strong> - Upload a CSV file from your bank to get started quickly<br>
                 4. <strong>Set your first budget</strong> - Create a monthly budget for groceries or entertainment

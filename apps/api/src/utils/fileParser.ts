@@ -212,8 +212,9 @@ function parseDate(dateStr: string): Date | null {
 function parseAmount(amountStr: string): number | null {
   if (!amountStr || amountStr.trim() === '') return null;
   
-  // Remove currency symbols, commas, and whitespace
-  const cleaned = amountStr.replace(/[$£€,\s]/g, '').trim();
+  // Remove common currency symbols, commas, and whitespace
+  // Support more currencies: $ £ € ¥ ₹ ₽ ¢ ₦ ₨ ₪ ₩ ₡ ₴ ₵ ₲ ₭ ₱ ₿
+  const cleaned = amountStr.replace(/[$£€¥₹₽¢₦₨₪₩₡₴₵₲₭₱₿,\s]/g, '').trim();
   
   // Handle parentheses for negative amounts
   if (cleaned.includes('(') && cleaned.includes(')')) {
@@ -381,4 +382,165 @@ export function mapOFXToTransactions(ofxTransactions: OFXTransaction[]): ParsedT
     type: tx.type === 'CREDIT' || tx.type === 'DEP' ? 'income' : 'expense',
     notes: tx.memo,
   }));
+}
+
+// JSON Parser for structured transaction data
+export function parseJSON(jsonContent: string): ParsedTransaction[] {
+  try {
+    const data = JSON.parse(jsonContent);
+    
+    // Handle different JSON structures
+    let transactions: any[] = [];
+    
+    if (Array.isArray(data)) {
+      transactions = data;
+    } else if (data.transactions && Array.isArray(data.transactions)) {
+      transactions = data.transactions;
+    } else if (data.data && Array.isArray(data.data)) {
+      transactions = data.data;
+    } else {
+      throw new Error('Invalid JSON structure - expected array of transactions');
+    }
+    
+    return transactions.map(tx => ({
+      date: new Date(tx.date || tx.transactionDate || tx.posted_date),
+      description: tx.description || tx.merchant || tx.name || tx.memo || 'Unknown',
+      amount: Math.abs(parseFloat(tx.amount || tx.value || '0')),
+      type: (tx.type === 'credit' || tx.amount > 0) ? 'income' : 'expense' as 'income' | 'expense',
+      notes: tx.notes || tx.memo || tx.reference,
+      category: tx.category || tx.categoryName,
+    }));
+  } catch (error) {
+    throw new Error(`Invalid JSON file: ${error}`);
+  }
+}
+
+// XML Parser for various bank formats
+export function parseXML(xmlContent: string): ParsedTransaction[] {
+  const transactions: ParsedTransaction[] = [];
+  
+  // Simple XML parsing for transaction data
+  // Look for common XML transaction patterns
+  const transactionRegex = /<transaction[^>]*>(.*?)<\/transaction>/gis;
+  const matches = xmlContent.matchAll(transactionRegex);
+  
+  const getXMLValue = (block: string, tag: string): string => {
+    const tagRegex = new RegExp(`<${tag}[^>]*>([^<]+)<\/${tag}>`, 'i');
+    const match = block.match(tagRegex);
+    return match ? match[1].trim() : '';
+  };
+  
+  for (const match of matches) {
+    const block = match[1];
+    
+    try {
+      const dateStr = getXMLValue(block, 'date') || getXMLValue(block, 'transactionDate');
+      const amountStr = getXMLValue(block, 'amount') || getXMLValue(block, 'value');
+      const description = getXMLValue(block, 'description') || getXMLValue(block, 'merchant') || getXMLValue(block, 'name');
+      
+      if (!dateStr || !amountStr) continue;
+      
+      const date = parseDate(dateStr);
+      if (!date) continue;
+      
+      const amount = parseAmount(amountStr);
+      if (amount === null) continue;
+      
+      const type = getXMLValue(block, 'type');
+      const notes = getXMLValue(block, 'notes') || getXMLValue(block, 'memo');
+      const category = getXMLValue(block, 'category');
+      
+      transactions.push({
+        date,
+        description: description || 'Unknown Transaction',
+        amount: Math.abs(amount),
+        type: (type === 'credit' || amount > 0) ? 'income' : 'expense',
+        notes,
+        category,
+      });
+    } catch (error) {
+      console.error('Error parsing XML transaction:', error);
+      continue;
+    }
+  }
+  
+  return transactions;
+}
+
+// PDF Parser (basic text extraction for bank statements)
+export function parsePDF(pdfContent: ArrayBuffer): ParsedTransaction[] {
+  // Note: This is a basic implementation. In production, you'd want to use
+  // a proper PDF parsing library like pdf-parse or pdf2pic with OCR
+  
+  // For now, we'll return an empty array and suggest manual conversion
+  // In a real implementation, you would:
+  // 1. Extract text from PDF using a library
+  // 2. Use regex patterns to find transaction data
+  // 3. Parse dates, amounts, and descriptions
+  
+  console.warn('PDF parsing not fully implemented - please convert to CSV first');
+  return [];
+}
+
+// Excel/XLS Parser (basic TSV/CSV-like parsing)
+export function parseXLS(xlsContent: string): ParsedTransaction[] {
+  // For basic XLS files exported as text, treat similar to CSV with tabs
+  try {
+    // Replace tabs with commas and parse as CSV
+    const csvContent = xlsContent.replace(/\t/g, ',');
+    const { rows } = parseCSV(csvContent);
+    return mapCSVToTransactions(rows);
+  } catch (error) {
+    throw new Error(`Failed to parse XLS file: ${error}`);
+  }
+}
+
+// MT940 Parser (SWIFT format used by many European banks)
+export function parseMT940(mt940Content: string): ParsedTransaction[] {
+  const transactions: ParsedTransaction[] = [];
+  const lines = mt940Content.split('\n');
+  
+  let currentTransaction: Partial<ParsedTransaction> = {};
+  
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    
+    // :61: - Statement Line (main transaction info)
+    if (trimmedLine.startsWith(':61:')) {
+      // Parse MT940 statement line
+      // Format: :61:YYMMDDMMDDxxx[amount][code][reference]
+      const match = trimmedLine.match(/:61:(\d{6})(\d{4})?([CD])([\d,\.]+)([A-Z]{3})?(.+)/);
+      if (match) {
+        const [, dateStr, , debitCredit, amountStr, , reference] = match;
+        
+        // Parse date (YYMMDD)
+        const year = 2000 + parseInt(dateStr.substring(0, 2));
+        const month = parseInt(dateStr.substring(2, 4)) - 1;
+        const day = parseInt(dateStr.substring(4, 6));
+        
+        const amount = parseFloat(amountStr.replace(',', '.'));
+        
+        currentTransaction = {
+          date: new Date(year, month, day),
+          amount: Math.abs(amount),
+          type: debitCredit === 'C' ? 'income' : 'expense',
+          description: reference?.trim() || 'MT940 Transaction',
+        };
+      }
+    }
+    
+    // :86: - Additional information (description/memo)
+    if (trimmedLine.startsWith(':86:') && currentTransaction.date) {
+      const description = trimmedLine.substring(4).trim();
+      currentTransaction.description = description || currentTransaction.description;
+      
+      // Complete the transaction
+      if (currentTransaction.date && currentTransaction.amount !== undefined) {
+        transactions.push(currentTransaction as ParsedTransaction);
+        currentTransaction = {};
+      }
+    }
+  }
+  
+  return transactions;
 }

@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { eq, and } from 'drizzle-orm';
 import { getDb, transactions, accounts, categories } from '../db';
 import { authMiddleware, tenantMiddleware } from '../middleware/auth';
-import { parseCSV, parseOFX, mapCSVToTransactions, mapOFXToTransactions } from '../utils/fileParser';
+import { parseCSV, parseOFX, mapCSVToTransactions, mapOFXToTransactions, parsePDF, parseXML, parseJSON, parseXLS, parseMT940 } from '../utils/fileParser';
 import type { Env } from '../types';
 import type { ParsedTransaction } from '../utils/fileParser';
 
@@ -105,13 +105,40 @@ filesRouter.post('/upload', async c => {
     } else if (fileName.endsWith('.ofx') || fileName.endsWith('.qfx')) {
       const ofxTransactions = parseOFX(content);
       parsedTransactions = mapOFXToTransactions(ofxTransactions);
+    } else if (fileName.endsWith('.json')) {
+      parsedTransactions = parseJSON(content);
+    } else if (fileName.endsWith('.xml')) {
+      parsedTransactions = parseXML(content);
+    } else if (fileName.endsWith('.txt') || fileName.endsWith('.mt940')) {
+      // Try to parse as MT940 SWIFT format
+      parsedTransactions = parseMT940(content);
+    } else if (fileName.endsWith('.xls') || fileName.endsWith('.xlsx')) {
+      // Basic XLS parsing (exported as text)
+      parsedTransactions = parseXLS(content);
+    } else if (fileName.endsWith('.pdf')) {
+      // PDF parsing (limited support)
+      const arrayBuffer = await file.arrayBuffer();
+      parsedTransactions = parsePDF(arrayBuffer);
+      
+      if (parsedTransactions.length === 0) {
+        return c.json(
+          {
+            success: false,
+            error: {
+              code: 'PDF_NOT_SUPPORTED',
+              message: 'PDF parsing is limited. Please export your bank statement as CSV, Excel, or another supported format for best results.',
+            },
+          },
+          400
+        );
+      }
     } else {
       return c.json(
         {
           success: false,
           error: {
             code: 'INVALID_FILE_TYPE',
-            message: 'Only CSV, OFX, and QFX files are supported',
+            message: 'Supported formats: CSV, Excel (XLS/XLSX), JSON, XML, OFX/QFX, MT940 (TXT), and PDF (limited)',
           },
         },
         400

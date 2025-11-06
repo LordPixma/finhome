@@ -6,6 +6,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { Modal, Input, Select, Button } from '@/components/ui';
 import { api } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
+import { useUserSettings } from '@/hooks/useUserSettings';
 import { AutoCategorizeButton, BatchCategorizeButton } from '@/components/ai';
 import { 
   TrashIcon, 
@@ -56,6 +57,7 @@ export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const { settings: userSettings } = useUserSettings();
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
@@ -440,7 +442,7 @@ export default function TransactionsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500 mb-1 font-medium">Total Income</p>
-                <p className="text-2xl font-bold text-success-600 font-mono">{formatCurrency(totalIncome)}</p>
+                <p className="text-2xl font-bold text-success-600 font-mono">{formatCurrency(totalIncome, userSettings?.currency, userSettings?.currencySymbol)}</p>
               </div>
               <div className="w-12 h-12 bg-success-50 rounded-full flex items-center justify-center border-2 border-success-200 group-hover:bg-success-100 transition-colors">
                 <ArrowUpIcon className="w-6 h-6 text-success-600" />
@@ -452,7 +454,7 @@ export default function TransactionsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500 mb-1 font-medium">Total Expenses</p>
-                <p className="text-2xl font-bold text-error-600 font-mono">{formatCurrency(totalExpenses)}</p>
+                <p className="text-2xl font-bold text-error-600 font-mono">{formatCurrency(totalExpenses, userSettings?.currency, userSettings?.currencySymbol)}</p>
               </div>
               <div className="w-12 h-12 bg-error-50 rounded-full flex items-center justify-center border-2 border-error-200 group-hover:bg-error-100 transition-colors">
                 <ArrowDownIcon className="w-6 h-6 text-error-600" />
@@ -465,7 +467,7 @@ export default function TransactionsPage() {
               <div>
                 <p className="text-sm text-gray-500 mb-1 font-medium">Net</p>
                 <p className={`text-2xl font-bold font-mono ${totalIncome - totalExpenses >= 0 ? 'text-success-600' : 'text-error-600'}`}>
-                  {formatCurrency(totalIncome - totalExpenses)}
+                  {formatCurrency(totalIncome - totalExpenses, userSettings?.currency, userSettings?.currencySymbol)}
                 </p>
               </div>
               <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 group-hover:opacity-80 transition-colors ${
@@ -715,7 +717,7 @@ export default function TransactionsPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
                           <span className={`font-bold font-mono ${transaction.type === 'income' ? 'text-success-600' : 'text-error-600'}`}>
-                            {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                            {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount, userSettings?.currency, userSettings?.currencySymbol)}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">

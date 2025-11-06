@@ -90,8 +90,8 @@ describe('Account Schemas', () => {
     it('should validate correct account data', () => {
       const validAccount = {
         tenantId: '123e4567-e89b-12d3-a456-426614174000',
-        name: 'Checking Account',
-        type: 'checking',
+        name: 'Current Account',
+        type: 'current',
         balance: 1000.50,
         currency: 'USD',
       };
@@ -100,7 +100,7 @@ describe('Account Schemas', () => {
     });
 
     it('should accept valid account types', () => {
-      const types = ['checking', 'savings', 'credit', 'cash', 'investment', 'other'];
+      const types = ['current', 'savings', 'credit', 'cash', 'investment', 'other'];
       types.forEach(type => {
         const account = {
           tenantId: '123e4567-e89b-12d3-a456-426614174000',

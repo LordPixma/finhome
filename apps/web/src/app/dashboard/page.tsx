@@ -7,6 +7,7 @@ import { api } from '@/lib/api';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { CategorizationStatsWidget } from '@/components/ai';
 import StatCard from '@/components/StatCard';
+import OnboardingModal from '@/components/OnboardingModal';
 import {
   CurrencyDollarIcon,
   ArrowTrendingUpIcon,
@@ -49,6 +50,9 @@ export default function DashboardPage() {
   const [monthlyExpenses, setMonthlyExpenses] = useState(0);
   const [timeRange, setTimeRange] = useState<'30days' | 'alltime'>('30days');
   const [syncingAccounts, setSyncingAccounts] = useState<Set<string>>(new Set());
+  const [userSettings, setUserSettings] = useState<{currency: string; currencySymbol: string} | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [isNewUser, setIsNewUser] = useState(false);
 
   useEffect(() => {
     loadDashboardData();
@@ -58,11 +62,33 @@ export default function DashboardPage() {
     try {
       setIsLoading(true);
       
+      // Load user settings for currency
+      try {
+        const settingsRes = await api.getSettings() as any;
+        if (settingsRes.success && settingsRes.data) {
+          setUserSettings({
+            currency: settingsRes.data.currency || 'GBP',
+            currencySymbol: settingsRes.data.currencySymbol || '£'
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load user settings:', error);
+        // Use defaults if settings fail to load
+        setUserSettings({ currency: 'GBP', currencySymbol: '£' });
+      }
+      
       // Load accounts
       const accountsRes = await api.getAccounts() as any;
       if (accountsRes.success) {
         const accountsList = accountsRes.data;
         setAccounts(accountsList);
+        
+        // Check if user is new (no accounts = new user)
+        const hasNoAccounts = !accountsList || accountsList.length === 0;
+        if (hasNoAccounts) {
+          setIsNewUser(true);
+          setShowOnboarding(true);
+        }
         
         // Calculate total balance
         const total = accountsList.reduce((sum: number, acc: Account) => sum + acc.balance, 0);
@@ -191,7 +217,7 @@ export default function DashboardPage() {
           {/* Total Balance - Primary Gradient */}
           <StatCard
             title="Total Balance"
-            value={formatCurrency(totalBalance)}
+            value={formatCurrency(totalBalance, userSettings?.currency, userSettings?.currencySymbol)}
             subtitle={`${accounts.length} accounts`}
             icon={<CurrencyDollarIcon className="w-6 h-6 text-white" />}
             variant="primary"
@@ -201,7 +227,7 @@ export default function DashboardPage() {
           {/* Monthly Income - Success */}
           <StatCard
             title="Income"
-            value={formatCurrency(monthlyIncome)}
+            value={formatCurrency(monthlyIncome, userSettings?.currency, userSettings?.currencySymbol)}
             subtitle={timeRange === '30days' ? 'Last 30 days' : 'All time'}
             icon={<ArrowTrendingUpIcon className="w-6 h-6 text-success-600" />}
             variant="success"
@@ -211,7 +237,7 @@ export default function DashboardPage() {
           {/* Monthly Expenses - Error */}
           <StatCard
             title="Expenses"
-            value={formatCurrency(monthlyExpenses)}
+            value={formatCurrency(monthlyExpenses, userSettings?.currency, userSettings?.currencySymbol)}
             subtitle={timeRange === '30days' ? 'Last 30 days' : 'All time'}
             icon={<ArrowTrendingDownIcon className="w-6 h-6 text-error-600" />}
             variant="error"
@@ -221,7 +247,7 @@ export default function DashboardPage() {
           {/* Net Savings - Warning */}
           <StatCard
             title="Net Savings"
-            value={formatCurrency(monthlyIncome - monthlyExpenses)}
+            value={formatCurrency(monthlyIncome - monthlyExpenses, userSettings?.currency, userSettings?.currencySymbol)}
             subtitle={timeRange === '30days' ? 'Last 30 days' : 'All time'}
             icon={<ScaleIcon className="w-6 h-6 text-warning-600" />}
             variant={monthlyIncome - monthlyExpenses >= 0 ? 'success' : 'error'}
@@ -302,7 +328,7 @@ export default function DashboardPage() {
                         <p className={`text-lg font-semibold tabular-nums ${
                           account.balance >= 0 ? 'text-gray-900' : 'text-error-600'
                         }`}>
-                          {formatCurrency(account.balance)}
+                          {formatCurrency(account.balance, userSettings?.currency, userSettings?.currencySymbol)}
                         </p>
                       </div>
                       <button
@@ -465,7 +491,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="text-right ml-4 flex-shrink-0">
                     <p className={`currency ${transaction.type === 'income' ? 'currency-positive' : 'currency-negative'}`}>
-                      {transaction.type === 'income' ? '+' : ''}{formatCurrency(transaction.amount)}
+                      {transaction.type === 'income' ? '+' : ''}{formatCurrency(transaction.amount, userSettings?.currency, userSettings?.currencySymbol)}
                     </p>
                   </div>
                 </div>
@@ -476,6 +502,25 @@ export default function DashboardPage() {
 
         </div>
       </DashboardLayout>
+      
+      {/* Onboarding Modal */}
+      {showOnboarding && (
+        <OnboardingModal
+          isOpen={showOnboarding}
+          onClose={() => {
+            setShowOnboarding(false);
+            setIsNewUser(false);
+            // Reload dashboard data after onboarding
+            loadDashboardData();
+          }}
+          onComplete={() => {
+            setShowOnboarding(false);
+            setIsNewUser(false);
+            // Reload dashboard data after onboarding completion
+            loadDashboardData();
+          }}
+        />
+      )}
     </ProtectedRoute>
   );
 }

@@ -6,9 +6,15 @@
  * Format a number as currency
  * @param amount The amount to format
  * @param currency The currency code (default: GBP)
+ * @param currencySymbol Optional currency symbol to use (takes precedence over currency)
  * @returns Formatted currency string
  */
-export function formatCurrency(amount: number, currency: string = 'GBP'): string {
+export function formatCurrency(amount: number, currency: string = 'GBP', currencySymbol?: string): string {
+  if (currencySymbol) {
+    // Use the custom currency symbol directly
+    return `${currencySymbol}${Math.abs(amount).toFixed(2)}`;
+  }
+  
   return new Intl.NumberFormat('en-GB', {
     style: 'currency',
     currency,

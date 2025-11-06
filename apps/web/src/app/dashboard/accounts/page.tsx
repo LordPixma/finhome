@@ -19,7 +19,7 @@ import {
 interface Account {
   id: string;
   name: string;
-  type: 'checking' | 'savings' | 'credit' | 'cash' | 'investment';
+  type: 'current' | 'savings' | 'credit' | 'cash' | 'investment';
   balance: number;
   currency: string;
   createdAt?: number;
@@ -32,7 +32,7 @@ export default function AccountsPage() {
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [formData, setFormData] = useState({
     name: '',
-    type: 'checking',
+    type: 'current',
     balance: '',
     currency: 'GBP',
   });
@@ -70,7 +70,7 @@ export default function AccountsPage() {
       setEditingAccount(null);
       setFormData({
         name: '',
-        type: 'checking',
+        type: 'current',
         balance: '',
         currency: 'GBP',
       });
@@ -129,7 +129,7 @@ export default function AccountsPage() {
 
   const getAccountIcon = (type: string) => {
     const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-      checking: BuildingLibraryIcon,
+      current: BuildingLibraryIcon,
       savings: BanknotesIcon,
       credit: CreditCardIcon,
       cash: BanknotesIcon,
@@ -140,7 +140,7 @@ export default function AccountsPage() {
 
   const getAccountColor = (type: string) => {
     const colors: Record<string, string> = {
-      checking: 'bg-primary-50 text-primary-600 border-primary-200',
+      current: 'bg-primary-50 text-primary-600 border-primary-200',
       savings: 'bg-success-50 text-success-600 border-success-200',
       credit: 'bg-purple-50 text-purple-600 border-purple-200',
       cash: 'bg-warning-50 text-warning-600 border-warning-200',
@@ -267,7 +267,7 @@ export default function AccountsPage() {
               required
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="e.g., Main Checking"
+              placeholder="e.g., Main Current Account"
             />
 
             <Select
@@ -276,7 +276,7 @@ export default function AccountsPage() {
               value={formData.type}
               onChange={(e) => setFormData({ ...formData, type: e.target.value })}
               options={[
-                { value: 'checking', label: '🏦 Checking' },
+                { value: 'current', label: '🏦 Current Account' },
                 { value: 'savings', label: '💰 Savings' },
                 { value: 'credit', label: '💳 Credit Card' },
                 { value: 'cash', label: '💵 Cash' },

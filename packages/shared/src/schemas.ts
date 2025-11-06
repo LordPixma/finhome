@@ -42,7 +42,7 @@ export const AccountSchema = z.object({
   id: z.string().uuid(),
   tenantId: z.string().uuid(),
   name: z.string().min(1).max(255),
-  type: z.enum(['checking', 'savings', 'credit', 'cash', 'investment', 'other']),
+  type: z.enum(['current', 'savings', 'credit', 'cash', 'investment', 'other']),
   balance: z.number(),
   currency: z.string().length(3).default('GBP'),
   createdAt: z.date(),

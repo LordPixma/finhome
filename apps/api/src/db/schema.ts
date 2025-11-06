@@ -9,7 +9,81 @@ export const tenants = sqliteTable('tenants', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 
-// Users Table
+// Global Users Table (unique users across all tenants)
+export const globalUsers = sqliteTable('global_users', {
+  id: text('id').primaryKey(),
+  email: text('email').notNull().unique(),
+  passwordHash: text('password_hash').notNull(),
+  name: text('name').notNull(),
+  isGlobalAdmin: integer('is_global_admin', { mode: 'boolean' }).default(false),
+  // Profile fields (shared across tenants)
+  profilePictureUrl: text('profile_picture_url'),
+  bio: text('bio'),
+  phoneNumber: text('phone_number'),
+  dateOfBirth: text('date_of_birth'), // YYYY-MM-DD format
+  // Address fields
+  addressLine1: text('address_line_1'),
+  addressLine2: text('address_line_2'),
+  city: text('city'),
+  state: text('state'),
+  postalCode: text('postal_code'),
+  country: text('country'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  emailIdx: index('idx_global_users_email').on(table.email),
+  globalAdminIdx: index('idx_global_users_global_admin').on(table.isGlobalAdmin),
+}));
+
+// Tenant Users Table (links global users to specific tenants)
+export const tenantUsers = sqliteTable('tenant_users', {
+  id: text('id').primaryKey(),
+  globalUserId: text('global_user_id')
+    .notNull()
+    .references(() => globalUsers.id),
+  tenantId: text('tenant_id')
+    .notNull()
+    .references(() => tenants.id),
+  role: text('role', { enum: ['owner', 'admin', 'member'] }).notNull(),
+  status: text('status', { enum: ['active', 'inactive', 'suspended'] }).notNull().default('active'),
+  // Tenant-specific settings
+  displayName: text('display_name'), // Override name for this tenant
+  // Permissions specific to this tenant
+  canManageAccounts: integer('can_manage_accounts', { mode: 'boolean' }).default(false),
+  canManageBudgets: integer('can_manage_budgets', { mode: 'boolean' }).default(false),
+  canInviteMembers: integer('can_invite_members', { mode: 'boolean' }).default(false),
+  
+  joinedAt: integer('joined_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  globalUserIdx: index('idx_tenant_users_global').on(table.globalUserId),
+  tenantIdx: index('idx_tenant_users_tenant').on(table.tenantId),
+  roleIdx: index('idx_tenant_users_role').on(table.role),
+  statusIdx: index('idx_tenant_users_status').on(table.status),
+  uniqueUserTenant: index('idx_tenant_users_unique').on(table.globalUserId, table.tenantId),
+}));
+
+// User Sessions Table (multi-tenant authentication)
+export const userSessions = sqliteTable('user_sessions', {
+  id: text('id').primaryKey(),
+  globalUserId: text('global_user_id')
+    .notNull()
+    .references(() => globalUsers.id),
+  currentTenantId: text('current_tenant_id')
+    .references(() => tenants.id), // Can be NULL for tenant selection
+  accessTokenHash: text('access_token_hash').notNull(),
+  refreshTokenHash: text('refresh_token_hash').notNull(),
+  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  globalUserIdx: index('idx_user_sessions_global_user').on(table.globalUserId),
+  tenantIdx: index('idx_user_sessions_tenant').on(table.currentTenantId),
+  accessTokenIdx: index('idx_user_sessions_access_token').on(table.accessTokenHash),
+}));
+
+// Legacy Users Table (will be deprecated after migration)
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
   tenantId: text('tenant_id')
@@ -48,7 +122,7 @@ export const accounts = sqliteTable('accounts', {
     .references(() => tenants.id),
   name: text('name').notNull(),
   type: text('type', {
-    enum: ['checking', 'savings', 'credit', 'cash', 'investment', 'other'],
+    enum: ['current', 'savings', 'credit', 'cash', 'investment', 'other'],
   }).notNull(),
   balance: real('balance').notNull().default(0),
   currency: text('currency').notNull().default('GBP'),
@@ -229,10 +303,13 @@ export const goalContributions = sqliteTable('goal_contributions', {
 // User Settings Table
 export const userSettings = sqliteTable('user_settings', {
   id: text('id').primaryKey(),
-  userId: text('user_id')
+  tenantUserId: text('tenant_user_id')
     .notNull()
     .unique()
-    .references(() => users.id),
+    .references(() => tenantUsers.id),
+  tenantId: text('tenant_id')
+    .notNull()
+    .references(() => tenants.id),
   currency: text('currency').notNull().default('GBP'),
   currencySymbol: text('currency_symbol').notNull().default('£'),
   language: text('language').notNull().default('en'),
@@ -241,7 +318,8 @@ export const userSettings = sqliteTable('user_settings', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 }, (table) => ({
-  userIdx: index('idx_user_settings_user').on(table.userId),
+  tenantUserIdx: index('idx_user_settings_tenant_user').on(table.tenantUserId),
+  tenantIdx: index('idx_user_settings_tenant').on(table.tenantId),
 }));
 
 // Tenant Members Table (for multi-user access to tenants)

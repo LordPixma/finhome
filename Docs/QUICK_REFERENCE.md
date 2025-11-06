@@ -32,7 +32,7 @@ npm run db:migrate -w @finhome/api     # Apply migrations
 ### Deployment
 ```bash
 npm run deploy -w @finhome/api         # Deploy API to Cloudflare
-docker-compose up                       # Run in Docker
+# Frontend deploys automatically via Cloudflare Pages
 ```
 
 ## Project Stats

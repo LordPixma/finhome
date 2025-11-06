@@ -231,6 +231,17 @@ export const api = {
 
   // Tenant
   getTenantInfo: () => apiClient('/api/tenant/info'),
+  deleteTenant: (confirmations: string[]) => apiClient('/api/tenant/delete', { 
+    method: 'DELETE', 
+    body: JSON.stringify({ confirmations }) 
+  }),
+  
+  // Multi-tenant User Support
+  getUserTenants: () => apiClient('/api/user/tenants'),
+  switchTenant: (tenantId: string) => apiClient('/api/user/switch-tenant', {
+    method: 'POST',
+    body: JSON.stringify({ tenantId })
+  }),
 
   // User Profile
   getProfile: () => apiClient('/api/profile'),
