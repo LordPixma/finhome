@@ -27,7 +27,7 @@ async function generateTokens(
 
   // Access token (1 hour)
   const accessToken = await new jose.SignJWT({
-    userId,
+    userId, // retain for backward compatibility
     email,
     name,
     tenantId,
@@ -37,6 +37,7 @@ async function generateTokens(
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('1h')
+    .setSubject(userId)
     .sign(secretKey);
 
   // Refresh token (7 days)
@@ -48,6 +49,7 @@ async function generateTokens(
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('7d')
+    .setSubject(userId)
     .sign(secretKey);
 
   return { accessToken, refreshToken };
@@ -491,6 +493,7 @@ auth.post('/global-admin/login', async (c) => {
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
       .setExpirationTime('1h')
+      .setSubject(user.id)
       .sign(secretKey);
 
     const refreshToken = await new jose.SignJWT({
@@ -500,6 +503,7 @@ auth.post('/global-admin/login', async (c) => {
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
       .setExpirationTime('7d')
+      .setSubject(user.id)
       .sign(secretKey);
 
     // Store refresh token in KV
