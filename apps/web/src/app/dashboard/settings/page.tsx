@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button, Input, Select } from '@/components/ui';
@@ -373,9 +374,11 @@ export default function SettingsPage() {
                   <div className="flex items-center space-x-4">
                     <div className="relative">
                       {profile.profilePictureUrl ? (
-                        <img 
+                        <Image 
                           src={profile.profilePictureUrl} 
                           alt="Profile" 
+                          width={80}
+                          height={80}
                           className="w-20 h-20 rounded-full object-cover border-4 border-gray-200"
                         />
                       ) : (

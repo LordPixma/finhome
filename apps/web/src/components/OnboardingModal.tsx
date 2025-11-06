@@ -118,7 +118,6 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
     },
   });
 
-  const currentStepData = ONBOARDING_STEPS[currentStep];
   const isLastStep = currentStep === ONBOARDING_STEPS.length - 1;
   const isFirstStep = currentStep === 0;
 
@@ -511,7 +510,7 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title="Welcome to Finhome" size="lg">
       <div className="p-6">
         {/* Progress Bar */}
         <div className="mb-6">

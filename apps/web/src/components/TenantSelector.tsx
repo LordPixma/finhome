@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui';
 import { api } from '@/lib/api';
 
 interface Tenant {

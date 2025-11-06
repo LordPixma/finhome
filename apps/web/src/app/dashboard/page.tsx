@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import DashboardLayout from '@/components/DashboardLayout';
 import { api } from '@/lib/api';
@@ -52,13 +52,8 @@ export default function DashboardPage() {
   const [syncingAccounts, setSyncingAccounts] = useState<Set<string>>(new Set());
   const [userSettings, setUserSettings] = useState<{currency: string; currencySymbol: string} | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [isNewUser, setIsNewUser] = useState(false);
 
-  useEffect(() => {
-    loadDashboardData();
-  }, [timeRange]);
-
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     try {
       setIsLoading(true);
       
@@ -86,7 +81,6 @@ export default function DashboardPage() {
         // Check if user is new (no accounts = new user)
         const hasNoAccounts = !accountsList || accountsList.length === 0;
         if (hasNoAccounts) {
-          setIsNewUser(true);
           setShowOnboarding(true);
         }
         
@@ -132,7 +126,11 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [timeRange]);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
 
   const syncAccount = async (accountId: string) => {
     try {
@@ -509,13 +507,11 @@ export default function DashboardPage() {
           isOpen={showOnboarding}
           onClose={() => {
             setShowOnboarding(false);
-            setIsNewUser(false);
             // Reload dashboard data after onboarding
             loadDashboardData();
           }}
           onComplete={() => {
             setShowOnboarding(false);
-            setIsNewUser(false);
             // Reload dashboard data after onboarding completion
             loadDashboardData();
           }}
