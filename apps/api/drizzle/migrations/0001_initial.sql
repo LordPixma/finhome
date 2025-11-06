@@ -18,6 +18,17 @@ CREATE TABLE IF NOT EXISTS users (
   name TEXT NOT NULL,
   password_hash TEXT NOT NULL,
   role TEXT NOT NULL CHECK (role IN ('admin', 'member')),
+  -- Profile enhancement columns (included in initial schema for fresh DBs)
+  profile_picture_url TEXT,
+  bio TEXT,
+  phone_number TEXT,
+  date_of_birth TEXT, -- YYYY-MM-DD format
+  address_line_1 TEXT,
+  address_line_2 TEXT,
+  city TEXT,
+  state TEXT,
+  postal_code TEXT,
+  country TEXT,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
   FOREIGN KEY (tenant_id) REFERENCES tenants(id)
