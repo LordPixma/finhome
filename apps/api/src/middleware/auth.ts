@@ -27,7 +27,7 @@ export async function authMiddleware(c: AppContext, next: Next): Promise<Respons
       algorithms: ['HS256'],
     });
 
-    if (!payload.userId) {
+    if (!payload.sub) {
       return c.json({ success: false, error: { code: 'INVALID_TOKEN', message: 'Invalid token payload' } }, 401);
     }
 
@@ -58,11 +58,10 @@ export async function authMiddleware(c: AppContext, next: Next): Promise<Respons
 
     // Set user context
     c.set('user', {
-      id: payload.userId as string,
+      id: payload.sub as string,
       email: payload.email as string,
       name: payload.name as string,
       tenantId: payload.tenantId as string | null,
-      role: payload.role as 'admin' | 'member',
       isGlobalAdmin: isGlobalAdmin,
     });
     

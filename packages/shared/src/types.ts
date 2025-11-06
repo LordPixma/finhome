@@ -81,7 +81,7 @@ export interface AuthUser {
   email: string;
   name: string;
   tenantId: string | null;
-  role: 'admin' | 'member';
+  role?: 'admin' | 'member' | 'owner'; // Made optional since it's determined per-tenant
   isGlobalAdmin?: boolean;
 }
 
