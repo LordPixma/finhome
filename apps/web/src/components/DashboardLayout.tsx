@@ -9,7 +9,6 @@ import TextLogo from './TextLogo';
 import {
   HomeIcon,
   BanknotesIcon,
-  LinkIcon,
   CreditCardIcon,
   ArrowPathIcon,
   ChartBarIcon,
