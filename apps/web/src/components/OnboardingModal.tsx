@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { api } from '@/lib/api';
 import { Modal } from '@/components/ui';
 import { 
   ChevronRightIcon, 
@@ -137,43 +138,31 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
   const completeOnboarding = async () => {
     setIsLoading(true);
     try {
-      // Create the account
+      // Create the account (authorized, via API client)
       if (data.account.name && data.account.balance) {
-        await fetch('/api/accounts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: data.account.name,
-            type: data.account.type,
-            balance: parseFloat(data.account.balance),
-            currency: data.account.currency,
-          }),
+        await api.createAccount({
+          name: data.account.name,
+          type: data.account.type,
+          balance: parseFloat(data.account.balance),
+          currency: data.account.currency,
         });
       }
 
       // Create default categories
       for (const category of DEFAULT_CATEGORIES) {
-        await fetch('/api/categories', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(category),
-        });
+        await api.createCategory(category as any);
       }
 
       // Create goals
       for (const goal of data.goals) {
         if (goal.name && goal.targetAmount) {
-          await fetch('/api/goals', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              name: goal.name,
-              description: goal.description,
-              targetAmount: parseFloat(goal.targetAmount),
-              deadline: goal.deadline ? new Date(goal.deadline) : null,
-              color: '#3b82f6',
-              icon: '🎯',
-            }),
+          await api.createGoal({
+            name: goal.name,
+            description: goal.description,
+            targetAmount: parseFloat(goal.targetAmount),
+            deadline: goal.deadline ? new Date(goal.deadline) : null,
+            color: '#3b82f6',
+            icon: '🎯',
           });
         }
       }
@@ -186,31 +175,22 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
           if (nextDueDate < new Date()) {
             nextDueDate.setMonth(nextDueDate.getMonth() + 1);
           }
-
-          await fetch('/api/bill-reminders', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              name: bill.name,
-              amount: parseFloat(bill.amount),
-              categoryId: bill.categoryId,
-              dueDate: nextDueDate,
-              frequency: bill.frequency,
-              reminderDays: parseInt(data.preferences.reminderDays),
-              status: 'pending',
-            }),
+          await api.createBillReminder({
+            name: bill.name,
+            amount: parseFloat(bill.amount),
+            categoryId: bill.categoryId,
+            dueDate: nextDueDate,
+            frequency: bill.frequency,
+            reminderDays: parseInt(data.preferences.reminderDays),
+            status: 'pending',
           });
         }
       }
 
       // Update user preferences and mark onboarding as complete
-      await fetch('/api/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...data.preferences,
-          onboardingComplete: true
-        }),
+      await api.updateSettings({
+        ...data.preferences,
+        onboardingComplete: true,
       });
 
       setCurrentStep(ONBOARDING_STEPS.length - 1);
