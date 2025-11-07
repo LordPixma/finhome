@@ -7,7 +7,6 @@ import { api } from '@/lib/api';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { CategorizationStatsWidget } from '@/components/ai';
 import StatCard from '@/components/StatCard';
-import OnboardingModal from '@/components/OnboardingModal';
 import {
   CurrencyDollarIcon,
   ArrowTrendingUpIcon,
@@ -51,14 +50,12 @@ export default function DashboardPage() {
   const [timeRange, setTimeRange] = useState<'30days' | 'alltime'>('30days');
   const [syncingAccounts, setSyncingAccounts] = useState<Set<string>>(new Set());
   const [userSettings, setUserSettings] = useState<{currency: string; currencySymbol: string} | null>(null);
-  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const loadDashboardData = useCallback(async () => {
     try {
       setIsLoading(true);
       
-      // Load user settings for currency and onboarding status
-      let shouldShowOnboarding = false;
+      // Load user settings for currency
       try {
         const settingsRes = await api.getSettings() as any;
         if (settingsRes.success && settingsRes.data) {
@@ -66,29 +63,11 @@ export default function DashboardPage() {
             currency: settingsRes.data.currency || 'GBP',
             currencySymbol: settingsRes.data.currencySymbol || '£'
           });
-          // Check if onboarding is complete on the server
-          shouldShowOnboarding = !settingsRes.data.onboardingComplete;
-        } else {
-          // If no settings exist, do NOT assume onboarding is needed to avoid loops
-          shouldShowOnboarding = false;
         }
       } catch (error) {
         console.error('Failed to load user settings:', error);
         // Use defaults if settings fail to load
         setUserSettings({ currency: 'GBP', currencySymbol: '£' });
-        // Do not show onboarding on error to prevent loops
-        shouldShowOnboarding = false;
-      }
-      
-      // Local guardrails to prevent loops: allow disabling via env and honoring local completion/dismissal
-      const DISABLE_ONBOARDING = process.env.NEXT_PUBLIC_DISABLE_ONBOARDING === '1';
-      const localCompleted = typeof window !== 'undefined' && window.localStorage.getItem('onboardingComplete') === '1';
-      const localDismissed = typeof window !== 'undefined' && window.localStorage.getItem('onboardingDismissed') === '1';
-
-      if (!DISABLE_ONBOARDING && !localCompleted && !localDismissed && shouldShowOnboarding) {
-        setShowOnboarding(true);
-      } else {
-        setShowOnboarding(false);
       }
 
       // Load accounts
@@ -514,24 +493,7 @@ export default function DashboardPage() {
         </div>
       </DashboardLayout>
       
-      {/* Onboarding Modal */}
-      {showOnboarding && (
-        <OnboardingModal
-          isOpen={showOnboarding}
-          onClose={() => {
-            setShowOnboarding(false);
-            try { window.localStorage.setItem('onboardingDismissed', '1'); } catch {}
-            // Reload dashboard data after onboarding
-            loadDashboardData();
-          }}
-          onComplete={() => {
-            setShowOnboarding(false);
-            try { window.localStorage.setItem('onboardingComplete', '1'); } catch {}
-            // Reload dashboard data after onboarding completion
-            loadDashboardData();
-          }}
-        />
-      )}
+
     </ProtectedRoute>
   );
 }
