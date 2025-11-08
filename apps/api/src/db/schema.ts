@@ -111,7 +111,8 @@ export const users = sqliteTable('users', {
 }, (table) => ({
   tenantIdx: index('idx_users_tenant').on(table.tenantId),
   emailIdx: index('idx_users_email').on(table.email),
-  uniqueTenantEmail: uniqueIndex('uniq_users_tenant_email').on(table.tenantId, table.email),
+  // Unique constraint on email to prevent duplicate emails even for global admins (null tenantId)
+  uniqueEmail: uniqueIndex('uniq_users_email').on(table.email),
   globalAdminIdx: index('idx_users_global_admin').on(table.isGlobalAdmin),
 }));
 
