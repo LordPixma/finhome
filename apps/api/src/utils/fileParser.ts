@@ -1,5 +1,5 @@
-import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
-import type { TextContent, TextItem } from 'pdfjs-dist/types/src/display/api';
+// PDF parsing removed due to Cloudflare Workers compatibility issues
+// pdfjs-dist has Node.js-specific dependencies that don't work in edge runtime
 
 // CSV Parser utility
 export interface CSVParseResult {
@@ -470,141 +470,13 @@ export function parseXML(xmlContent: string): ParsedTransaction[] {
   return transactions;
 }
 
-// PDF Parser (basic text extraction for bank statements)
-export async function parsePDF(pdfContent: ArrayBuffer): Promise<ParsedTransaction[]> {
-  try {
-    const pdfBytes = new Uint8Array(pdfContent);
-    const loadingTask = getDocument({
-      data: pdfBytes,
-      disableFontFace: true,
-      useSystemFonts: true,
-    });
-    const pdf = await loadingTask.promise;
-
-    const allLines: string[] = [];
-
-    for (let pageIndex = 1; pageIndex <= pdf.numPages; pageIndex++) {
-      const page = await pdf.getPage(pageIndex);
-      const textContent = (await page.getTextContent()) as TextContent;
-      allLines.push(...extractPdfLines(textContent));
-    }
-
-    return parsePdfLines(allLines);
-  } catch (error) {
-    console.error('Failed to parse PDF file:', error);
-    return [];
-  }
-}
-
-function extractPdfLines(textContent: TextContent): string[] {
-  const lineMap = new Map<number, string[]>();
-
-  for (const item of textContent.items) {
-    const textItem = item as TextItem;
-    const value = (textItem.str || '').replace(/\u00a0/g, ' ').trim();
-    if (!value) continue;
-
-    const transform = textItem.transform || [0, 0, 0, 0, 0, 0];
-    const yPosition = Math.round(transform[5] || 0);
-    const currentLine = lineMap.get(yPosition) || [];
-    currentLine.push(value);
-    lineMap.set(yPosition, currentLine);
-  }
-
-  return Array.from(lineMap.entries())
-    .sort((a, b) => b[0] - a[0]) // PDF coordinates start at bottom-left
-    .map(([, fragments]) => fragments.join(' ').replace(/\s+/g, ' ').trim())
-    .filter(line => line.length > 0);
-}
-
-function parsePdfLines(lines: string[]): ParsedTransaction[] {
-  const transactions: ParsedTransaction[] = [];
-  let lastTransaction: ParsedTransaction | null = null;
-
-  for (const rawLine of lines) {
-    const line = rawLine.replace(/\u00a0/g, ' ').trim();
-    if (!line) continue;
-
-    const lower = line.toLowerCase();
-    if (lower.includes('date') && lower.includes('description')) {
-      continue; // Skip header rows
-    }
-
-    // Expecting date in MM/DD/YYYY or MM-DD-YYYY format (strict, 01-12 for month, 01-31 for day, 4-digit year)
-    const dateMatch = line.match(/^((0[1-9]|1[0-2])[\/\-](0[1-9]|[12][0-9]|3[01])[\/\-](\d{4}))\s+(.*)$/);
-    if (!dateMatch) {
-      if (lastTransaction) {
-        const notes = `${lastTransaction.notes ? `${lastTransaction.notes} ` : ''}${line}`.trim();
-        lastTransaction.notes = notes;
-      }
-      continue;
-    }
-
-    const [, dateStr, remainderRaw] = dateMatch;
-    const remainder = remainderRaw.replace(/\s{2,}/g, ' ').trim();
-    const date = parseDate(dateStr);
-    if (!date) {
-      continue;
-    }
-
-    const matchIterator = remainder.matchAll(/-?[0-9]+[0-9,]*\.\d{2}/g);
-    const matchResults = Array.from(matchIterator).map(match => ({
-      value: match[0],
-      index: match.index ?? remainder.indexOf(match[0]),
-      amount: parseAmount(match[0]) ?? 0,
-    }));
-
-    if (matchResults.length === 0) {
-      if (lastTransaction) {
-        const notes = `${lastTransaction.notes ? `${lastTransaction.notes} ` : ''}${remainder}`.trim();
-        lastTransaction.notes = notes;
-      }
-      continue;
-    }
-
-    const primaryMatch = matchResults.find(match => match.amount !== 0) || matchResults[0];
-    const amount = primaryMatch.amount;
-    const descriptionPart = remainder.slice(0, primaryMatch.index).trim();
-    const trailingPart = remainder.slice(primaryMatch.index + primaryMatch.value.length).trim();
-
-    const cleanedDescription = descriptionPart.replace(/\b(CR|DR)\b/gi, '').trim() || 'Transaction';
-    const typeOverride = detectTypeFromText(trailingPart);
-    const normalizedAmount = Math.abs(amount);
-    const type: 'income' | 'expense' = typeOverride ?? (amount >= 0 ? 'income' : 'expense');
-
-    const trailingTokens = trailingPart
-      .replace(/\b(CR|DR)\b/gi, '')
-      .trim()
-      .split(/\s+/)
-      .filter(Boolean)
-      .filter(token => !/^[-+]?\d[\d,]*\.?\d*$/.test(token));
-
-    const notes = trailingTokens.join(' ');
-
-    const transaction: ParsedTransaction = {
-      date,
-      description: cleanedDescription,
-      amount: normalizedAmount,
-      type,
-      notes: notes || undefined,
-    };
-
-    transactions.push(transaction);
-    lastTransaction = transaction;
-  }
-
-  return transactions;
-}
-
-function detectTypeFromText(text: string): 'income' | 'expense' | null {
-  if (!text) return null;
-  if (/\bCR\b/i.test(text) || /credit/i.test(text)) {
-    return 'income';
-  }
-  if (/\bDR\b/i.test(text) || /debit/i.test(text)) {
-    return 'expense';
-  }
-  return null;
+// PDF Parser - Not supported in Cloudflare Workers edge runtime
+// pdfjs-dist has Node.js dependencies incompatible with Workers
+// Users should export bank statements as CSV, Excel, OFX, or other supported formats
+export async function parsePDF(_pdfContent: ArrayBuffer): Promise<ParsedTransaction[]> {
+  // Return empty array - the route handler will show appropriate error message
+  console.warn('PDF parsing is not supported in Cloudflare Workers runtime. Please use CSV, Excel, OFX, or other supported formats.');
+  return [];
 }
 
 // Excel/XLS Parser (basic TSV/CSV-like parsing)
