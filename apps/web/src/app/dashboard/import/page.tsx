@@ -34,7 +34,6 @@ export default function ImportPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [isLoadingAccounts, setIsLoadingAccounts] = useState(true);
-  const [currentFileIndex, setCurrentFileIndex] = useState(0);
   const [uploadProgress, setUploadProgress] = useState<string>('');
 
   useEffect(() => {
@@ -129,14 +128,12 @@ export default function ImportPage() {
     setIsProcessing(true);
     setError('');
     setImportResults([]);
-    setCurrentFileIndex(0);
 
     const results: ImportResult[] = [];
 
     // Process each file
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      setCurrentFileIndex(i + 1);
       setUploadProgress(`Processing ${i + 1} of ${files.length}: ${file.name}`);
 
       try {
