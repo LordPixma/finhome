@@ -129,7 +129,7 @@ export async function subdomainMiddleware(c: AppContext, next: Next): Promise<Re
  * Extract subdomain from host header
  * Returns null if no subdomain or base domain
  */
-function extractSubdomain(host: string): string | null {
+export function extractSubdomain(host: string): string | null {
   // Remove port if present
   const hostWithoutPort = host.split(':')[0];
   
@@ -173,7 +173,7 @@ function extractSubdomain(host: string): string | null {
 /**
  * Validate subdomain format
  */
-function isValidSubdomain(subdomain: string): boolean {
+export function isValidSubdomain(subdomain: string): boolean {
   // Must be lowercase letters, numbers, and hyphens only
   // Must be 1-63 characters (DNS limit)
   // Cannot start or end with hyphen

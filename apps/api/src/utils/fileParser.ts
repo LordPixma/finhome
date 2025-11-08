@@ -1,3 +1,6 @@
+import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
+import type { TextContent, TextItem } from 'pdfjs-dist/types/src/display/api';
+
 // CSV Parser utility
 export interface CSVParseResult {
   headers: string[];
@@ -468,18 +471,140 @@ export function parseXML(xmlContent: string): ParsedTransaction[] {
 }
 
 // PDF Parser (basic text extraction for bank statements)
-export function parsePDF(_pdfContent: ArrayBuffer): ParsedTransaction[] {
-  // Note: This is a basic implementation. In production, you'd want to use
-  // a proper PDF parsing library like pdf-parse or pdf2pic with OCR
-  
-  // For now, we'll return an empty array and suggest manual conversion
-  // In a real implementation, you would:
-  // 1. Extract text from PDF using a library
-  // 2. Use regex patterns to find transaction data
-  // 3. Parse dates, amounts, and descriptions
-  
-  console.warn('PDF parsing not fully implemented - please convert to CSV first');
-  return [];
+export async function parsePDF(pdfContent: ArrayBuffer): Promise<ParsedTransaction[]> {
+  try {
+    const pdfBytes = new Uint8Array(pdfContent);
+    const loadingTask = getDocument({
+      data: pdfBytes,
+      disableWorker: true,
+      disableFontFace: true,
+      useSystemFonts: true,
+    });
+    const pdf = await loadingTask.promise;
+
+    const allLines: string[] = [];
+
+    for (let pageIndex = 1; pageIndex <= pdf.numPages; pageIndex++) {
+      const page = await pdf.getPage(pageIndex);
+      const textContent = (await page.getTextContent()) as TextContent;
+      allLines.push(...extractPdfLines(textContent));
+    }
+
+    return parsePdfLines(allLines);
+  } catch (error) {
+    console.error('Failed to parse PDF file:', error);
+    return [];
+  }
+}
+
+function extractPdfLines(textContent: TextContent): string[] {
+  const lineMap = new Map<number, string[]>();
+
+  for (const item of textContent.items) {
+    const textItem = item as TextItem;
+    const value = (textItem.str || '').replace(/\u00a0/g, ' ').trim();
+    if (!value) continue;
+
+    const transform = textItem.transform || [0, 0, 0, 0, 0, 0];
+    const yPosition = Math.round(transform[5] || 0);
+    const currentLine = lineMap.get(yPosition) || [];
+    currentLine.push(value);
+    lineMap.set(yPosition, currentLine);
+  }
+
+  return Array.from(lineMap.entries())
+    .sort((a, b) => b[0] - a[0]) // PDF coordinates start at bottom-left
+    .map(([, fragments]) => fragments.join(' ').replace(/\s+/g, ' ').trim())
+    .filter(line => line.length > 0);
+}
+
+function parsePdfLines(lines: string[]): ParsedTransaction[] {
+  const transactions: ParsedTransaction[] = [];
+  let lastTransaction: ParsedTransaction | null = null;
+
+  for (const rawLine of lines) {
+    const line = rawLine.replace(/\u00a0/g, ' ').trim();
+    if (!line) continue;
+
+    const lower = line.toLowerCase();
+    if (lower.includes('date') && lower.includes('description')) {
+      continue; // Skip header rows
+    }
+
+    const dateMatch = line.match(/^(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\s+(.*)$/);
+    if (!dateMatch) {
+      if (lastTransaction) {
+        const notes = `${lastTransaction.notes ? `${lastTransaction.notes} ` : ''}${line}`.trim();
+        lastTransaction.notes = notes;
+      }
+      continue;
+    }
+
+    const [, dateStr, remainderRaw] = dateMatch;
+    const remainder = remainderRaw.replace(/\s{2,}/g, ' ').trim();
+    const date = parseDate(dateStr);
+    if (!date) {
+      continue;
+    }
+
+    const matchIterator = remainder.matchAll(/-?[0-9]+[0-9,]*\.\d{2}/g);
+    const matchResults = Array.from(matchIterator).map(match => ({
+      value: match[0],
+      index: match.index ?? remainder.indexOf(match[0]),
+      amount: parseAmount(match[0]) ?? 0,
+    }));
+
+    if (matchResults.length === 0) {
+      if (lastTransaction) {
+        const notes = `${lastTransaction.notes ? `${lastTransaction.notes} ` : ''}${remainder}`.trim();
+        lastTransaction.notes = notes;
+      }
+      continue;
+    }
+
+    const primaryMatch = matchResults.find(match => match.amount !== 0) || matchResults[0];
+    const amount = primaryMatch.amount;
+    const descriptionPart = remainder.slice(0, primaryMatch.index).trim();
+    const trailingPart = remainder.slice(primaryMatch.index + primaryMatch.value.length).trim();
+
+    const cleanedDescription = descriptionPart.replace(/\b(CR|DR)\b/gi, '').trim() || 'Transaction';
+    const typeOverride = detectTypeFromText(trailingPart);
+    const normalizedAmount = Math.abs(amount);
+    const type: 'income' | 'expense' = typeOverride ?? (amount >= 0 ? 'income' : 'expense');
+
+    const trailingTokens = trailingPart
+      .replace(/\b(CR|DR)\b/gi, '')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .filter(token => !/^[-+]?\d[\d,]*\.?\d*$/.test(token));
+
+    const notes = trailingTokens.join(' ');
+
+    const transaction: ParsedTransaction = {
+      date,
+      description: cleanedDescription,
+      amount: normalizedAmount,
+      type,
+      notes: notes || undefined,
+    };
+
+    transactions.push(transaction);
+    lastTransaction = transaction;
+  }
+
+  return transactions;
+}
+
+function detectTypeFromText(text: string): 'income' | 'expense' | null {
+  if (!text) return null;
+  if (/\bCR\b/i.test(text) || /credit/i.test(text)) {
+    return 'income';
+  }
+  if (/\bDR\b/i.test(text) || /debit/i.test(text)) {
+    return 'expense';
+  }
+  return null;
 }
 
 // Excel/XLS Parser (basic TSV/CSV-like parsing)

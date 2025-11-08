@@ -551,7 +551,8 @@ transactionsRouter.delete('/clear', async c => {
     // Delete all transactions for the tenant
     await db
       .delete(transactions)
-      .where(eq(transactions.tenantId, tenantId));
+      .where(eq(transactions.tenantId, tenantId))
+      .run();
 
     return c.json({
       success: true,

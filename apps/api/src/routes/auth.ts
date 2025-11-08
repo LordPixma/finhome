@@ -3,6 +3,7 @@ import * as jose from 'jose';
 import * as bcrypt from 'bcryptjs';
 import { eq, and } from 'drizzle-orm';
 import { getDb, tenants, users } from '../db';
+import { extractSubdomain, isValidSubdomain } from '../middleware/subdomain';
 import { LoginSchema, RegisterSchema, RefreshTokenSchema } from '@finhome360/shared';
 import { authRateLimiter } from '../middleware/rateLimit';
 import { createHybridEmailService } from '../services/hybridEmail';
@@ -75,17 +76,113 @@ auth.post('/login', async c => {
       );
     }
 
-    const { email, password } = validation.data;
+    const { email, password, subdomain } = validation.data;
     const db = getDb(c.env.DB);
 
-    // Find user by email
-    const user = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, email))
-      .get();
+    const host = c.req.header('Host') || '';
+    const hostSubdomain = extractSubdomain(host);
+    const requestedSubdomain = subdomain?.toLowerCase() || hostSubdomain || null;
+
+    let tenantContext: { id: string; subdomain: string } | null = null;
+    if (requestedSubdomain) {
+      if (!isValidSubdomain(requestedSubdomain)) {
+        return c.json(
+          {
+            success: false,
+            error: { code: 'INVALID_SUBDOMAIN', message: 'Invalid tenant subdomain provided' },
+          },
+          400
+        );
+      }
+
+      const tenantRecord = await db
+        .select({ id: tenants.id, subdomain: tenants.subdomain })
+        .from(tenants)
+        .where(eq(tenants.subdomain, requestedSubdomain))
+        .get();
+
+      if (!tenantRecord) {
+        return c.json(
+          {
+            success: false,
+            error: { code: 'TENANT_NOT_FOUND', message: 'No tenant found for the provided subdomain' },
+          },
+          404
+        );
+      }
+
+      tenantContext = tenantRecord;
+    }
+
+    const hostWithoutPort = host.split(':')[0];
+    const isAdminDomain = hostWithoutPort.startsWith('admin.');
+
+    let user;
+
+    if (tenantContext) {
+      user = await db
+        .select()
+        .from(users)
+        .where(and(eq(users.email, email), eq(users.tenantId, tenantContext.id)))
+        .get();
+    } else {
+      const matches = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email))
+        .all();
+
+      if (matches.length === 0) {
+        return c.json(
+          {
+            success: false,
+            error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' },
+          },
+          401
+        );
+      }
+
+      if (matches.length === 1) {
+        user = matches[0];
+      } else if (isAdminDomain) {
+        user = matches.find(candidate => candidate.isGlobalAdmin);
+        if (!user) {
+          return c.json(
+            {
+              success: false,
+              error: {
+                code: 'TENANT_REQUIRED',
+                message: 'Multiple tenants found for this email. Provide a tenant subdomain to continue.',
+              },
+            },
+            400
+          );
+        }
+      } else {
+        return c.json(
+          {
+            success: false,
+            error: {
+              code: 'TENANT_REQUIRED',
+              message: 'Multiple tenants found for this email. Sign in from your tenant subdomain or include it in the request.',
+            },
+          },
+          400
+        );
+      }
+    }
 
     if (!user) {
+      return c.json(
+        {
+          success: false,
+          error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' },
+        },
+        401
+      );
+    }
+
+    if (tenantContext && user.tenantId !== tenantContext.id) {
       return c.json(
         {
           success: false,
@@ -200,23 +297,6 @@ auth.post('/register', async c => {
         {
           success: false,
           error: { code: 'SUBDOMAIN_TAKEN', message: 'This subdomain is already taken' },
-        },
-        409
-      );
-    }
-
-    // Check if email already exists
-    const existingUser = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, email))
-      .get();
-
-    if (existingUser) {
-      return c.json(
-        {
-          success: false,
-          error: { code: 'EMAIL_TAKEN', message: 'This email is already registered' },
         },
         409
       );

@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real, index } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, real, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 // Tenants Table
 export const tenants = sqliteTable('tenants', {
@@ -61,7 +61,7 @@ export const tenantUsers = sqliteTable('tenant_users', {
   tenantIdx: index('idx_tenant_users_tenant').on(table.tenantId),
   roleIdx: index('idx_tenant_users_role').on(table.role),
   statusIdx: index('idx_tenant_users_status').on(table.status),
-  uniqueUserTenant: index('idx_tenant_users_unique').on(table.globalUserId, table.tenantId),
+  uniqueUserTenant: uniqueIndex('uniq_tenant_users_user_tenant').on(table.globalUserId, table.tenantId),
 }));
 
 // User Sessions Table (multi-tenant authentication)
@@ -111,6 +111,7 @@ export const users = sqliteTable('users', {
 }, (table) => ({
   tenantIdx: index('idx_users_tenant').on(table.tenantId),
   emailIdx: index('idx_users_email').on(table.email),
+  uniqueTenantEmail: uniqueIndex('uniq_users_tenant_email').on(table.tenantId, table.email),
   globalAdminIdx: index('idx_users_global_admin').on(table.isGlobalAdmin),
 }));
 
@@ -343,6 +344,7 @@ export const tenantMembers = sqliteTable('tenant_members', {
   tenantIdx: index('idx_tenant_members_tenant').on(table.tenantId),
   userIdx: index('idx_tenant_members_user').on(table.userId),
   tenantStatusIdx: index('idx_tenant_members_tenant_status').on(table.tenantId, table.status),
+  uniqueMemberPerTenant: uniqueIndex('uniq_tenant_members_user_tenant').on(table.tenantId, table.userId),
 }));
 
 // Bank Connections Table (Open Banking integration)
