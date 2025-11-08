@@ -530,7 +530,8 @@ function parsePdfLines(lines: string[]): ParsedTransaction[] {
       continue; // Skip header rows
     }
 
-    const dateMatch = line.match(/^(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\s+(.*)$/);
+    // Expecting date in MM/DD/YYYY or MM-DD-YYYY format (strict, 01-12 for month, 01-31 for day, 4-digit year)
+    const dateMatch = line.match(/^((0[1-9]|1[0-2])[\/\-](0[1-9]|[12][0-9]|3[01])[\/\-](\d{4}))\s+(.*)$/);
     if (!dateMatch) {
       if (lastTransaction) {
         const notes = `${lastTransaction.notes ? `${lastTransaction.notes} ` : ''}${line}`.trim();
