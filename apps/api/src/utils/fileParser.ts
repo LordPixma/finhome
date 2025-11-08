@@ -472,6 +472,7 @@ export function parseXML(xmlContent: string): ParsedTransaction[] {
 }
 
 // PDF Parser (basic text extraction for bank statements)
+<<<<<<< HEAD
 export interface BankPdfParseOptions {
   templateId?: string;
 }
