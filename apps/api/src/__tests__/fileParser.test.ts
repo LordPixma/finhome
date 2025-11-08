@@ -18,7 +18,11 @@ async function createSampleStatement(): Promise<ArrayBuffer> {
   drawLine('01/02/2024 Coffee Shop -5.50 995.00');
   drawLine('02/02/2024 Salary 2000.00 2995.00');
   const pdfBytes = await pdfDoc.save();
-  return pdfBytes.buffer.slice(pdfBytes.byteOffset, pdfBytes.byteOffset + pdfBytes.byteLength);
+  const pdfBuffer = pdfBytes.buffer.slice(
+    pdfBytes.byteOffset,
+    pdfBytes.byteOffset + pdfBytes.byteLength,
+  ) as ArrayBuffer;
+  return pdfBuffer;
 }
 
 describe('parsePDF', () => {

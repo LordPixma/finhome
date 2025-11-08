@@ -476,7 +476,6 @@ export async function parsePDF(pdfContent: ArrayBuffer): Promise<ParsedTransacti
     const pdfBytes = new Uint8Array(pdfContent);
     const loadingTask = getDocument({
       data: pdfBytes,
-      disableWorker: true,
       disableFontFace: true,
       useSystemFonts: true,
     });
