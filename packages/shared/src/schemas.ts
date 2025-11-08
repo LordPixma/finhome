@@ -249,6 +249,12 @@ export type FileUpload = z.infer<typeof FileUploadSchema>;
 export const LoginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
+  subdomain: z
+    .string()
+    .min(1)
+    .max(63)
+    .regex(/^[a-z0-9-]+$/)
+    .optional(),
 });
 
 export type LoginRequest = z.infer<typeof LoginSchema>;

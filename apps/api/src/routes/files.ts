@@ -118,8 +118,8 @@ filesRouter.post('/upload', async c => {
     } else if (fileName.endsWith('.pdf')) {
       // PDF parsing (limited support)
       const arrayBuffer = await file.arrayBuffer();
-      parsedTransactions = parsePDF(arrayBuffer);
-      
+      parsedTransactions = await parsePDF(arrayBuffer);
+
       if (parsedTransactions.length === 0) {
         return c.json(
           {

@@ -44,6 +44,26 @@ describe('Authentication Schemas', () => {
       const result = LoginSchema.safeParse(invalidLogin);
       expect(result.success).toBe(false);
     });
+
+    it('should allow optional tenant subdomain', () => {
+      const loginWithTenant = {
+        email: 'test@example.com',
+        password: 'password123',
+        subdomain: 'family-home',
+      };
+      const result = LoginSchema.safeParse(loginWithTenant);
+      expect(result.success).toBe(true);
+    });
+
+    it('should reject invalid tenant subdomain characters', () => {
+      const invalidLogin = {
+        email: 'test@example.com',
+        password: 'password123',
+        subdomain: 'Invalid_Sub',
+      };
+      const result = LoginSchema.safeParse(invalidLogin);
+      expect(result.success).toBe(false);
+    });
   });
 
   describe('RegisterSchema', () => {
