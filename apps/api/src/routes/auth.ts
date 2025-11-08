@@ -320,6 +320,23 @@ auth.post('/register', async c => {
       })
       .run();
 
+    // Check if email already exists for this tenant (defensive check)
+    const existingUser = await db
+      .select()
+      .from(users)
+      .where(and(eq(users.tenantId, tenantId), eq(users.email, email)))
+      .get();
+
+    if (existingUser) {
+      return c.json(
+        {
+          success: false,
+          error: { code: 'EMAIL_TAKEN', message: 'This email is already registered' },
+        },
+        409
+      );
+    }
+
     // Create user (admin role)
     const userId = crypto.randomUUID();
 
