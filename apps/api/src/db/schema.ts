@@ -515,3 +515,33 @@ export const dataExportRequests = sqliteTable('data_export_requests', {
 }, (table) => ({
   statusIdx: index('idx_data_export_status').on(table.status, table.createdAt),
 }));
+
+// Import Logs Table
+export const importLogs = sqliteTable('import_logs', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id')
+    .notNull()
+    .references(() => tenants.id),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id),
+  accountId: text('account_id').references(() => accounts.id),
+  fileName: text('file_name').notNull(),
+  fileSize: integer('file_size').notNull(), // in bytes
+  fileType: text('file_type').notNull(),
+  status: text('status', { enum: ['processing', 'success', 'partial', 'failed'] }).notNull(),
+  transactionsImported: integer('transactions_imported').notNull().default(0),
+  transactionsFailed: integer('transactions_failed').notNull().default(0),
+  transactionsTotal: integer('transactions_total').notNull().default(0),
+  errorMessage: text('error_message'),
+  errorDetails: text('error_details'), // JSON string with detailed errors
+  processingTimeMs: integer('processing_time_ms'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  completedAt: integer('completed_at', { mode: 'timestamp' }),
+}, (table) => ({
+  tenantIdx: index('idx_import_logs_tenant').on(table.tenantId),
+  userIdx: index('idx_import_logs_user').on(table.userId),
+  statusIdx: index('idx_import_logs_status').on(table.status),
+  tenantDateIdx: index('idx_import_logs_tenant_date').on(table.tenantId, table.createdAt),
+}));
+

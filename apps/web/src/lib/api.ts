@@ -209,6 +209,8 @@ export const api = {
     }).then(res => res.json());
   },
   getUploads: () => apiClient('/api/files/uploads'),
+  getImportLogs: () => apiClient('/api/files/logs'),
+  getImportLog: (id: string) => apiClient(`/api/files/logs/${id}`),
 
   // Recurring Transactions
   getRecurringTransactions: () => apiClient('/api/recurring-transactions'),
