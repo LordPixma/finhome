@@ -362,6 +362,25 @@ export default function ImportPage() {
           </div>
         )}
 
+        {/* Mobile sticky action bar (ensures upload button is always visible on small screens) */}
+        {importResults.length === 0 && files.length > 0 && (
+          <div className="fixed inset-x-0 bottom-24 z-40 px-4 sm:hidden">
+            <div className="bg-white border border-gray-200 shadow-lg rounded-xl p-3 flex items-center gap-3">
+              <Button
+                onClick={handleImport}
+                isLoading={isProcessing}
+                className="flex-1"
+                disabled={!selectedAccountId || accounts.length === 0}
+              >
+                Import {files.length} File{files.length !== 1 ? 's' : ''}
+              </Button>
+              <Button onClick={handleReset} variant="secondary">
+                Clear
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Error Message */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl mb-8">
