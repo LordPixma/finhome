@@ -182,16 +182,6 @@ auth.post('/login', async c => {
       );
     }
 
-    if (tenantContext && user.tenantId !== tenantContext.id) {
-      return c.json(
-        {
-          success: false,
-          error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' },
-        },
-        401
-      );
-    }
-
     // For regular users, require tenantId. For global admins, allow null tenantId
     if (!user.isGlobalAdmin && !user.tenantId) {
       return c.json(
