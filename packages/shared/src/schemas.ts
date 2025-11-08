@@ -249,6 +249,8 @@ export type FileUpload = z.infer<typeof FileUploadSchema>;
 export const LoginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
+  // Subdomain is normalized to lowercase in auth.ts before validation
+  // Regex allows lowercase letters, numbers, and hyphens only
   subdomain: z
     .string()
     .min(1)
@@ -261,6 +263,8 @@ export type LoginRequest = z.infer<typeof LoginSchema>;
 
 export const RegisterSchema = z.object({
   tenantName: z.string().min(1).max(255),
+  // Subdomain must be lowercase letters, numbers, and hyphens only
+  // Input should be normalized to lowercase before validation
   subdomain: z.string().min(1).max(63).regex(/^[a-z0-9-]+$/),
   email: z.string().email(),
   name: z.string().min(1).max(255),
