@@ -253,6 +253,106 @@ transactionsRouter.put('/:id', async c => {
   }
 });
 
+// Bulk delete selected transactions (MUST be before /:id route)
+transactionsRouter.delete('/bulk', async c => {
+  try {
+    const tenantId = c.get('tenantId')!;
+    const db = getDb(c.env.DB);
+    const body = await c.req.json();
+    
+    if (!body.transactionIds || !Array.isArray(body.transactionIds)) {
+      return c.json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'transactionIds array is required' }
+      }, 400);
+    }
+
+    if (body.transactionIds.length === 0) {
+      return c.json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'At least one transaction ID is required' }
+      }, 400);
+    }
+
+    // Delete transactions (with tenant isolation)
+    let deletedCount = 0;
+    for (const transactionId of body.transactionIds) {
+      try {
+        await db
+          .delete(transactions)
+          .where(
+            and(
+              eq(transactions.tenantId, tenantId),
+              eq(transactions.id, transactionId)
+            )
+          );
+        deletedCount++;
+      } catch (error) {
+        console.error(`Failed to delete transaction ${transactionId}:`, error);
+      }
+    }
+
+    return c.json({
+      success: true,
+      data: { 
+        message: `Successfully deleted ${deletedCount} transaction${deletedCount !== 1 ? 's' : ''}`,
+        deletedCount 
+      }
+    });
+  } catch (error: any) {
+    console.error('Bulk delete error:', error);
+    return c.json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to delete transactions' }
+    }, 500);
+  }
+});
+
+// Clear all transactions (MUST be before /:id route)
+transactionsRouter.delete('/clear', async c => {
+  try {
+    const tenantId = c.get('tenantId')!;
+    const db = getDb(c.env.DB);
+    const body = await c.req.json();
+    
+    // Require explicit confirmation
+    if (body.confirm !== 'DELETE_ALL_TRANSACTIONS') {
+      return c.json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Confirmation required. Send { "confirm": "DELETE_ALL_TRANSACTIONS" }' }
+      }, 400);
+    }
+
+    // Get count before deletion for reporting
+    const existingTransactions = await db
+      .select({ id: transactions.id })
+      .from(transactions)
+      .where(eq(transactions.tenantId, tenantId))
+      .all();
+
+    const totalCount = existingTransactions.length;
+
+    // Delete all transactions for the tenant
+    await db
+      .delete(transactions)
+      .where(eq(transactions.tenantId, tenantId));
+
+    return c.json({
+      success: true,
+      data: { 
+        message: `Successfully cleared all transactions`,
+        deletedCount: totalCount
+      }
+    });
+  } catch (error: any) {
+    console.error('Clear all transactions error:', error);
+    return c.json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to clear transactions' }
+    }, 500);
+  }
+});
+
 // Delete transaction
 transactionsRouter.delete('/:id', async c => {
   try {
@@ -466,106 +566,6 @@ transactionsRouter.post('/auto-categorize-batch', async c => {
       },
       500
     );
-  }
-});
-
-// Bulk delete selected transactions
-transactionsRouter.delete('/bulk', async c => {
-  try {
-    const tenantId = c.get('tenantId')!;
-    const db = getDb(c.env.DB);
-    const body = await c.req.json();
-    
-    if (!body.transactionIds || !Array.isArray(body.transactionIds)) {
-      return c.json({
-        success: false,
-        error: { code: 'VALIDATION_ERROR', message: 'transactionIds array is required' }
-      }, 400);
-    }
-
-    if (body.transactionIds.length === 0) {
-      return c.json({
-        success: false,
-        error: { code: 'VALIDATION_ERROR', message: 'At least one transaction ID is required' }
-      }, 400);
-    }
-
-    // Delete transactions (with tenant isolation)
-    let deletedCount = 0;
-    for (const transactionId of body.transactionIds) {
-      try {
-        await db
-          .delete(transactions)
-          .where(
-            and(
-              eq(transactions.tenantId, tenantId),
-              eq(transactions.id, transactionId)
-            )
-          );
-        deletedCount++;
-      } catch (error) {
-        console.error(`Failed to delete transaction ${transactionId}:`, error);
-      }
-    }
-
-    return c.json({
-      success: true,
-      data: { 
-        message: `Successfully deleted ${deletedCount} transaction${deletedCount !== 1 ? 's' : ''}`,
-        deletedCount 
-      }
-    });
-  } catch (error: any) {
-    console.error('Bulk delete error:', error);
-    return c.json({
-      success: false,
-      error: { code: 'INTERNAL_ERROR', message: 'Failed to delete transactions' }
-    }, 500);
-  }
-});
-
-// Clear all transactions (with confirmation)
-transactionsRouter.delete('/clear', async c => {
-  try {
-    const tenantId = c.get('tenantId')!;
-    const db = getDb(c.env.DB);
-    const body = await c.req.json();
-    
-    // Require explicit confirmation
-    if (body.confirm !== 'DELETE_ALL_TRANSACTIONS') {
-      return c.json({
-        success: false,
-        error: { code: 'VALIDATION_ERROR', message: 'Confirmation required. Send { "confirm": "DELETE_ALL_TRANSACTIONS" }' }
-      }, 400);
-    }
-
-    // Get count before deletion for reporting
-    const existingTransactions = await db
-      .select({ id: transactions.id })
-      .from(transactions)
-      .where(eq(transactions.tenantId, tenantId))
-      .all();
-
-    const totalCount = existingTransactions.length;
-
-    // Delete all transactions for the tenant
-    await db
-      .delete(transactions)
-      .where(eq(transactions.tenantId, tenantId));
-
-    return c.json({
-      success: true,
-      data: { 
-        message: `Successfully cleared all transactions`,
-        deletedCount: totalCount
-      }
-    });
-  } catch (error: any) {
-    console.error('Clear all transactions error:', error);
-    return c.json({
-      success: false,
-      error: { code: 'INTERNAL_ERROR', message: 'Failed to clear transactions' }
-    }, 500);
   }
 });
 
