@@ -4,6 +4,7 @@ import { getDb, accounts } from '../db';
 import { authMiddleware, tenantMiddleware } from '../middleware/auth';
 import { validateRequest } from '../middleware/validation';
 import { CreateAccountSchema } from '@finhome360/shared';
+import { getCurrentTimestamp } from '../utils/timestamp';
 import type { Env } from '../types';
 
 const accountsRouter = new Hono<Env>();
@@ -86,13 +87,15 @@ accountsRouter.post('/', validateRequest(CreateAccountSchema), async c => {
     console.log('Creating account - tenantId:', tenantId);
     console.log('Creating account - validated body:', JSON.stringify(body));
 
+    const now = getCurrentTimestamp();
+
     const newAccount = {
       id: crypto.randomUUID(),
       tenantId,
       ...body,
       balance: body.balance ?? 0,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: now,
+      updatedAt: now,
     };
 
     console.log('Creating account - final account object:', JSON.stringify(newAccount));
@@ -148,7 +151,7 @@ accountsRouter.put('/:id', validateRequest(CreateAccountSchema), async c => {
 
     const updatedAccount = {
       ...body,
-      updatedAt: new Date(),
+      updatedAt: getCurrentTimestamp(),
     };
 
     await db
