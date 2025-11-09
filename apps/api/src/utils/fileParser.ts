@@ -1,3 +1,7 @@
+import { detectPdfTemplate, type BankPdfTemplate } from '@finhome360/shared';
+import { getDocument } from 'pdfjs-dist';
+import type { TextItem } from 'pdfjs-dist/types/src/display/api';
+
 // CSV Parser utility
 export interface CSVParseResult {
   headers: string[];
@@ -468,18 +472,104 @@ export function parseXML(xmlContent: string): ParsedTransaction[] {
 }
 
 // PDF Parser (basic text extraction for bank statements)
-export function parsePDF(_pdfContent: ArrayBuffer): ParsedTransaction[] {
-  // Note: This is a basic implementation. In production, you'd want to use
-  // a proper PDF parsing library like pdf-parse or pdf2pic with OCR
-  
-  // For now, we'll return an empty array and suggest manual conversion
-  // In a real implementation, you would:
-  // 1. Extract text from PDF using a library
-  // 2. Use regex patterns to find transaction data
-  // 3. Parse dates, amounts, and descriptions
-  
-  console.warn('PDF parsing not fully implemented - please convert to CSV first');
-  return [];
+export interface BankPdfParseOptions {
+  templateId?: string;
+}
+
+export interface BankPdfParseResult {
+  template?: BankPdfTemplate;
+  transactions: ParsedTransaction[];
+  unmatchedLines: string[];
+  warnings: string[];
+}
+
+export async function parsePDF(
+  pdfContent: ArrayBuffer,
+  options: BankPdfParseOptions = {}
+): Promise<ParsedTransaction[]> {
+  const result = await parseBankPdf(pdfContent, options);
+
+  if (result.warnings.length > 0) {
+    console.warn('PDF parse warnings:', result.warnings);
+  }
+
+  if (result.unmatchedLines.length > 0) {
+    console.debug('PDF unmatched lines sample:', result.unmatchedLines.slice(0, 10));
+  }
+
+  return result.transactions;
+}
+
+export async function parseBankPdf(
+  pdfContent: ArrayBuffer,
+  options: BankPdfParseOptions = {}
+): Promise<BankPdfParseResult> {
+  const text = await extractPdfText(pdfContent);
+  const template = detectPdfTemplate(text, options.templateId);
+
+  if (!template) {
+    return {
+      transactions: [],
+      warnings: ['No matching PDF template detected'],
+      unmatchedLines: text.split(/\r?\n/).map(sanitizeLine).filter(Boolean),
+    };
+  }
+
+  const lines = text.split(/\r?\n/);
+  const skipMatchers = (template.skipLineIncludes || []).map(value => value.toLowerCase());
+
+  const unmatchedLines: string[] = [];
+  const warnings: string[] = [];
+  const transactions: ParsedTransaction[] = [];
+
+  let currentTransaction: ParsedTransaction | null = null;
+
+  const flushCurrent = () => {
+    if (!currentTransaction) return;
+    transactions.push(currentTransaction);
+    currentTransaction = null;
+  };
+
+  for (const rawLine of lines) {
+    const line = sanitizeLine(rawLine);
+    if (!line) continue;
+
+    if (skipMatchers.some(skip => line.toLowerCase().includes(skip))) {
+      continue;
+    }
+
+    const match = template.rowPattern.exec(line);
+    template.rowPattern.lastIndex = 0;
+
+    if (match && match.groups) {
+      flushCurrent();
+      const parsed = buildTransactionFromMatch(template, match);
+
+      if (!parsed) {
+        warnings.push(`Unable to parse transaction from line: "${line}"`);
+        continue;
+      }
+
+      currentTransaction = parsed;
+      continue;
+    }
+
+    if (template.multiLineDescriptions && currentTransaction) {
+      currentTransaction.description = `${currentTransaction.description} ${line}`.trim();
+      continue;
+    }
+
+    unmatchedLines.push(line);
+  }
+
+  flushCurrent();
+
+  return {
+    template,
+    transactions,
+    unmatchedLines,
+    warnings,
+  };
 }
 
 // Excel/XLS Parser (basic TSV/CSV-like parsing)
@@ -543,4 +633,163 @@ export function parseMT940(mt940Content: string): ParsedTransaction[] {
   }
   
   return transactions;
+}
+
+async function extractPdfText(pdfContent: ArrayBuffer): Promise<string> {
+  const data = pdfContent instanceof Uint8Array ? pdfContent : new Uint8Array(pdfContent);
+  const loadingTask = getDocument({ data, useWorker: false } as any);
+
+  try {
+    const pdf = await loadingTask.promise;
+    const pages: string[] = [];
+
+    for (let index = 1; index <= pdf.numPages; index++) {
+      const page = await pdf.getPage(index);
+      const textContent = await page.getTextContent();
+
+      let pageText = '';
+      for (const item of textContent.items) {
+        const textItem = item as TextItem;
+        if (!textItem?.str) continue;
+        pageText += textItem.str;
+        pageText += textItem.hasEOL ? '\n' : ' ';
+      }
+
+      pages.push(pageText);
+
+      if (typeof page.cleanup === 'function') {
+        page.cleanup();
+      }
+    }
+
+    if (typeof pdf.cleanup === 'function') {
+      pdf.cleanup();
+    }
+
+    return pages.join('\n');
+  } finally {
+    loadingTask.destroy();
+  }
+}
+
+function buildTransactionFromMatch(
+  template: BankPdfTemplate,
+  match: RegExpMatchArray
+): ParsedTransaction | null {
+  if (!match.groups) return null;
+
+  const rawDate = match.groups[template.groups.date];
+  const rawDescription = match.groups[template.groups.description] || '';
+
+  const date = parseTemplateDate(rawDate, template.dateFormat);
+  if (!date) return null;
+
+  if (template.amountStyle === 'debitCredit') {
+    const debitGroupKey = template.groups.debit;
+    const creditGroupKey = template.groups.credit;
+
+    const debitValue = debitGroupKey ? parseCurrency(match.groups[debitGroupKey]) : null;
+    const creditValue = creditGroupKey ? parseCurrency(match.groups[creditGroupKey]) : null;
+
+    if (creditValue && creditValue > 0) {
+      return {
+        date,
+        description: rawDescription.trim(),
+        amount: Math.abs(creditValue),
+        type: 'income',
+      };
+    }
+
+    if (debitValue && debitValue > 0) {
+      return {
+        date,
+        description: rawDescription.trim(),
+        amount: Math.abs(debitValue),
+        type: 'expense',
+      };
+    }
+
+    return null;
+  }
+
+  const amountGroupKey = template.groups.amount;
+  const amountValue = amountGroupKey ? parseCurrency(match.groups[amountGroupKey]) : null;
+
+  if (amountValue === null || amountValue === 0) {
+    return null;
+  }
+
+  return {
+    date,
+    description: rawDescription.trim(),
+    amount: Math.abs(amountValue),
+    type: amountValue >= 0 ? 'income' : 'expense',
+  };
+}
+
+function parseTemplateDate(
+  value: string | undefined,
+  format: BankPdfTemplate['dateFormat']
+): Date | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+
+  let day: number;
+  let month: number;
+  let year: number;
+
+  if (format === 'dd/MM/yyyy') {
+    const parts = trimmed.split(/[\/]/);
+    if (parts.length !== 3) return null;
+    [day, month, year] = parts.map(part => parseInt(part, 10));
+  } else if (format === 'MM/dd/yyyy') {
+    const parts = trimmed.split(/[\/]/);
+    if (parts.length !== 3) return null;
+    [month, day, year] = parts.map(part => parseInt(part, 10));
+  } else {
+    const parts = trimmed.split(/[-]/);
+    if (parts.length !== 3) return null;
+    [year, month, day] = parts.map(part => parseInt(part, 10));
+  }
+
+  const parsed = new Date(year, month - 1, day);
+  if (Number.isNaN(parsed.getTime())) return null;
+  if (parsed.getFullYear() !== year || parsed.getMonth() !== month - 1 || parsed.getDate() !== day) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function parseCurrency(rawValue: string | undefined): number | null {
+  if (!rawValue) return null;
+
+  const trimmed = rawValue.trim();
+  if (!trimmed) return null;
+
+  const negativeViaParens = trimmed.includes('(') && trimmed.includes(')');
+  const cleaned = trimmed
+    .replace(/[^0-9.,()+\-]/g, '')
+    .replace(/\s+/g, '')
+    .replace(/[()]/g, '')
+    .replace(/,/g, '');
+
+  if (!cleaned) return null;
+
+  const numeric = parseFloat(cleaned);
+  if (Number.isNaN(numeric)) return null;
+
+  if (negativeViaParens) {
+    return -Math.abs(numeric);
+  }
+
+  if (trimmed.startsWith('-')) {
+    return -Math.abs(numeric);
+  }
+
+  return numeric;
+}
+
+function sanitizeLine(line: string): string {
+  return line.replace(/\s+/g, ' ').trim();
 }

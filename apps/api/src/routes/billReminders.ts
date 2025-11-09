@@ -119,6 +119,7 @@ billRemindersRouter.post('/', validateRequest(CreateBillReminderSchema), async c
     
     if (daysUntilDue <= newBillReminder.reminderDays && c.env.BILL_REMINDERS) {
       await c.env.BILL_REMINDERS.send({
+        type: 'bill-reminder',
         billReminderId: newBillReminder.id,
         tenantId,
         dueDate: newBillReminder.dueDate.toISOString(),

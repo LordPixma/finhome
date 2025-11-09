@@ -1,9 +1,10 @@
 import { Hono } from 'hono';
 import { eq, and, desc } from 'drizzle-orm';
-import { getDb, transactions, accounts, categories, importLogs } from '../db';
+import { getDb, accounts, categories, importLogs } from '../db';
 import { authMiddleware, tenantMiddleware } from '../middleware/auth';
 import { parseCSV, parseOFX, mapCSVToTransactions, mapOFXToTransactions, parsePDF, parseXML, parseJSON, parseXLS, parseMT940 } from '../utils/fileParser';
 import { getCurrentTimestamp } from '../utils/timestamp';
+import { persistTransactionsFromImport } from '../services/importProcessor';
 import type { Env } from '../types';
 import type { ParsedTransaction } from '../utils/fileParser';
 
@@ -134,37 +135,84 @@ filesRouter.post('/upload', async c => {
       }
     }
 
-    // Read file content
-    const content = await file.text();
-    
+    const lowerCaseName = fileName.toLowerCase();
     let parsedTransactions: ParsedTransaction[] = [];
     let parseError: string | null = null;
+    let fileContentForStorage: string | ArrayBuffer | null = null;
 
-    // Parse based on file type
     try {
-      if (fileName.endsWith('.csv')) {
-        const { rows } = parseCSV(content);
-        parsedTransactions = mapCSVToTransactions(rows);
-      } else if (fileName.endsWith('.ofx') || fileName.endsWith('.qfx')) {
-        const ofxTransactions = parseOFX(content);
-        parsedTransactions = mapOFXToTransactions(ofxTransactions);
-      } else if (fileName.endsWith('.json')) {
-        parsedTransactions = parseJSON(content);
-      } else if (fileName.endsWith('.xml')) {
-        parsedTransactions = parseXML(content);
-      } else if (fileName.endsWith('.txt') || fileName.endsWith('.mt940')) {
-        parsedTransactions = parseMT940(content);
-      } else if (fileName.endsWith('.xls') || fileName.endsWith('.xlsx')) {
-        parsedTransactions = parseXLS(content);
-      } else if (fileName.endsWith('.pdf')) {
+      if (lowerCaseName.endsWith('.pdf')) {
+        if (c.env.FILES && c.env.BILL_REMINDERS) {
+          const arrayBuffer = await file.arrayBuffer();
+          const fileKey = `imports/${tenantId}/${accountId}/${logId}-${Date.now()}-${fileName}`;
+
+          await c.env.FILES.put(fileKey, arrayBuffer, {
+            httpMetadata: {
+              contentType: file.type || 'application/pdf',
+            },
+            customMetadata: {
+              tenantId,
+              accountId,
+              logId,
+              uploadedAt: new Date().toISOString(),
+              queued: 'true',
+            },
+          });
+
+          await c.env.BILL_REMINDERS.send({
+            type: 'pdf-import',
+            tenantId,
+            accountId,
+            logId,
+            fileKey,
+            defaultCategoryId: categoryId,
+            userId: user.id,
+            fileName,
+          });
+
+          return c.json(
+            {
+              success: true,
+              data: {
+                logId,
+                status: 'processing',
+                queued: true,
+                accountId,
+                accountName: account.name,
+              },
+            },
+            202
+          );
+        }
+
         const arrayBuffer = await file.arrayBuffer();
-        parsedTransactions = parsePDF(arrayBuffer);
-        
+        fileContentForStorage = arrayBuffer;
+        parsedTransactions = await parsePDF(arrayBuffer);
+
         if (parsedTransactions.length === 0) {
           parseError = 'PDF parsing is limited. Please export your bank statement as CSV, Excel, or another supported format for best results.';
         }
       } else {
-        parseError = 'Unsupported file format';
+        const content = await file.text();
+        fileContentForStorage = content;
+
+        if (lowerCaseName.endsWith('.csv')) {
+          const { rows } = parseCSV(content);
+          parsedTransactions = mapCSVToTransactions(rows);
+        } else if (lowerCaseName.endsWith('.ofx') || lowerCaseName.endsWith('.qfx')) {
+          const ofxTransactions = parseOFX(content);
+          parsedTransactions = mapOFXToTransactions(ofxTransactions);
+        } else if (lowerCaseName.endsWith('.json')) {
+          parsedTransactions = parseJSON(content);
+        } else if (lowerCaseName.endsWith('.xml')) {
+          parsedTransactions = parseXML(content);
+        } else if (lowerCaseName.endsWith('.txt') || lowerCaseName.endsWith('.mt940')) {
+          parsedTransactions = parseMT940(content);
+        } else if (lowerCaseName.endsWith('.xls') || lowerCaseName.endsWith('.xlsx')) {
+          parsedTransactions = parseXLS(content);
+        } else {
+          parseError = 'Unsupported file format';
+        }
       }
     } catch (err: any) {
       parseError = `Failed to parse file: ${err.message}`;
@@ -194,160 +242,45 @@ filesRouter.post('/upload', async c => {
       );
     }
 
-    // Update log with total count
-    await db
-      .update(importLogs)
-      .set({
-        transactionsTotal: parsedTransactions.length,
-      })
-      .where(eq(importLogs.id, logId))
-      .run();
+    const persistenceResult = await persistTransactionsFromImport({
+      db,
+      tenantId,
+      account,
+      defaultCategoryId: categoryId!,
+      parsedTransactions,
+      logId,
+      startedAt: startTime,
+    });
 
-    // Store file in R2 (optional, for record keeping)
-    if (c.env.FILES) {
+    if (c.env.FILES && fileContentForStorage !== null) {
       const fileKey = `${tenantId}/${accountId}/${Date.now()}-${fileName}`;
-      await c.env.FILES.put(fileKey, content, {
+      await c.env.FILES.put(fileKey, fileContentForStorage, {
         httpMetadata: {
-          contentType: file.type,
+          contentType: file.type || 'application/octet-stream',
         },
         customMetadata: {
           tenantId,
           accountId,
           logId,
           uploadedAt: new Date().toISOString(),
-          transactionCount: parsedTransactions.length.toString(),
+          transactionCount: persistenceResult.total.toString(),
         },
       });
     }
-
-    // Create transactions in database
-    const createdTransactions: any[] = [];
-    let importedCount = 0;
-    let skippedCount = 0;
-    const errors: string[] = [];
-
-    // Get all categories for this tenant for matching
-    const tenantCategories = await db
-      .select()
-      .from(categories)
-      .where(eq(categories.tenantId, tenantId))
-      .all();
-
-    for (const parsed of parsedTransactions) {
-      try {
-        // Try to match category by name if provided in CSV
-        let transactionCategoryId = categoryId; // Default to uncategorized
-        
-        if (parsed.category && parsed.category.trim() !== '') {
-          const matchedCategory = tenantCategories.find(
-            cat => cat.name.toLowerCase() === parsed.category!.toLowerCase()
-          );
-          
-          if (matchedCategory) {
-            transactionCategoryId = matchedCategory.id;
-          } else {
-            // Create new category if it doesn't exist
-            const now = getCurrentTimestamp();
-            const newCategoryId = crypto.randomUUID();
-            await db
-              .insert(categories)
-              .values({
-                id: newCategoryId,
-                tenantId,
-                name: parsed.category,
-                type: parsed.type,
-                color: `#${Math.floor(Math.random()*16777215).toString(16)}`, // Random color
-                icon: null,
-                parentId: null,
-                createdAt: now,
-                updatedAt: now,
-              })
-              .run();
-            
-            transactionCategoryId = newCategoryId;
-            tenantCategories.push({
-              id: newCategoryId,
-              tenantId,
-              name: parsed.category,
-              type: parsed.type,
-              color: `#${Math.floor(Math.random()*16777215).toString(16)}`,
-              icon: null,
-              parentId: null,
-              createdAt: now,
-              updatedAt: now,
-            });
-          }
-        }
-
-        const txnNow = getCurrentTimestamp();
-        const newTransaction = {
-          id: crypto.randomUUID(),
-          tenantId,
-          accountId,
-          categoryId: transactionCategoryId,
-          amount: parsed.amount,
-          description: parsed.description,
-          date: parsed.date,
-          type: parsed.type,
-          notes: parsed.notes,
-          createdAt: txnNow,
-          updatedAt: txnNow,
-        };
-
-        await db.insert(transactions).values(newTransaction).run();
-        createdTransactions.push(newTransaction);
-        importedCount++;
-
-        // Update account balance
-        const balanceChange = parsed.type === 'income' ? parsed.amount : -parsed.amount;
-        await db
-          .update(accounts)
-          .set({
-            balance: account.balance + balanceChange,
-            updatedAt: new Date(),
-          })
-          .where(eq(accounts.id, accountId))
-          .run();
-        
-        account.balance += balanceChange; // Update local reference
-      } catch (error) {
-        console.error('Error importing transaction:', error);
-        skippedCount++;
-        errors.push(`Failed to import: ${parsed.description} - ${error}`);
-      }
-    }
-
-    // Update import log with final results
-    const processingTime = Date.now() - startTime;
-    const finalStatus = skippedCount === 0 ? 'success' : (importedCount > 0 ? 'partial' : 'failed');
-    
-    await db
-      .update(importLogs)
-      .set({
-        status: finalStatus,
-        transactionsImported: importedCount,
-        transactionsFailed: skippedCount,
-        errorDetails: errors.length > 0 ? JSON.stringify(errors) : null,
-        errorMessage: errors.length > 0 ? `${skippedCount} transaction(s) failed` : null,
-        completedAt: new Date(),
-        processingTimeMs: processingTime,
-      })
-      .where(eq(importLogs.id, logId))
-      .run();
 
     return c.json({
       success: true,
       data: {
         logId,
-        imported: importedCount,
-        skipped: skippedCount,
-        total: parsedTransactions.length,
+        imported: persistenceResult.importedCount,
+        skipped: persistenceResult.skippedCount,
+        total: persistenceResult.total,
         accountId,
-        accountName: account.name,
-        newBalance: account.balance,
-        transactions: createdTransactions.slice(0, 10), // Return first 10 as sample
-        errors: errors.length > 0 ? errors : undefined,
-        processingTimeMs: processingTime,
+        accountName: persistenceResult.accountName,
+        newBalance: persistenceResult.newBalance,
+        transactions: persistenceResult.createdTransactions.slice(0, 10),
+        errors: persistenceResult.errors.length > 0 ? persistenceResult.errors : undefined,
+        processingTimeMs: persistenceResult.processingTimeMs,
       },
     });
   } catch (error) {

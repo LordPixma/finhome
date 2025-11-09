@@ -23,8 +23,10 @@ import { adminTenantRouter } from './routes/admin-tenants';
 import adminSecurity from './routes/admin-security';
 import adminUsers from './routes/admin-users';
 import adminMetrics from './routes/admin-metrics';
-import { getDb, billReminders, users, userSettings } from './db';
+import { getDb, billReminders, users, userSettings, accounts as accountsTable, importLogs as importLogsTable } from './db';
 import { createEmailService } from './services/email';
+import { parsePDF } from './utils/fileParser';
+import { persistTransactionsFromImport } from './services/importProcessor';
 import type { Env } from './types';
 // Note: Avoid direct dependency on '@cloudflare/workers-types' here for portability
 
@@ -165,8 +167,118 @@ export async function queue(batch: any, env: Env['Bindings']): Promise<void> {
 
   for (const message of batch.messages) {
     try {
-      // Handle bill reminder messages (existing logic)
-      const { billReminderId, tenantId, dueDate } = message.body;
+      const body = message.body || {};
+      const messageType = body.type ?? 'bill-reminder';
+
+      if (messageType === 'pdf-import') {
+        if (!env.FILES) {
+          console.error('FILES binding missing for PDF import job');
+          message.retry();
+          continue;
+        }
+
+        const { tenantId, accountId, logId, fileKey, defaultCategoryId, templateId } = body;
+
+        if (!tenantId || !accountId || !logId || !fileKey || !defaultCategoryId) {
+          console.error('Invalid PDF import message payload', body);
+          message.ack();
+          continue;
+        }
+
+        const account = await db
+          .select()
+          .from(accountsTable)
+          .where(and(eq(accountsTable.id, accountId), eq(accountsTable.tenantId, tenantId)))
+          .get();
+
+        if (!account) {
+          await db
+            .update(importLogsTable)
+            .set({
+              status: 'failed',
+              errorMessage: 'Account not found for PDF import',
+              completedAt: new Date(),
+              processingTimeMs: 0,
+            })
+            .where(eq(importLogsTable.id, logId))
+            .run();
+
+          message.ack();
+          continue;
+        }
+
+        const storedFile = await env.FILES.get(fileKey);
+        if (!storedFile) {
+          await db
+            .update(importLogsTable)
+            .set({
+              status: 'failed',
+              errorMessage: 'PDF file missing from storage',
+              completedAt: new Date(),
+              processingTimeMs: 0,
+            })
+            .where(eq(importLogsTable.id, logId))
+            .run();
+
+          message.ack();
+          continue;
+        }
+
+        const startedAt = Date.now();
+
+        try {
+          const arrayBuffer = await storedFile.arrayBuffer();
+          const parsedTransactions = await parsePDF(arrayBuffer, { templateId });
+
+          if (parsedTransactions.length === 0) {
+            await db
+              .update(importLogsTable)
+              .set({
+                status: 'failed',
+                errorMessage: 'No transactions detected in PDF',
+                completedAt: new Date(),
+                processingTimeMs: Date.now() - startedAt,
+              })
+              .where(eq(importLogsTable.id, logId))
+              .run();
+
+            message.ack();
+            continue;
+          }
+
+          await persistTransactionsFromImport({
+            db,
+            tenantId,
+            account,
+            defaultCategoryId,
+            parsedTransactions,
+            logId,
+            startedAt,
+          });
+
+          console.log(`PDF import completed for log ${logId} (records: ${parsedTransactions.length})`);
+          message.ack();
+        } catch (error) {
+          console.error('Error processing PDF import message:', error);
+          await db
+            .update(importLogsTable)
+            .set({
+              status: 'failed',
+              errorMessage: error instanceof Error ? error.message : 'Unknown PDF processing error',
+              completedAt: new Date(),
+              processingTimeMs: Date.now() - startedAt,
+            })
+            .where(eq(importLogsTable.id, logId))
+            .run();
+
+          message.ack();
+        }
+
+        continue;
+      }
+
+      // Handle bill reminder messages (default)
+      const { billReminderId, tenantId, dueDate } = body;
       console.log(`Processing bill reminder: ${billReminderId} for tenant: ${tenantId}`);
 
       // Fetch bill reminder details
