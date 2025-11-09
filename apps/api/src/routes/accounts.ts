@@ -9,6 +9,15 @@ import type { Env } from '../types';
 
 const accountsRouter = new Hono<Env>();
 
+type ApiAccountType = 'current' | 'savings' | 'credit' | 'cash' | 'investment' | 'other';
+type DbAccountType = 'checking' | 'savings' | 'credit' | 'cash' | 'investment' | 'other';
+
+const toDbAccountType = (type: ApiAccountType): DbAccountType =>
+  type === 'current' ? 'checking' : type;
+
+const fromDbAccountType = (type: DbAccountType | ApiAccountType): ApiAccountType =>
+  type === 'checking' ? 'current' : type;
+
 // Apply middleware
 accountsRouter.use('*', authMiddleware, tenantMiddleware);
 
@@ -25,9 +34,14 @@ accountsRouter.get('/', async c => {
       .orderBy(desc(accounts.createdAt))
       .all();
 
+    const normalizedAccounts = allAccounts.map(account => ({
+      ...account,
+      type: fromDbAccountType(account.type as DbAccountType),
+    }));
+
     return c.json({
       success: true,
-      data: allAccounts,
+      data: normalizedAccounts,
     });
   } catch (error) {
     console.error('Error fetching accounts:', error);
@@ -63,7 +77,10 @@ accountsRouter.get('/:id', async c => {
 
     return c.json({
       success: true,
-      data: account,
+      data: {
+        ...account,
+        type: fromDbAccountType(account.type as DbAccountType),
+      },
     });
   } catch (error) {
     console.error('Error fetching account:', error);
@@ -88,11 +105,13 @@ accountsRouter.post('/', validateRequest(CreateAccountSchema), async c => {
     console.log('Creating account - validated body:', JSON.stringify(body));
 
     const now = getCurrentTimestamp();
+    const dbType = toDbAccountType(body.type);
 
     const newAccount = {
       id: crypto.randomUUID(),
       tenantId,
       ...body,
+      type: dbType,
       balance: body.balance ?? 0,
       createdAt: now,
       updatedAt: now,
@@ -105,7 +124,10 @@ accountsRouter.post('/', validateRequest(CreateAccountSchema), async c => {
     return c.json(
       {
         success: true,
-        data: newAccount,
+        data: {
+          ...newAccount,
+          type: body.type,
+        },
       },
       201
     );
@@ -151,6 +173,7 @@ accountsRouter.put('/:id', validateRequest(CreateAccountSchema), async c => {
 
     const updatedAccount = {
       ...body,
+      type: toDbAccountType(body.type),
       updatedAt: getCurrentTimestamp(),
     };
 
@@ -166,6 +189,7 @@ accountsRouter.put('/:id', validateRequest(CreateAccountSchema), async c => {
         id,
         tenantId,
         ...updatedAccount,
+        type: body.type,
         createdAt: existingAccount.createdAt,
       },
     });
