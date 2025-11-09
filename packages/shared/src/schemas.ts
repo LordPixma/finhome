@@ -187,6 +187,8 @@ export const CreateAccountSchema = AccountSchema.omit({
   tenantId: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  balance: z.number().default(0),
 });
 
 export const CreateCategorySchema = CategorySchema.omit({

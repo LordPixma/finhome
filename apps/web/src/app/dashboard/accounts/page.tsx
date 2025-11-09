@@ -94,7 +94,7 @@ export default function AccountsPage() {
       const accountData = {
         name: formData.name,
         type: formData.type,
-        balance: parseFloat(formData.balance),
+        balance: formData.balance === '' ? 0 : parseFloat(formData.balance),
         currency: formData.currency,
       };
 

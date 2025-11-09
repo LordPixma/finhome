@@ -143,7 +143,7 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
         await api.createAccount({
           name: data.account.name,
           type: data.account.type,
-          balance: parseFloat(data.account.balance),
+          balance: data.account.balance === '' ? 0 : parseFloat(data.account.balance),
           currency: data.account.currency,
         });
       }
