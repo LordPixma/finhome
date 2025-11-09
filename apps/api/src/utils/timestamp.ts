@@ -1,9 +1,9 @@
 /**
- * Get current Unix timestamp in seconds (for SQLite timestamp columns)
- * SQLite timestamp columns expect seconds, not milliseconds
+ * Get current timestamp as Date object for Drizzle timestamp columns
+ * Drizzle with { mode: 'timestamp' } expects Date objects and converts to Unix seconds
  */
-export function getCurrentTimestamp(): number {
-  return Math.floor(Date.now() / 1000);
+export function getCurrentTimestamp(): Date {
+  return new Date();
 }
 
 /**

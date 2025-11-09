@@ -4,6 +4,7 @@ import { getDb, categories } from '../db';
 import { authMiddleware, tenantMiddleware } from '../middleware/auth';
 import { validateRequest } from '../middleware/validation';
 import { CreateCategorySchema } from '@finhome360/shared';
+import { getCurrentTimestamp } from '../utils/timestamp';
 import type { Env } from '../types';
 
 const categoriesRouter = new Hono<Env>();
@@ -83,12 +84,14 @@ categoriesRouter.post('/', validateRequest(CreateCategorySchema), async c => {
     const body = c.get('validatedData');
     const db = getDb(c.env.DB);
 
+    const now = getCurrentTimestamp();
+
     const newCategory = {
       id: crypto.randomUUID(),
       tenantId,
       ...body,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: now,
+      updatedAt: now,
     };
 
     await db.insert(categories).values(newCategory).run();
@@ -136,7 +139,7 @@ categoriesRouter.put('/:id', validateRequest(CreateCategorySchema), async c => {
 
     const updatedCategory = {
       ...body,
-      updatedAt: new Date(),
+      updatedAt: getCurrentTimestamp(),
     };
 
     await db

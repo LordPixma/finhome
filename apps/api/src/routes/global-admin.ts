@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { eq, desc } from 'drizzle-orm';
 import { getDb, tenants, users, globalAdminActions, globalAdminSettings } from '../db';
 import { globalAdminMiddleware, logGlobalAdminAction } from '../middleware/global-admin';
+import { getCurrentTimestamp } from '../utils/timestamp';
 import type { AppContext } from '../types';
 import bcrypt from 'bcryptjs';
 import { randomUUID } from 'node:crypto';
@@ -41,6 +42,8 @@ app.post('/create-first-admin', async (c: AppContext) => {
     const passwordHash = await bcrypt.hash(password, 10);
     const userId = randomUUID();
 
+    const now = getCurrentTimestamp();
+
     // Create global admin user (no tenant_id)
     await db.insert(users).values({
       id: userId,
@@ -50,8 +53,8 @@ app.post('/create-first-admin', async (c: AppContext) => {
       passwordHash,
       role: 'admin',
       isGlobalAdmin: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: now,
+      updatedAt: now,
     });
 
     return c.json({

@@ -4,6 +4,7 @@ import { getDb, transactions, accounts, categories } from '../db';
 import { authMiddleware, tenantMiddleware } from '../middleware/auth';
 import { validateRequest } from '../middleware/validation';
 import { CreateTransactionSchema } from '@finhome360/shared';
+import { getCurrentTimestamp } from '../utils/timestamp';
 import { 
   categorizeTransaction, 
   categorizeBatch, 
@@ -161,6 +162,8 @@ transactionsRouter.post('/', validateRequest(CreateTransactionSchema), async c =
       );
     }
 
+    const now = getCurrentTimestamp();
+
     const newTransaction = {
       id: crypto.randomUUID(),
       tenantId,
@@ -171,8 +174,8 @@ transactionsRouter.post('/', validateRequest(CreateTransactionSchema), async c =
       date,
       type: body.type,
       notes: body.notes || null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: now,
+      updatedAt: now,
     };
 
     await db.insert(transactions).values(newTransaction).run();
@@ -216,7 +219,7 @@ transactionsRouter.put('/:id', async c => {
     }
 
     // Convert date if provided
-    const updateData: any = { ...body, updatedAt: new Date() };
+    const updateData: any = { ...body, updatedAt: getCurrentTimestamp() };
     if (body.date) {
       const date = new Date(body.date);
       if (isNaN(date.getTime())) {
@@ -434,7 +437,7 @@ transactionsRouter.post('/:id/auto-categorize', async c => {
         .update(transactions)
         .set({
           categoryId: result.suggestedCategoryId,
-          updatedAt: new Date(),
+          updatedAt: getCurrentTimestamp(),
         })
         .where(and(eq(transactions.id, id), eq(transactions.tenantId, tenantId)))
         .run();
@@ -534,7 +537,7 @@ transactionsRouter.post('/auto-categorize-batch', async c => {
           .update(transactions)
           .set({
             categoryId: result.suggestedCategoryId,
-            updatedAt: new Date(),
+            updatedAt: getCurrentTimestamp(),
           })
           .where(and(eq(transactions.id, transactionId), eq(transactions.tenantId, tenantId)))
           .run();
@@ -598,7 +601,7 @@ transactionsRouter.patch('/bulk/archive', async c => {
           .update(transactions)
           .set({
             notes: 'ARCHIVED',
-            updatedAt: new Date()
+            updatedAt: getCurrentTimestamp()
           })
           .where(
             and(

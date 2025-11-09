@@ -3,6 +3,7 @@ import { eq, and, desc } from 'drizzle-orm';
 import { getDb, transactions, accounts, categories, importLogs } from '../db';
 import { authMiddleware, tenantMiddleware } from '../middleware/auth';
 import { parseCSV, parseOFX, mapCSVToTransactions, mapOFXToTransactions, parsePDF, parseXML, parseJSON, parseXLS, parseMT940 } from '../utils/fileParser';
+import { getCurrentTimestamp } from '../utils/timestamp';
 import type { Env } from '../types';
 import type { ParsedTransaction } from '../utils/fileParser';
 
@@ -116,6 +117,7 @@ filesRouter.post('/upload', async c => {
         categoryId = uncategorized.id;
       } else {
         // Create default category
+        const now = getCurrentTimestamp();
         categoryId = crypto.randomUUID();
         await db
           .insert(categories)
@@ -125,8 +127,8 @@ filesRouter.post('/upload', async c => {
             name: 'Uncategorized',
             type: 'expense',
             color: '#999999',
-            createdAt: new Date(),
-            updatedAt: new Date(),
+            createdAt: now,
+            updatedAt: now,
           })
           .run();
       }
@@ -245,6 +247,7 @@ filesRouter.post('/upload', async c => {
             transactionCategoryId = matchedCategory.id;
           } else {
             // Create new category if it doesn't exist
+            const now = getCurrentTimestamp();
             const newCategoryId = crypto.randomUUID();
             await db
               .insert(categories)
@@ -256,8 +259,8 @@ filesRouter.post('/upload', async c => {
                 color: `#${Math.floor(Math.random()*16777215).toString(16)}`, // Random color
                 icon: null,
                 parentId: null,
-                createdAt: new Date(),
-                updatedAt: new Date(),
+                createdAt: now,
+                updatedAt: now,
               })
               .run();
             
@@ -270,12 +273,13 @@ filesRouter.post('/upload', async c => {
               color: `#${Math.floor(Math.random()*16777215).toString(16)}`,
               icon: null,
               parentId: null,
-              createdAt: new Date(),
-              updatedAt: new Date(),
+              createdAt: now,
+              updatedAt: now,
             });
           }
         }
 
+        const txnNow = getCurrentTimestamp();
         const newTransaction = {
           id: crypto.randomUUID(),
           tenantId,
@@ -286,8 +290,8 @@ filesRouter.post('/upload', async c => {
           date: parsed.date,
           type: parsed.type,
           notes: parsed.notes,
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          createdAt: txnNow,
+          updatedAt: txnNow,
         };
 
         await db.insert(transactions).values(newTransaction).run();

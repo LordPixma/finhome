@@ -4,6 +4,7 @@ import { getDb, billReminders, categories } from '../db';
 import { authMiddleware, tenantMiddleware } from '../middleware/auth';
 import { validateRequest } from '../middleware/validation';
 import { CreateBillReminderSchema } from '@finhome360/shared';
+import { getCurrentTimestamp } from '../utils/timestamp';
 import type { Env } from '../types';
 
 const billRemindersRouter = new Hono<Env>();
@@ -101,12 +102,14 @@ billRemindersRouter.post('/', validateRequest(CreateBillReminderSchema), async c
     const body = c.get('validatedData');
     const db = getDb(c.env.DB);
 
+    const now = getCurrentTimestamp();
+
     const newBillReminder = {
       id: crypto.randomUUID(),
       tenantId,
       ...body,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: now,
+      updatedAt: now,
     };
 
     await db.insert(billReminders).values(newBillReminder).run();
@@ -165,7 +168,7 @@ billRemindersRouter.put('/:id', validateRequest(CreateBillReminderSchema), async
 
     const updatedBillReminder = {
       ...body,
-      updatedAt: new Date(),
+      updatedAt: getCurrentTimestamp(),
     };
 
     await db

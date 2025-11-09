@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { eq, and } from 'drizzle-orm';
 import { getDb, budgets, categories } from '../db';
 import { authMiddleware, tenantMiddleware } from '../middleware/auth';
+import { getCurrentTimestamp } from '../utils/timestamp';
 import type { Env } from '../types';
 
 const budgetsRouter = new Hono<Env>();
@@ -49,12 +50,14 @@ budgetsRouter.post('/', async c => {
   const body = await c.req.json();
   const db = getDb(c.env.DB);
 
+  const now = getCurrentTimestamp();
+
   const newBudget = {
     id: crypto.randomUUID(),
     tenantId,
     ...body,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: now,
+    updatedAt: now,
   };
 
   await db.insert(budgets).values(newBudget).run();
@@ -74,7 +77,7 @@ budgetsRouter.put('/:id', async c => {
 
   await db
     .update(budgets)
-    .set({ ...body, updatedAt: new Date() })
+    .set({ ...body, updatedAt: getCurrentTimestamp() })
     .where(and(eq(budgets.id, id), eq(budgets.tenantId, tenantId)))
     .run();
 

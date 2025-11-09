@@ -6,6 +6,7 @@ import { MFAService } from '../services/mfa';
 import { validateRequest } from '../middleware/validation';
 import { getDb, globalAdminMFA, users } from '../db';
 import { globalAdminMiddleware } from '../middleware/global-admin';
+import { getCurrentTimestamp } from '../utils/timestamp';
 import type { AppContext } from '../types';
 
 const mfaRouter = new Hono<{ Bindings: any; Variables: any }>();
@@ -74,14 +75,15 @@ mfaRouter.post('/setup', validateRequest(setupMFASchema), async (c: AppContext) 
         })
         .where(eq(globalAdminMFA.userId, admin.id));
     } else {
+      const now = getCurrentTimestamp();
       await db.insert(globalAdminMFA).values({
         id: crypto.randomUUID(),
         userId: admin.id,
         secret: mfaSetup.secret,
         isEnabled: false,
         backupCodes: JSON.stringify(mfaSetup.hashedBackupCodes),
-        createdAt: new Date(),
-        updatedAt: new Date()
+        createdAt: now,
+        updatedAt: now
       });
     }
 
