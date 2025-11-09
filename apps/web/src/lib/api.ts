@@ -84,6 +84,12 @@ export async function apiClient<T>(
   const data = await response.json();
 
   if (!response.ok) {
+    console.error('API Error:', {
+      url,
+      status: response.status,
+      error: data.error,
+      details: data.error?.details
+    });
     throw new Error(data.error?.message || 'An error occurred');
   }
 

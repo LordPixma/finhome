@@ -83,13 +83,19 @@ accountsRouter.post('/', validateRequest(CreateAccountSchema), async c => {
     const body = c.get('validatedData');
     const db = getDb(c.env.DB);
 
+    console.log('Creating account - tenantId:', tenantId);
+    console.log('Creating account - validated body:', JSON.stringify(body));
+
     const newAccount = {
       id: crypto.randomUUID(),
       tenantId,
       ...body,
+      balance: body.balance ?? 0,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
+
+    console.log('Creating account - final account object:', JSON.stringify(newAccount));
 
     await db.insert(accounts).values(newAccount).run();
 
@@ -101,11 +107,17 @@ accountsRouter.post('/', validateRequest(CreateAccountSchema), async c => {
       201
     );
   } catch (error) {
-    console.error('Error creating account:', error);
+    console.error('Error creating account - full error:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    console.error('Error message:', error instanceof Error ? error.message : String(error));
     return c.json(
       {
         success: false,
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to create account' },
+        error: { 
+          code: 'INTERNAL_ERROR', 
+          message: 'Failed to create account',
+          details: error instanceof Error ? error.message : String(error)
+        },
       },
       500
     );

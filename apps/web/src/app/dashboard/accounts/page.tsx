@@ -91,12 +91,23 @@ export default function AccountsPage() {
     setIsSaving(true);
 
     try {
+      const balanceValue = formData.balance === '' ? 0 : parseFloat(formData.balance);
+      
+      // Validate that balance is a valid number
+      if (isNaN(balanceValue)) {
+        setError('Please enter a valid number for balance');
+        setIsSaving(false);
+        return;
+      }
+
       const accountData = {
         name: formData.name,
         type: formData.type,
-        balance: formData.balance === '' ? 0 : parseFloat(formData.balance),
+        balance: balanceValue,
         currency: formData.currency,
       };
+
+      console.log('Submitting account data:', accountData);
 
       if (editingAccount) {
         await api.updateAccount(editingAccount.id, accountData);
@@ -107,6 +118,7 @@ export default function AccountsPage() {
       await loadAccounts();
       handleCloseModal();
     } catch (err: any) {
+      console.error('Account save error:', err);
       setError(err.message || 'Failed to save account');
     } finally {
       setIsSaving(false);
