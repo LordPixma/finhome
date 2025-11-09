@@ -35,6 +35,7 @@ export default function ImportPage() {
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [isLoadingAccounts, setIsLoadingAccounts] = useState(true);
   const [uploadProgress, setUploadProgress] = useState<string>('');
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error'; link?: { text: string; href: string } } | null>(null);
 
   useEffect(() => {
     loadAccounts();
@@ -178,6 +179,17 @@ export default function ImportPage() {
     setFiles([]);
     setUploadProgress('');
     setIsProcessing(false);
+
+    // Show success toast
+    const successCount = results.filter(r => r.success).length;
+    if (successCount > 0) {
+      setNotification({
+        message: `Successfully imported ${totalImported} transaction${totalImported !== 1 ? 's' : ''} from ${successCount} file${successCount !== 1 ? 's' : ''}`,
+        type: 'success',
+        link: { text: 'View Transactions', href: '/dashboard/transactions' }
+      });
+      setTimeout(() => setNotification(null), 7000);
+    }
   };
 
   const handleRemoveFile = (index: number) => {
@@ -197,6 +209,36 @@ export default function ImportPage() {
   return (
     <ProtectedRoute>
       <DashboardLayout>
+        {/* Success Notification Toast */}
+        {notification && (
+          <div className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg ${
+            notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+          } text-white animate-slide-in-right max-w-md`}>
+            <div className="flex items-center gap-3">
+              <span className="text-xl">
+                {notification.type === 'success' ? '✅' : '❌'}
+              </span>
+              <div className="flex-1">
+                <span className="font-medium block">{notification.message}</span>
+                {notification.link && (
+                  <a
+                    href={notification.link.href}
+                    className="text-sm underline hover:text-white/90 mt-1 inline-block"
+                  >
+                    {notification.link.text} →
+                  </a>
+                )}
+              </div>
+              <button
+                onClick={() => setNotification(null)}
+                className="text-white/80 hover:text-white text-xl"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Import Transactions</h1>
@@ -282,6 +324,21 @@ export default function ImportPage() {
           </div>
         )}
 
+        {/* Mobile-only: Files ready banner */}
+        {importResults.length === 0 && files.length > 0 && (
+          <div className="sm:hidden bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 flex items-center gap-3">
+            <span className="text-2xl">📁</span>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-blue-900">
+                {files.length} file{files.length !== 1 ? 's' : ''} ready to import
+              </p>
+              <p className="text-xs text-blue-700">
+                Scroll down to review or use the import button below
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Upload Area */}
         {importResults.length === 0 && (
           <div
@@ -364,7 +421,7 @@ export default function ImportPage() {
 
         {/* Mobile sticky action bar (ensures upload button is always visible on small screens) */}
         {importResults.length === 0 && files.length > 0 && (
-          <div className="fixed inset-x-0 bottom-24 z-40 px-4 sm:hidden">
+          <div className="fixed inset-x-0 bottom-24 z-40 px-4 sm:hidden animate-slide-up">
             <div className="bg-white border border-gray-200 shadow-lg rounded-xl p-3 flex items-center gap-3">
               <Button
                 onClick={handleImport}
