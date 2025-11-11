@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Modal, Input, Select, Button } from '@/components/ui';
@@ -184,13 +185,18 @@ export default function AccountsPage() {
             <h1 className="text-3xl font-bold text-gray-900">Accounts</h1>
             <p className="text-gray-600 mt-1">Manage your financial accounts</p>
           </div>
-          <button
-            onClick={() => handleOpenModal()}
-            className="btn-primary flex items-center gap-2"
-          >
-            <PlusIcon className="w-5 h-5" />
-            Add Account
-          </button>
+          <div className="flex gap-3">
+            <Link href="/dashboard/banking" className="btn-secondary flex items-center gap-2">
+              Secure Bank Sync
+            </Link>
+            <button
+              onClick={() => handleOpenModal()}
+              className="btn-primary flex items-center gap-2"
+            >
+              <PlusIcon className="w-5 h-5" />
+              Add Account
+            </button>
+          </div>
         </div>
 
         {/* Total Balance Card */}

@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { eq, and, desc } from 'drizzle-orm';
-import { getDb, accounts } from '../db';
+import { getDb, accounts, bankAccounts, bankConnections } from '../db';
 import { authMiddleware, tenantMiddleware } from '../middleware/auth';
 import { validateRequest } from '../middleware/validation';
 import { CreateAccountSchema } from '@finhome360/shared';
@@ -247,6 +247,67 @@ accountsRouter.delete('/:id', async c => {
   }
 });
 
-// Bank sync endpoint removed for Bankless edition
+// Trigger a bank sync for an individual account
+accountsRouter.post('/:id/sync', async c => {
+  try {
+    const accountId = c.req.param('id');
+    const tenantId = c.get('tenantId')!;
+    const user = c.get('user');
+    const db = getDb(c.env.DB);
+
+    const account = await db
+      .select()
+      .from(accounts)
+      .where(and(eq(accounts.id, accountId), eq(accounts.tenantId, tenantId)))
+      .get();
+
+    if (!account) {
+      return c.json(
+        { success: false, error: { code: 'NOT_FOUND', message: 'Account not found' } },
+        404
+      );
+    }
+
+    const linkedConnection = await db
+      .select({ connectionId: bankConnections.id })
+      .from(bankAccounts)
+      .innerJoin(bankConnections, eq(bankAccounts.connectionId, bankConnections.id))
+      .where(
+        and(
+          eq(bankAccounts.accountId, accountId),
+          eq(bankConnections.tenantId, tenantId)
+        )
+      )
+      .get();
+
+    if (!linkedConnection) {
+      return c.json(
+        {
+          success: false,
+          error: {
+            code: 'ACCOUNT_NOT_LINKED',
+            message: 'This account is not linked to a bank connection.',
+          },
+        },
+        400
+      );
+    }
+
+    await c.env.TRANSACTION_SYNC.send({
+      type: 'transaction-sync',
+      tenantId,
+      connectionId: linkedConnection.connectionId,
+      triggeredBy: user?.id ?? null,
+    });
+
+    return c.json({ success: true, data: { message: 'Sync started' } });
+  } catch (error) {
+    console.error('Failed to queue account sync:', error);
+    return c.json(
+      { success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to queue sync' } },
+      500
+    );
+  }
+});
 
 export default accountsRouter;

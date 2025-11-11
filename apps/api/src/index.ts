@@ -16,6 +16,7 @@ import tenantMembers from './routes/tenantMembers';
 import profile from './routes/profile';
 import tenant from './routes/tenant';
 import aiRouter from './routes/ai';
+import banking from './routes/banking';
 import globalAdmin from './routes/global-admin';
 import { mfaRouter } from './routes/admin-mfa';
 import { adminAnalyticsRouter } from './routes/admin-analytics';
@@ -27,6 +28,7 @@ import { getDb, billReminders, users, userSettings, accounts as accountsTable, i
 import { createEmailService } from './services/email';
 import { parsePDF } from './utils/fileParser';
 import { persistTransactionsFromImport } from './services/importProcessor';
+import { TransactionSyncService } from './services/transactionSync';
 import type { Env } from './types';
 // Note: Avoid direct dependency on '@cloudflare/workers-types' here for portability
 
@@ -131,6 +133,7 @@ app.route('/api/tenant-members', tenantMembers);
 app.route('/api/profile', profile);
 app.route('/api/tenant', tenant);
 app.route('/api/ai', aiRouter);
+app.route('/api/banking', banking);
 
 app.route('/api/global-admin', globalAdmin);
 app.route('/api/admin/mfa', mfaRouter);
@@ -272,6 +275,27 @@ export async function queue(batch: any, env: Env['Bindings']): Promise<void> {
             .run();
 
           message.ack();
+        }
+
+        continue;
+      }
+
+      if (messageType === 'transaction-sync') {
+        const { tenantId, connectionId } = body;
+
+        if (!tenantId || !connectionId) {
+          console.error('Invalid transaction sync payload', body);
+          message.ack();
+          continue;
+        }
+
+        try {
+          const syncService = new TransactionSyncService(db, env, tenantId);
+          await syncService.forceSyncConnection(connectionId);
+          message.ack();
+        } catch (error) {
+          console.error('Transaction sync job failed:', error);
+          message.retry();
         }
 
         continue;

@@ -118,3 +118,32 @@ export interface CategorizationStats {
     category: string;
   }[];
 }
+
+// Banking Types
+export interface LinkedBankAccountSummary {
+  id: string;
+  accountId: string;
+  providerAccountId: string;
+  name: string;
+  type: 'current' | 'savings' | 'credit' | 'cash' | 'investment' | 'other';
+  balance: number;
+  currency: string;
+  accountNumber?: string | null;
+  sortCode?: string | null;
+  iban?: string | null;
+  syncFromDate?: string | null;
+  lastUpdatedAt?: string | null;
+}
+
+export interface BankConnectionSummary {
+  id: string;
+  provider: string;
+  providerConnectionId: string;
+  institutionId?: string | null;
+  institutionName?: string | null;
+  status: 'active' | 'disconnected' | 'expired' | 'error';
+  lastSyncAt?: string | null;
+  lastError?: string | null;
+  createdAt?: string | null;
+  accounts: LinkedBankAccountSummary[];
+}
