@@ -30,6 +30,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_bank_connections_provider ON bank_connecti
 
 CREATE TABLE IF NOT EXISTS bank_accounts (
   id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
   connection_id TEXT NOT NULL,
   account_id TEXT NOT NULL,
   provider_account_id TEXT NOT NULL,
@@ -41,16 +42,19 @@ CREATE TABLE IF NOT EXISTS bank_accounts (
   sync_from_date INTEGER,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
+  FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
   FOREIGN KEY (connection_id) REFERENCES bank_connections(id) ON DELETE CASCADE,
   FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
 );
 
+CREATE INDEX IF NOT EXISTS idx_bank_accounts_tenant ON bank_accounts(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_bank_accounts_connection ON bank_accounts(connection_id);
 CREATE INDEX IF NOT EXISTS idx_bank_accounts_account ON bank_accounts(account_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_bank_accounts_provider ON bank_accounts(provider_account_id);
 
 CREATE TABLE IF NOT EXISTS transaction_sync_history (
   id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
   connection_id TEXT NOT NULL,
   bank_account_id TEXT,
   sync_started_at INTEGER NOT NULL,
@@ -62,10 +66,12 @@ CREATE TABLE IF NOT EXISTS transaction_sync_history (
   status TEXT NOT NULL DEFAULT 'in_progress',
   error_message TEXT,
   created_at INTEGER NOT NULL,
+  FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
   FOREIGN KEY (connection_id) REFERENCES bank_connections(id) ON DELETE CASCADE,
   FOREIGN KEY (bank_account_id) REFERENCES bank_accounts(id) ON DELETE SET NULL
 );
 
+CREATE INDEX IF NOT EXISTS idx_sync_history_tenant ON transaction_sync_history(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_sync_history_connection ON transaction_sync_history(connection_id);
 CREATE INDEX IF NOT EXISTS idx_sync_history_status ON transaction_sync_history(status);
 CREATE INDEX IF NOT EXISTS idx_sync_history_date ON transaction_sync_history(sync_started_at);
