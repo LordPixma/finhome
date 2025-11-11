@@ -275,6 +275,7 @@ accountsRouter.post('/:id/sync', async c => {
       .where(
         and(
           eq(bankAccounts.accountId, accountId),
+          eq(bankAccounts.tenantId, tenantId),
           eq(bankConnections.tenantId, tenantId)
         )
       )

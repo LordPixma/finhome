@@ -56,7 +56,12 @@ export class TransactionSyncService {
       .select({ bankAccount: bankAccounts, account: accounts })
       .from(bankAccounts)
       .innerJoin(accounts, eq(bankAccounts.accountId, accounts.id))
-      .where(eq(bankAccounts.connectionId, connectionId))
+      .where(
+        and(
+          eq(bankAccounts.connectionId, connectionId),
+          eq(bankAccounts.tenantId, this.tenantId)
+        )
+      )
       .all();
 
     if (linkedAccounts.length === 0) {
