@@ -9,11 +9,12 @@ export interface BankPdfTemplate {
   dateFormat: PdfDateFormat;
   amountStyle: 'debitCredit' | 'signed';
   groups: {
-    date: string;
-    description: string;
-    debit?: string;
-    credit?: string;
-    amount?: string;
+    // 1-based indices of capturing groups in rowPattern
+    date: number;
+    description: number;
+    debit?: number;
+    credit?: number;
+    amount?: number;
   };
   currencySymbol?: string;
   multiLineDescriptions?: boolean;
@@ -27,14 +28,15 @@ export const BANK_PDF_TEMPLATES: BankPdfTemplate[] = [
     displayName: 'UK Generic Statement',
     description: 'Date, description, debit, credit columns',
     detectKeywords: ['Sort Code', 'Account Number', 'Balance Brought Forward'],
-    rowPattern: /^(?<date>\d{2}\/\d{2}\/\d{4})\s+(?<description>.+?)\s+(?<debit>-?[£\d,]+\.\d{2})?\s+(?<credit>-?[£\d,]+\.\d{2})?\s*(?<balance>-?[£\d,]+\.\d{2})?$/,
+    // 1: date, 2: description, 3: debit (optional), 4: credit (optional), 5: balance (optional)
+    rowPattern: /^(\d{2}\/\d{2}\/\d{4})\s+(.+?)\s+(-?[£\d,]+\.\d{2})?\s+(-?[£\d,]+\.\d{2})?\s*(-?[£\d,]+\.\d{2})?$/,
     dateFormat: 'dd/MM/yyyy',
     amountStyle: 'debitCredit',
     groups: {
-      date: 'date',
-      description: 'description',
-      debit: 'debit',
-      credit: 'credit',
+      date: 1,
+      description: 2,
+      debit: 3,
+      credit: 4,
     },
     currencySymbol: '£',
     multiLineDescriptions: true,
@@ -46,13 +48,14 @@ export const BANK_PDF_TEMPLATES: BankPdfTemplate[] = [
     displayName: 'US Generic Statement',
     description: 'Date, description, amount (signed) columns',
     detectKeywords: ['Beginning Balance', 'Ending Balance', 'Deposits and Credits'],
-    rowPattern: /^(?<date>\d{2}\/\d{2}\/\d{4})\s+(?<description>.+?)\s+(?<amount>[-+]?\$?[\d,]+\.\d{2})$/, 
+    // 1: date, 2: description, 3: amount
+    rowPattern: /^(\d{2}\/\d{2}\/\d{4})\s+(.+?)\s+([-+]?\$?[\d,]+\.\d{2})$/, 
     dateFormat: 'MM/dd/yyyy',
     amountStyle: 'signed',
     groups: {
-      date: 'date',
-      description: 'description',
-      amount: 'amount',
+      date: 1,
+      description: 2,
+      amount: 3,
     },
     currencySymbol: '$',
     multiLineDescriptions: true,
