@@ -88,7 +88,12 @@ protectedRoutes.get('/connections', async c => {
         .select({ bankAccount: bankAccounts, account: accounts })
         .from(bankAccounts)
         .innerJoin(accounts, eq(bankAccounts.accountId, accounts.id))
-        .where(eq(bankAccounts.connectionId, connection.id))
+        .where(
+          and(
+            eq(bankAccounts.connectionId, connection.id),
+            eq(bankAccounts.tenantId, tenantId)
+          )
+        )
         .all();
 
       const latestSync = await db
@@ -443,6 +448,7 @@ banking.get('/callback', async c => {
         .insert(bankAccounts)
         .values({
           id: bankAccountId,
+          tenantId: statePayload.tenantId,
           connectionId,
           accountId,
           providerAccountId: tlAccount.account_id,
