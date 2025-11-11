@@ -346,11 +346,79 @@ export const tenantMembers = sqliteTable('tenant_members', {
 }));
 
 // Bank Connections Table (Open Banking integration)
-// Open Banking tables removed in Bankless Edition (Nov 2025):
-// - bank_connections
-// - bank_accounts
-// - transaction_sync_history
-// See Docs/DEPRECATIONS.md and migration 0005_drop_open_banking.sql
+export const bankConnections = sqliteTable('bank_connections', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id')
+    .notNull()
+    .references(() => tenants.id),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id),
+  provider: text('provider').notNull().default('truelayer'),
+  providerConnectionId: text('provider_connection_id').notNull(),
+  institutionId: text('institution_id'),
+  institutionName: text('institution_name'),
+  accessToken: text('access_token'),
+  refreshToken: text('refresh_token'),
+  tokenExpiresAt: integer('token_expires_at', { mode: 'timestamp' }),
+  status: text('status', { enum: ['active', 'disconnected', 'expired', 'error'] }).notNull().default('active'),
+  lastSyncAt: integer('last_sync_at', { mode: 'timestamp' }),
+  lastError: text('last_error'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  tenantIdx: index('idx_bank_connections_tenant').on(table.tenantId),
+  userIdx: index('idx_bank_connections_user').on(table.userId),
+  statusIdx: index('idx_bank_connections_status').on(table.status),
+  providerIdx: index('idx_bank_connections_provider').on(table.provider, table.providerConnectionId),
+}));
+
+// Linked Bank Accounts Table
+export const bankAccounts = sqliteTable('bank_accounts', {
+  id: text('id').primaryKey(),
+  connectionId: text('connection_id')
+    .notNull()
+    .references(() => bankConnections.id),
+  accountId: text('account_id')
+    .notNull()
+    .references(() => accounts.id),
+  providerAccountId: text('provider_account_id').notNull(),
+  accountNumber: text('account_number'),
+  sortCode: text('sort_code'),
+  iban: text('iban'),
+  accountType: text('account_type'),
+  currency: text('currency').default('GBP'),
+  syncFromDate: integer('sync_from_date', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  connectionIdx: index('idx_bank_accounts_connection').on(table.connectionId),
+  accountIdx: index('idx_bank_accounts_account').on(table.accountId),
+  providerAccountIdx: index('idx_bank_accounts_provider').on(table.providerAccountId),
+}));
+
+// Transaction Sync History Table
+export const transactionSyncHistory = sqliteTable('transaction_sync_history', {
+  id: text('id').primaryKey(),
+  connectionId: text('connection_id')
+    .notNull()
+    .references(() => bankConnections.id),
+  bankAccountId: text('bank_account_id')
+    .references(() => bankAccounts.id),
+  syncStartedAt: integer('sync_started_at', { mode: 'timestamp' }).notNull(),
+  syncCompletedAt: integer('sync_completed_at', { mode: 'timestamp' }),
+  transactionsFetched: integer('transactions_fetched').default(0),
+  transactionsImported: integer('transactions_imported').default(0),
+  transactionsSkipped: integer('transactions_skipped').default(0),
+  transactionsFailed: integer('transactions_failed').default(0),
+  status: text('status', { enum: ['in_progress', 'completed', 'failed'] }).notNull().default('in_progress'),
+  errorMessage: text('error_message'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  connectionIdx: index('idx_sync_history_connection').on(table.connectionId),
+  statusIdx: index('idx_sync_history_status').on(table.status),
+  dateIdx: index('idx_sync_history_date').on(table.syncStartedAt),
+}));
 
 // Global Admin Action Log Table
 export const globalAdminActions = sqliteTable('global_admin_actions', {

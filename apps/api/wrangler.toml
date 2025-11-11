@@ -42,7 +42,14 @@ queue = "finhome-bill-reminders"
 max_batch_size = 10
 max_batch_timeout = 30
 
-# Transaction sync queues removed for Bankless edition
+[[queues.producers]]
+binding = "TRANSACTION_SYNC"
+queue = "finhome-transaction-sync"
+
+[[queues.consumers]]
+queue = "finhome-transaction-sync"
+max_batch_size = 5
+max_batch_timeout = 30
 
 # Cron triggers removed (no scheduled banking sync tasks in Bankless edition)
 
@@ -56,7 +63,9 @@ ENVIRONMENT = "production"
 JWT_SECRET = "gBk9Lm3Np2Qr5Ts8Wv1Yx4Za7Cd0Ef3Hi6Jl9Mo2Pr5Su8Vx1Za4Cd7Ff0Hi3"
 FRONTEND_URL = "https://app.finhome360.com"
 RESEND_API_KEY = "re_joNCiaUb_4q5et1qJxxfpNbXPhUbq2pFL"
-# TrueLayer variables removed for Bankless edition
+TRUELAYER_CLIENT_ID = "your_truelayer_client_id"
+TRUELAYER_CLIENT_SECRET = "your_truelayer_client_secret"
+TRUELAYER_REDIRECT_URI = "https://api.finhome360.com/api/banking/callback"
 # Durable Objects (for future use)
 # [[durable_objects.bindings]]
 # name = "ANALYTICS"
