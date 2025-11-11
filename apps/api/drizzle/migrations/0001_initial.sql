@@ -73,6 +73,8 @@ CREATE TABLE IF NOT EXISTS transactions (
   date INTEGER NOT NULL,
   type TEXT NOT NULL CHECK (type IN ('income', 'expense', 'transfer')),
   notes TEXT,
+  -- Open Banking provider transaction identifier (nullable)
+  provider_transaction_id TEXT,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
   FOREIGN KEY (tenant_id) REFERENCES tenants(id),

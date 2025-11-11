@@ -70,7 +70,9 @@ CREATE INDEX IF NOT EXISTS idx_sync_history_connection ON transaction_sync_histo
 CREATE INDEX IF NOT EXISTS idx_sync_history_status ON transaction_sync_history(status);
 CREATE INDEX IF NOT EXISTS idx_sync_history_date ON transaction_sync_history(sync_started_at);
 
--- Ensure provider_transaction_id column exists on transactions table
--- Note: SQLite in D1 does not support IF NOT EXISTS for ALTER TABLE ADD COLUMN
-ALTER TABLE transactions ADD COLUMN provider_transaction_id TEXT;
+-- NOTE: Do not ALTER TABLE to add provider_transaction_id here.
+-- The column is now part of the base schema for fresh databases (see 0001_initial.sql).
+-- On existing databases where this column was already added manually or by a prior run,
+-- attempting to add it again causes 'duplicate column name' errors in D1.
+-- We keep the index creation below idempotent via IF NOT EXISTS.
 CREATE INDEX IF NOT EXISTS idx_transactions_provider ON transactions(provider_transaction_id);
