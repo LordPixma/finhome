@@ -249,9 +249,25 @@ export class TransactionSyncService {
       latestTransactionDate: null,
     };
 
+    // Performance optimization: Fetch all existing provider transaction IDs in one query
+    const existingProviderIds = new Set(
+      (await this.db
+        .select({ providerId: transactions.providerTransactionId })
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.tenantId, this.tenantId),
+            eq(transactions.accountId, account.id)
+          )
+        )
+        .all())
+        .map(r => r.providerId)
+        .filter((id): id is string => !!id)
+    );
+
     for (const tlTransaction of transactionsFromProvider) {
       try {
-        const imported = await this.importTransaction(tlTransaction, account);
+        const imported = await this.importTransaction(tlTransaction, account, existingProviderIds);
         if (imported) {
           totals.imported += 1;
           if (!totals.latestTransactionDate || imported > totals.latestTransactionDate) {
@@ -332,25 +348,16 @@ export class TransactionSyncService {
 
   private async importTransaction(
     tlTransaction: TrueLayerTransaction,
-    account: AccountRecord
+    account: AccountRecord,
+    existingProviderIds: Set<string>
   ): Promise<Date | null> {
     const providerId = tlTransaction.transaction_id;
     if (!providerId) {
       return null;
     }
 
-    const existing = await this.db
-      .select({ id: transactions.id })
-      .from(transactions)
-      .where(
-        and(
-          eq(transactions.providerTransactionId, providerId),
-          eq(transactions.tenantId, this.tenantId)
-        )
-      )
-      .get();
-
-    if (existing) {
+    // Check against the pre-fetched set instead of querying the database
+    if (existingProviderIds.has(providerId)) {
       return null;
     }
 
@@ -384,6 +391,9 @@ export class TransactionSyncService {
         updatedAt: now,
       })
       .run();
+
+    // Add to the set so subsequent checks in the same sync won't try to insert duplicates
+    existingProviderIds.add(providerId);
 
     return transactionDate;
   }
