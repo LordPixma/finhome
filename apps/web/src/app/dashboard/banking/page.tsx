@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -54,6 +54,15 @@ function formatDate(value?: string | null): string {
 }
 
 export default function BankingPage() {
+  // Wrap searchParams usage in a Suspense boundary per Next.js guidance
+  return (
+    <Suspense fallback={<div />}> 
+      <BankingPageContent />
+    </Suspense>
+  );
+}
+
+function BankingPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [connections, setConnections] = useState<BankConnectionSummary[]>([]);
