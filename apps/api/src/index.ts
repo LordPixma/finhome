@@ -17,6 +17,7 @@ import profile from './routes/profile';
 import tenant from './routes/tenant';
 import aiRouter from './routes/ai';
 import globalAdmin from './routes/global-admin';
+import pdfRouter from './routes/pdf';
 import { mfaRouter } from './routes/admin-mfa';
 import { adminAnalyticsRouter } from './routes/admin-analytics';
 import { adminTenantRouter } from './routes/admin-tenants';
@@ -131,6 +132,7 @@ app.route('/api/tenant-members', tenantMembers);
 app.route('/api/profile', profile);
 app.route('/api/tenant', tenant);
 app.route('/api/ai', aiRouter);
+app.route('/api/pdf', pdfRouter);
 
 app.route('/api/global-admin', globalAdmin);
 app.route('/api/admin/mfa', mfaRouter);
