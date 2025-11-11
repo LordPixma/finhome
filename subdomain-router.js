@@ -15,7 +15,10 @@ export default {
         // API subdomain - proxy to Workers API
         if (subdomain === 'api') {
           const apiUrl = new URL(request.url);
-          apiUrl.hostname = env.API_HOSTNAME || 'finhome-api.samuel-1e5.workers.dev';
+          // Route API traffic to the Finhome API worker. Prefer env override.
+          // IMPORTANT: The active API worker is "finhome" not "finhome-api".
+          // Set API_HOSTNAME env var in Cloudflare to avoid hardcoding here.
+          apiUrl.hostname = env.API_HOSTNAME || 'finhome.samuel-1e5.workers.dev';
           
           return fetch(apiUrl, {
             method: request.method,
