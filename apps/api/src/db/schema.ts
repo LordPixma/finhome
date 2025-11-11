@@ -400,6 +400,9 @@ export const bankAccounts = sqliteTable('bank_accounts', {
 // Transaction Sync History Table
 export const transactionSyncHistory = sqliteTable('transaction_sync_history', {
   id: text('id').primaryKey(),
+  tenantId: text('tenant_id')
+    .notNull()
+    .references(() => tenants.id),
   connectionId: text('connection_id')
     .notNull()
     .references(() => bankConnections.id),
@@ -415,6 +418,7 @@ export const transactionSyncHistory = sqliteTable('transaction_sync_history', {
   errorMessage: text('error_message'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 }, (table) => ({
+  tenantIdx: index('idx_sync_history_tenant').on(table.tenantId),
   connectionIdx: index('idx_sync_history_connection').on(table.connectionId),
   statusIdx: index('idx_sync_history_status').on(table.status),
   dateIdx: index('idx_sync_history_date').on(table.syncStartedAt),

@@ -70,6 +70,7 @@ export class TransactionSyncService {
       .insert(transactionSyncHistory)
       .values({
         id: syncId,
+        tenantId: this.tenantId,
         connectionId: connection.id,
         bankAccountId: null,
         syncStartedAt: now,
