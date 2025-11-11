@@ -7,6 +7,13 @@ export function getCurrentTimestamp(): Date {
 }
 
 /**
+ * Get current Unix timestamp in seconds (for direct INTEGER column inserts)
+ */
+export function getCurrentUnixTimestamp(): number {
+  return Math.floor(Date.now() / 1000);
+}
+
+/**
  * Convert a Date object to Unix timestamp in seconds
  */
 export function dateToTimestamp(date: Date): number {

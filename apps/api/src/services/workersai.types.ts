@@ -39,6 +39,7 @@ export interface SpendingInsights {
   }[];
   recommendations: string[];
   riskAreas: string[];
+  highlights?: string[]; // Positive financial behaviors
 }
 
 export interface AnomalyAlert {

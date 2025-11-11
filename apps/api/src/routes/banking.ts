@@ -1,22 +1,22 @@
 import { Hono } from 'hono';
 import { eq, and, desc } from 'drizzle-orm';
 import { authMiddleware } from '../middleware/auth';
-import { getDb, bankConnections, bankAccounts } from '../db';
+import { getDb, bankConnections, bankAccounts, accounts } from '../db';
 import { TrueLayerService } from '../services/truelayer';
 import { TransactionSyncService } from '../services/transactionSync';
 import type { Env } from '../types';
 
 const banking = new Hono<Env>();
 
-// Apply auth middleware to all routes
-banking.use('*', authMiddleware);
+// IMPORTANT: Do NOT require auth for the OAuth callback route.
+// Apply auth selectively to endpoints that require a user/tenant context.
 
 /**
  * POST /api/banking/link
  * Initiates TrueLayer OAuth flow
  * Returns authorization URL for user to connect their bank
  */
-banking.post('/link', async (c) => {
+banking.post('/link', authMiddleware, async (c) => {
   try {
     const user = c.get('user');
     const tenantId = c.get('tenantId');
@@ -37,7 +37,10 @@ banking.post('/link', async (c) => {
     const truelayer = new TrueLayerService(
       c.env.TRUELAYER_CLIENT_ID,
       c.env.TRUELAYER_CLIENT_SECRET,
-      c.env.TRUELAYER_REDIRECT_URI
+      c.env.TRUELAYER_REDIRECT_URI,
+      // Optional: allow configuring providers via env (e.g., "uk-ob-all").
+      // If not set, we omit the providers param to avoid upstream errors.
+      (c.env as any).TRUELAYER_PROVIDERS
     );
 
     // Generate state token (tenant + user + timestamp + random)
@@ -83,6 +86,13 @@ banking.post('/link', async (c) => {
  * Exchanges authorization code for access token and stores connection
  */
 banking.get('/callback', async (c) => {
+  console.log('[CALLBACK] Received callback request');
+  console.log('[CALLBACK] Query params:', { 
+    code: c.req.query('code') ? 'present' : 'missing',
+    state: c.req.query('state') ? 'present' : 'missing',
+    error: c.req.query('error') 
+  });
+  
   try {
     const code = c.req.query('code');
     const state = c.req.query('state');
@@ -92,19 +102,41 @@ banking.get('/callback', async (c) => {
       console.error('OAuth error from TrueLayer:', error);
       const errorDescription = c.req.query('error_description') || 'Authorization failed';
       
-      // Redirect to frontend with error
+      // Redirect to frontend with error - explicit Response with 303
       const redirectUrl = `${c.env.FRONTEND_URL}/dashboard/banking?status=error&message=${encodeURIComponent(errorDescription)}`;
-      return c.redirect(redirectUrl);
+      return new Response(null, {
+        status: 303,
+        headers: {
+          'Location': redirectUrl,
+          'Cache-Control': 'no-cache, no-store, must-revalidate'
+        }
+      });
     }
 
     if (!code || !state) {
-      return c.redirect(`${c.env.FRONTEND_URL}/dashboard/banking?status=error&message=Invalid+callback+parameters`);
+      const url = `${c.env.FRONTEND_URL}/dashboard/banking?status=error&message=Invalid+callback+parameters`;
+      return new Response(null, {
+        status: 303,
+        headers: {
+          'Location': url,
+          'Cache-Control': 'no-cache, no-store, must-revalidate'
+        }
+      });
     }
 
     // Verify state token
     const storedState = await c.env.CACHE.get(`oauth:state:${state}`);
+    console.log('[CALLBACK] State verification:', storedState ? 'valid' : 'invalid/expired');
     if (!storedState) {
-      return c.redirect(`${c.env.FRONTEND_URL}/dashboard/banking?status=error&message=Invalid+or+expired+state`);
+      const url = `${c.env.FRONTEND_URL}/dashboard/banking?status=error&message=Invalid+or+expired+state`;
+      console.log('[CALLBACK] Redirecting to:', url);
+      return new Response(null, {
+        status: 303,
+        headers: {
+          'Location': url,
+          'Cache-Control': 'no-cache, no-store, must-revalidate'
+        }
+      });
     }
 
     const { tenantId, userId } = JSON.parse(storedState);
@@ -120,15 +152,23 @@ banking.get('/callback', async (c) => {
 
     // Exchange code for tokens
     const tokenResponse = await truelayer.exchangeCodeForToken(code);
+    console.log('[CALLBACK] Token exchange successful');
 
     // Fetch provider metadata (account info)
     const metadata = await truelayer.getAccountsMetadata(tokenResponse.access_token);
+    console.log('[CALLBACK] Metadata:', JSON.stringify(metadata));
 
     const db = getDb(c.env.DB);
 
     // Store connection
     const connectionId = crypto.randomUUID();
     const now = new Date();
+
+    // Use provider info from metadata
+    let institutionName = metadata.provider?.display_name || 'Unknown Bank';
+    let institutionId = metadata.provider?.provider_id || null;
+    
+    console.log('[CALLBACK] Creating connection:', { institutionName, institutionId });
 
     await db
       .insert(bankConnections)
@@ -138,8 +178,8 @@ banking.get('/callback', async (c) => {
         userId,
         provider: 'truelayer',
         providerConnectionId: metadata.credentials_id || connectionId,
-        institutionId: metadata.provider?.provider_id || null,
-        institutionName: metadata.provider?.display_name || 'Bank',
+        institutionId,
+        institutionName,
         accessToken: tokenResponse.access_token,
         refreshToken: tokenResponse.refresh_token || null,
         tokenExpiresAt: tokenResponse.expires_in
@@ -154,31 +194,134 @@ banking.get('/callback', async (c) => {
       .run();
 
     // Fetch and store linked accounts
-    const accounts = await truelayer.getAccounts(tokenResponse.access_token);
-
-    for (const truelayerAccount of accounts) {
-      const accountId = crypto.randomUUID();
+    const truelayerAccounts = await truelayer.getAccounts(tokenResponse.access_token);
+    console.log('[CALLBACK] Fetched accounts:', truelayerAccounts.length);
+    
+    // Get institution name from first account's provider info if metadata didn't have it
+    if (institutionName === 'Unknown Bank' && truelayerAccounts.length > 0 && truelayerAccounts[0].provider) {
+      institutionName = truelayerAccounts[0].provider.display_name || 'Unknown Bank';
+      institutionId = truelayerAccounts[0].provider.provider_id || null;
+      console.log('[CALLBACK] Got institution from account:', { institutionName, institutionId });
       
+      // Update the connection with the correct institution info
       await db
-        .insert(bankAccounts)
-        .values({
-          id: accountId,
-          connectionId,
-          accountId: accountId, // Will be linked to user's Finhome account later
-          providerAccountId: truelayerAccount.account_id,
-          accountNumber: truelayerAccount.account_number?.number || null,
-          sortCode: truelayerAccount.account_number?.sort_code || null,
-          iban: truelayerAccount.account_number?.iban || null,
-          accountType: truelayerAccount.account_type || 'transaction',
-          currency: truelayerAccount.currency || 'GBP',
-          syncFromDate: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000), // Last 90 days
-          createdAt: now,
-          updatedAt: now,
-        })
+        .update(bankConnections)
+        .set({ institutionName, institutionId })
+        .where(eq(bankConnections.id, connectionId))
         .run();
+    }
+    
+    for (const truelayerAccount of truelayerAccounts) {
+      const bankAccountId = crypto.randomUUID();
+      
+      // Check if this provider account already exists (from a previous connection)
+      const existingBankAccount = await db
+        .select()
+        .from(bankAccounts)
+        .where(eq(bankAccounts.providerAccountId, truelayerAccount.account_id))
+        .get();
+      
+      let finhomeAccountId: string;
+      
+      if (existingBankAccount) {
+        // Reuse the existing Finhome account
+        finhomeAccountId = existingBankAccount.accountId;
+        console.log('[CALLBACK] Reusing existing Finhome account:', finhomeAccountId, 'for provider account:', truelayerAccount.account_id);
+        
+        // Update the existing bank account with new connection
+        await db
+          .update(bankAccounts)
+          .set({
+            connectionId,
+            accountNumber: truelayerAccount.account_number?.number || null,
+            sortCode: truelayerAccount.account_number?.sort_code || null,
+            iban: truelayerAccount.account_number?.iban || null,
+            accountType: truelayerAccount.account_type || 'transaction',
+            currency: truelayerAccount.currency || 'GBP',
+            syncFromDate: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
+            updatedAt: now,
+          })
+          .where(eq(bankAccounts.id, existingBankAccount.id))
+          .run();
+        
+        console.log('[CALLBACK] Updated existing bank account link:', existingBankAccount.id);
+      } else {
+        // Create a new Finhome account for this bank account
+        finhomeAccountId = crypto.randomUUID();
+        const accountName = truelayerAccount.display_name || 
+                            truelayerAccount.account_number?.number || 
+                            `${institutionName} Account`;
+        
+        // Determine account type mapping - convert to lowercase
+        let accountType: 'current' | 'savings' | 'credit' | 'cash' | 'investment' | 'other' = 'checking' as any;
+        const tlType = truelayerAccount.account_type?.toUpperCase();
+        if (tlType === 'SAVINGS') {
+          accountType = 'savings';
+        } else if (tlType === 'TRANSACTION') {
+          accountType = 'checking' as any; // Production DB uses 'checking' not 'current'
+        }
+        
+        console.log('[CALLBACK] Creating new Finhome account:', { name: accountName, type: accountType, currency: truelayerAccount.currency });
+        
+        try {
+          // Create Finhome account
+          await db
+            .insert(accounts)
+            .values({
+              id: finhomeAccountId,
+              tenantId,
+              name: accountName,
+              type: accountType,
+              balance: 0, // Will be updated during sync
+              currency: truelayerAccount.currency || 'GBP',
+              createdAt: now,
+              updatedAt: now,
+            })
+            .run();
+            
+          console.log('[CALLBACK] Finhome account created:', finhomeAccountId);
+        } catch (accountError) {
+          console.error('[CALLBACK] Failed to create Finhome account:', accountError);
+          console.error('[CALLBACK] Account data was:', { id: finhomeAccountId, tenantId, name: accountName, type: accountType });
+          throw accountError;
+        }
+        
+        // Create new bank account link
+        await db
+          .insert(bankAccounts)
+          .values({
+            id: bankAccountId,
+            connectionId,
+            accountId: finhomeAccountId,
+            providerAccountId: truelayerAccount.account_id,
+            accountNumber: truelayerAccount.account_number?.number || null,
+            sortCode: truelayerAccount.account_number?.sort_code || null,
+            iban: truelayerAccount.account_number?.iban || null,
+            accountType: truelayerAccount.account_type || 'transaction',
+            currency: truelayerAccount.currency || 'GBP',
+            syncFromDate: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run();
+        
+        console.log('[CALLBACK] Created new bank account link:', bankAccountId, '→', finhomeAccountId);
+      }
     }
 
     console.log(`Bank connection ${connectionId} created for tenant ${tenantId}`);
+
+    // Trigger initial sync in background (don't wait for it)
+    try {
+      const syncService = new TransactionSyncService(db, c.env);
+      syncService.syncConnection(connectionId).catch(err => {
+        console.error(`[CALLBACK] Background sync failed for ${connectionId}:`, err);
+      });
+      console.log('[CALLBACK] Initial sync triggered in background');
+    } catch (syncError) {
+      console.error('[CALLBACK] Failed to trigger sync:', syncError);
+      // Don't fail the callback - user can manually sync later
+    }
 
     // Decode state to get redirect URL
     let redirectPath = '/dashboard/banking';
@@ -191,11 +334,26 @@ banking.get('/callback', async (c) => {
       // Use default
     }
 
-    return c.redirect(`${c.env.FRONTEND_URL}${redirectPath}?status=connected`);
+    // Success - redirect to frontend
+    const url = `${c.env.FRONTEND_URL}${redirectPath}?status=connected`;
+    return new Response(null, {
+      status: 303,
+      headers: {
+        'Location': url,
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
+      }
+    });
   } catch (error) {
     console.error('OAuth callback error:', error);
     const message = error instanceof Error ? error.message : 'Failed+to+connect+bank';
-    return c.redirect(`${c.env.FRONTEND_URL}/dashboard/banking?status=error&message=${encodeURIComponent(message)}`);
+    const url = `${c.env.FRONTEND_URL}/dashboard/banking?status=error&message=${encodeURIComponent(message)}`;
+    return new Response(null, {
+      status: 303,
+      headers: {
+        'Location': url,
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
+      }
+    });
   }
 });
 
@@ -203,7 +361,7 @@ banking.get('/callback', async (c) => {
  * GET /api/banking/connections
  * List all bank connections for the current tenant
  */
-banking.get('/connections', async (c) => {
+banking.get('/connections', authMiddleware, async (c) => {
   try {
     const tenantId = c.get('tenantId');
 
@@ -219,6 +377,7 @@ banking.get('/connections', async (c) => {
 
     const db = getDb(c.env.DB);
 
+    // Only return active connections (not disconnected)
     const connections = await db
       .select({
         id: bankConnections.id,
@@ -230,7 +389,12 @@ banking.get('/connections', async (c) => {
         createdAt: bankConnections.createdAt,
       })
       .from(bankConnections)
-      .where(eq(bankConnections.tenantId, tenantId))
+      .where(
+        and(
+          eq(bankConnections.tenantId, tenantId),
+          eq(bankConnections.status, 'active')
+        )
+      )
       .orderBy(desc(bankConnections.createdAt))
       .all();
 
@@ -273,7 +437,7 @@ banking.get('/connections', async (c) => {
  * POST /api/banking/connections/:id/sync
  * Trigger manual sync for a connection
  */
-banking.post('/connections/:id/sync', async (c) => {
+banking.post('/connections/:id/sync', authMiddleware, async (c) => {
   try {
     const connectionId = c.req.param('id');
     const tenantId = c.get('tenantId');
@@ -336,7 +500,7 @@ banking.post('/connections/:id/sync', async (c) => {
  * POST /api/banking/connections/sync-all
  * Trigger sync for all active connections
  */
-banking.post('/connections/sync-all', async (c) => {
+banking.post('/connections/sync-all', authMiddleware, async (c) => {
   try {
     const tenantId = c.get('tenantId');
 
@@ -395,7 +559,7 @@ banking.post('/connections/sync-all', async (c) => {
  * DELETE /api/banking/connections/:id
  * Disconnect a bank connection
  */
-banking.delete('/connections/:id', async (c) => {
+banking.delete('/connections/:id', authMiddleware, async (c) => {
   try {
     const connectionId = c.req.param('id');
     const tenantId = c.get('tenantId');

@@ -62,13 +62,15 @@ export class TrueLayerService {
   private clientId: string;
   private clientSecret: string;
   private redirectUri: string;
+  private providers?: string;
   private baseUrl: string = 'https://api.truelayer.com';
   private authUrl: string = 'https://auth.truelayer.com';
 
-  constructor(clientId: string, clientSecret: string, redirectUri: string) {
+  constructor(clientId: string, clientSecret: string, redirectUri: string, providers?: string) {
     this.clientId = clientId;
     this.clientSecret = clientSecret;
     this.redirectUri = redirectUri;
+    this.providers = providers;
   }
 
   /**
@@ -81,8 +83,13 @@ export class TrueLayerService {
       redirect_uri: this.redirectUri,
       scope: 'info accounts transactions balance offline_access',
       state,
-      providers: 'uk-ob-all uk-oauth-all', // All UK banks
     });
+
+    // Only include providers if explicitly configured. This avoids upstream errors
+    // if a provider group is not supported for the current client/environment.
+    if (this.providers && this.providers.trim().length > 0) {
+      params.set('providers', this.providers);
+    }
 
     return `${this.authUrl}/?${params.toString()}`;
   }

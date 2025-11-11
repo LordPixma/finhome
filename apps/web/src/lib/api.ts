@@ -282,6 +282,26 @@ export const api = {
   getMonthlySummary: () => apiClient('/api/ai/monthly-summary'),
   getBudgetRecommendations: () => apiClient('/api/ai/budget-recommendations'),
 
+  // AI Report (PDF download)
+  downloadAIReport: async (period?: string) => {
+    const params = new URLSearchParams();
+    if (period) params.set('period', period);
+    const token = tokenManager.getAccessToken();
+    const res = await fetch(`${API_URL}/api/ai/report${params.toString() ? `?${params.toString()}` : ''}`, {
+      method: 'GET',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) {
+      try {
+        const data = await res.json();
+        throw new Error(data?.error?.message || 'Failed to generate report');
+      } catch {
+        throw new Error('Failed to generate report');
+      }
+    }
+    return await res.blob();
+  },
+
   // Banking / Open Banking (TrueLayer)
   createBankLink: (redirectUrl?: string) => 
     apiClient('/api/banking/link', { 

@@ -32,7 +32,8 @@ aiRouter.get('/', c => {
         'GET /api/ai/detect-anomalies',
         'POST /api/ai/financial-advice',
         'GET /api/ai/monthly-summary',
-        'GET /api/ai/budget-recommendations'
+        'GET /api/ai/budget-recommendations',
+        'GET /api/ai/report'
       ],
       note: 'All routes require Authorization bearer token and tenant subdomain.'
     }
@@ -399,5 +400,129 @@ aiRouter.get('/budget-recommendations', async c => {
     );
   }
 });
+
+  /**
+   * Generate AI Financial Insights PDF
+   * GET /api/ai/report
+   * Optional query: period=YYYY-MM (defaults to current month)
+   */
+  aiRouter.get('/report', async c => {
+    try {
+      const tenantId = c.get('tenantId')!;
+      const db = getDb(c.env.DB);
+      const aiService = new CloudflareAIService(c.env.AI);
+
+      // Determine period
+      const url = new URL(c.req.url);
+      const period = url.searchParams.get('period'); // YYYY-MM
+      const baseDate = period ? new Date(`${period}-01T00:00:00Z`) : new Date();
+      const startOfMonth = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
+  // endOfMonth not currently required but retained logic above for potential future range filtering
+
+      // Fetch transactions for the month
+      const monthly = await db
+        .select({
+          id: transactions.id,
+          description: transactions.description,
+          amount: transactions.amount,
+          date: transactions.date,
+          category: categories.name
+        })
+        .from(transactions)
+        .leftJoin(categories, eq(transactions.categoryId, categories.id))
+        .where(and(eq(transactions.tenantId, tenantId), gte(transactions.date, startOfMonth)))
+        .orderBy(desc(transactions.date));
+
+      // Basic stats
+      const expenses = monthly.filter(t => t.amount < 0);
+      const income = monthly.filter(t => t.amount > 0);
+      const totalSpending = expenses.reduce((s, t) => s + Math.abs(t.amount), 0);
+      const totalIncome = income.reduce((s, t) => s + t.amount, 0);
+      const net = totalIncome - totalSpending;
+
+      // Group by category
+      const byCategory: Record<string, number> = {};
+      expenses.forEach(t => {
+        const cat = t.category || 'Uncategorized';
+        byCategory[cat] = (byCategory[cat] || 0) + Math.abs(t.amount);
+      });
+      const topCategories = Object.entries(byCategory).sort((a,b) => b[1]-a[1]).slice(0,5);
+
+      // AI summary
+      const formatted = monthly.map(t => ({
+        id: t.id,
+        description: t.description,
+        amount: t.amount,
+        date: t.date.toISOString(),
+        category: t.category || 'Uncategorized'
+      }));
+      const summary = formatted.length > 0
+        ? await aiService.summarizeMonthlySpending(formatted)
+        : 'No transactions recorded for this period.';
+
+      // Generate PDF using pdf-lib
+      const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
+      const pdfDoc = await PDFDocument.create();
+      const page = pdfDoc.addPage([595.28, 841.89]); // A4
+      const { width } = page.getSize();
+      const margin = 50;
+      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+      let y = 780;
+      const drawText = (text: string, x: number, size = 12, options: any = {}) => {
+        page.drawText(text, { x, y, size, font: options.bold ? bold : font, color: options.color || rgb(0,0,0) });
+        y -= size + 6;
+      };
+
+      // Header
+      page.drawRectangle({ x: 0, y: 800, width, height: 41, color: rgb(0.36, 0.42, 0.96) });
+      page.drawText('Finhome360 — AI Financial Insights Report', { x: margin, y: 812, size: 14, font: bold, color: rgb(1,1,1) });
+
+      // Meta
+      drawText(`Period: ${startOfMonth.getFullYear()}-${String(startOfMonth.getMonth()+1).padStart(2,'0')}`, margin, 12, { bold: true });
+      drawText(`Generated: ${new Date().toLocaleString('en-GB')}`, margin, 10);
+      y -= 6;
+
+      // Summary section
+      drawText('Summary', margin, 13, { bold: true });
+      const summaryLines = summary.split('\n').filter(Boolean);
+      summaryLines.forEach(line => drawText(line.trim(), margin, 11));
+      y -= 6;
+
+      // Key metrics
+      drawText('Key Metrics', margin, 13, { bold: true });
+      drawText(`Total Income: £${totalIncome.toFixed(2)}`, margin, 11);
+      drawText(`Total Spending: £${totalSpending.toFixed(2)}`, margin, 11);
+      drawText(`Net Savings: £${net.toFixed(2)} (Savings Rate: ${totalIncome>0?((net/totalIncome)*100).toFixed(1):'0'}%)`, margin, 11);
+      y -= 6;
+
+      // Top categories table
+      drawText('Top Expense Categories', margin, 13, { bold: true });
+      topCategories.forEach(([cat, amt]) => drawText(`• ${cat}: £${amt.toFixed(2)} (${totalSpending>0?((amt/totalSpending)*100).toFixed(1):'0'}%)`, margin, 11));
+
+      // Footer
+      page.drawLine({ start: { x: margin, y: 40 }, end: { x: width - margin, y: 40 }, color: rgb(0.8,0.8,0.8) });
+      page.drawText('Generated by Finhome360 AI • https://finhome360.com', { x: margin, y: 26, size: 10, font, color: rgb(0.4,0.4,0.4) });
+
+      const pdfBytes = await pdfDoc.save();
+      return new Response(pdfBytes, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="finhome-ai-report-${startOfMonth.getFullYear()}-${String(startOfMonth.getMonth()+1).padStart(2,'0')}.pdf"`,
+        },
+      });
+    } catch (error) {
+      console.error('AI report generation error:', error);
+      return c.json(
+        {
+          success: false,
+          error: { code: 'AI_REPORT_ERROR', message: 'Failed to generate AI report PDF' }
+        },
+        500
+      );
+    }
+  });
 
 export default aiRouter;

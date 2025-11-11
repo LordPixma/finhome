@@ -35,10 +35,13 @@ export default {
           // Set API_HOSTNAME env var in Cloudflare to avoid hardcoding here.
           apiUrl.hostname = env.API_HOSTNAME || 'finhome.samuel-1e5.workers.dev';
           
+          // CRITICAL: Don't follow redirects - pass them through to the browser
+          // This is essential for OAuth callbacks that redirect to the frontend
           return fetch(apiUrl, {
             method: request.method,
             headers: request.headers,
             body: request.body,
+            redirect: 'manual', // Don't follow redirects - return them as-is
           });
         }
         

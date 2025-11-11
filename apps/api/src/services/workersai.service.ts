@@ -21,39 +21,45 @@ import type {
 export class CloudflareAIService implements WorkersAIService {
   constructor(private ai: any) {}
 
+  // Use the more capable Llama 3.1 model for better results
+  private readonly MODEL = '@cf/meta/llama-3.1-8b-instruct';
+
   /**
    * AI-powered transaction categorization using natural language processing
    */
   async categorizeTransaction(description: string, amount: number): Promise<CategorySuggestion> {
     try {
-      const prompt = `
-Analyze this financial transaction and categorize it appropriately:
+      const prompt = `You are a financial transaction categorization expert. Analyze the following transaction and categorize it precisely.
 
-Transaction: "${description}"
-Amount: $${amount}
+Transaction Description: "${description}"
+Amount: £${Math.abs(amount).toFixed(2)}
 
-Based on the description, determine the most appropriate category from:
-- Food & Dining
-- Transportation  
-- Shopping
-- Entertainment
-- Bills & Utilities
-- Healthcare
-- Travel
-- Income
-- Transfer
-- Other
+Available Categories:
+1. Food & Dining (groceries, restaurants, takeout, coffee shops)
+2. Transportation (fuel, parking, public transport, ride-sharing, car maintenance)
+3. Shopping (retail, clothing, electronics, household items)
+4. Entertainment (movies, games, subscriptions, hobbies)
+5. Bills & Utilities (electricity, water, internet, phone, insurance)
+6. Healthcare (medical, pharmacy, dental, fitness)
+7. Travel (flights, hotels, vacation expenses)
+8. Income (salary, freelance, refunds, cashback)
+9. Transfer (between accounts, savings, investments)
+10. Other (miscellaneous, uncategorized)
 
-Provide your analysis in this exact JSON format:
+Respond ONLY with a valid JSON object in this exact format:
 {
-  "category": "category_name",
+  "category": "exact category name from list above",
   "confidence": 0.95,
-  "reasoning": "Brief explanation of why this category was chosen",
+  "reasoning": "brief 1-sentence explanation",
   "alternativeCategories": ["alternative1", "alternative2"]
 }`;
 
-      const response = await this.ai.run('@cf/meta/llama-2-7b-chat-int8', {
-        messages: [{ role: 'user', content: prompt }]
+      const response = await this.ai.run(this.MODEL, {
+        messages: [
+          { role: 'system', content: 'You are a precise financial assistant that only outputs valid JSON.' },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 256
       });
 
       // Parse the AI response
@@ -61,7 +67,7 @@ Provide your analysis in this exact JSON format:
       
       return {
         category: result.category || 'Other',
-        confidence: result.confidence || 0.5,
+        confidence: Math.min(0.99, Math.max(0.1, result.confidence || 0.5)),
         reasoning: result.reasoning || 'AI analysis of transaction description',
         alternativeCategories: result.alternativeCategories || []
       };
@@ -78,31 +84,50 @@ Provide your analysis in this exact JSON format:
     try {
       const spendingByCategory = this.groupTransactionsByCategory(transactions);
       const totalSpending = transactions.reduce((sum, t) => sum + Math.abs(t.amount), 0);
+      const avgTransaction = totalSpending / transactions.length;
       
-      const prompt = `
-Analyze this spending data and provide insights:
+      const topCategories = Object.entries(spendingByCategory)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 5);
+      
+      const prompt = `You are an expert financial analyst. Analyze this spending data and provide actionable insights.
 
-Total Monthly Spending: $${totalSpending.toFixed(2)}
-Category Breakdown:
-${Object.entries(spendingByCategory)
-  .map(([cat, amount]) => `- ${cat}: $${amount.toFixed(2)} (${((amount/totalSpending)*100).toFixed(1)}%)`)
-  .join('\n')}
+Total Monthly Spending: £${totalSpending.toFixed(2)}
+Number of Transactions: ${transactions.length}
+Average Transaction: £${avgTransaction.toFixed(2)}
 
-Provide analysis in this JSON format:
+Top 5 Spending Categories:
+${topCategories.map(([cat, amount]) => 
+  `- ${cat}: £${amount.toFixed(2)} (${((amount/totalSpending)*100).toFixed(1)}%)`
+).join('\n')}
+
+Provide a detailed analysis as a JSON object with:
 {
-  "summary": "Brief overview of spending patterns",
+  "summary": "2-3 sentence overview highlighting key patterns",
   "trends": [
-    {"category": "Food & Dining", "trend": "increasing", "percentage": 15}
+    {"category": "category name", "trend": "increasing/stable/decreasing", "percentage": number}
   ],
-  "recommendations": ["Specific actionable advice"],
-  "riskAreas": ["Areas of concern"]
+  "recommendations": ["specific actionable advice with numbers"],
+  "riskAreas": ["areas of potential overspending"],
+  "highlights": ["positive financial behaviors observed"]
 }`;
 
-      const response = await this.ai.run('@cf/meta/llama-2-7b-chat-int8', {
-        messages: [{ role: 'user', content: prompt }]
+      const response = await this.ai.run(this.MODEL, {
+        messages: [
+          { role: 'system', content: 'You are a financial analyst providing JSON-formatted insights.' },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 512
       });
 
-      return this.parseJSONResponse(response.response);
+      const result = this.parseJSONResponse(response.response);
+      return {
+        summary: result.summary || this.getFallbackSpendingInsights(transactions).summary,
+        trends: result.trends || [],
+        recommendations: result.recommendations || [],
+        riskAreas: result.riskAreas || [],
+        highlights: result.highlights || []
+      };
     } catch (error) {
       console.error('Spending analysis failed:', error);
       return this.getFallbackSpendingInsights(transactions);
@@ -207,26 +232,38 @@ Provide budget advice in this JSON format:
    */
   async provideFiscalGuidance(question: string, context: FinancialContext): Promise<string> {
     try {
-      const prompt = `
-You are a knowledgeable financial advisor. Answer this question based on the user's context:
+      const budgetSummary = context.currentBudgets
+        .map(b => `${b.category}: £${b.spent}/${b.amount} (${((b.spent/b.amount)*100).toFixed(0)}% used)`)
+        .join(', ');
+      
+      const goalsSummary = context.goals
+        .map(g => `${g.name}: £${g.currentAmount}/${g.targetAmount} (${((g.currentAmount/g.targetAmount)*100).toFixed(0)}%)`)
+        .join(', ');
 
-Question: "${question}"
+      const prompt = `You are a knowledgeable UK-based financial advisor. Provide practical, encouraging advice.
 
-User Context:
-- Monthly Income: $${context.monthlyIncome}
-- Current Budgets: ${context.currentBudgets.map(b => `${b.category}: $${b.amount} (spent: $${b.spent})`).join(', ')}
-- Goals: ${context.goals.map(g => `${g.name}: $${g.currentAmount}/$${g.targetAmount}`).join(', ')}
+User Question: "${question}"
 
-Provide helpful, practical financial advice in 2-3 paragraphs. Be encouraging but realistic.`;
+Financial Context:
+- Monthly Income: £${context.monthlyIncome.toFixed(2)}
+- Current Budgets: ${budgetSummary || 'None set'}
+- Financial Goals: ${goalsSummary || 'None set'}
+${context.demographics.familySize ? `- Family Size: ${context.demographics.familySize}` : ''}
 
-      const response = await this.ai.run('@cf/meta/llama-2-7b-chat-int8', {
-        messages: [{ role: 'user', content: prompt }]
+Provide helpful, practical financial advice in 2-3 clear paragraphs. Be encouraging but realistic. Use British English and reference UK financial products/regulations where relevant.`;
+
+      const response = await this.ai.run(this.MODEL, {
+        messages: [
+          { role: 'system', content: 'You are a helpful UK financial advisor providing clear, practical advice in British English.' },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 512
       });
 
-      return response.response || 'I apologize, but I\'m unable to provide guidance at this time. Please consult with a financial professional for personalized advice.';
+      return response.response || 'I apologize, but I\'m unable to provide guidance at this time. Please consult with a qualified financial adviser for personalized advice.';
     } catch (error) {
       console.error('Financial guidance failed:', error);
-      return 'I apologize, but I\'m experiencing technical difficulties. Please try again later or consult with a financial professional.';
+      return 'I apologize, but I\'m experiencing technical difficulties. Please try again later or consult with a qualified financial adviser.';
     }
   }
 
@@ -235,28 +272,43 @@ Provide helpful, practical financial advice in 2-3 paragraphs. Be encouraging bu
    */
   async summarizeMonthlySpending(transactions: Transaction[]): Promise<string> {
     try {
-      const totalSpending = transactions.reduce((sum, t) => sum + (t.amount < 0 ? Math.abs(t.amount) : 0), 0);
-      const totalIncome = transactions.reduce((sum, t) => sum + (t.amount > 0 ? t.amount : 0), 0);
-      const categoryBreakdown = this.groupTransactionsByCategory(transactions);
+      const expenses = transactions.filter(t => t.amount < 0);
+      const income = transactions.filter(t => t.amount > 0);
+      
+      const totalSpending = expenses.reduce((sum, t) => sum + Math.abs(t.amount), 0);
+      const totalIncome = income.reduce((sum, t) => sum + t.amount, 0);
+      const netAmount = totalIncome - totalSpending;
+      
+      const categoryBreakdown = this.groupTransactionsByCategory(expenses);
+      const topCategories = Object.entries(categoryBreakdown)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 5);
 
-      const prompt = `
-Summarize this month's financial activity:
+      const prompt = `You are a financial analyst creating a monthly summary report.
 
-Income: $${totalIncome.toFixed(2)}
-Expenses: $${totalSpending.toFixed(2)}
-Net: $${(totalIncome - totalSpending).toFixed(2)}
+Financial Summary for the Month:
+- Income: £${totalIncome.toFixed(2)} (${income.length} transactions)
+- Expenses: £${totalSpending.toFixed(2)} (${expenses.length} transactions)
+- Net Savings: £${netAmount.toFixed(2)}
+- Savings Rate: ${totalIncome > 0 ? ((netAmount/totalIncome)*100).toFixed(1) : '0'}%
 
-Spending by Category:
-${Object.entries(categoryBreakdown)
-  .sort(([,a], [,b]) => b - a)
-  .slice(0, 5)
-  .map(([cat, amount]) => `- ${cat}: $${amount.toFixed(2)}`)
-  .join('\n')}
+Top 5 Expense Categories:
+${topCategories.map(([cat, amount]) => 
+  `- ${cat}: £${amount.toFixed(2)} (${((amount/totalSpending)*100).toFixed(1)}%)`
+).join('\n')}
 
-Provide a concise, encouraging 2-paragraph summary focusing on key insights and actionable next steps.`;
+Write an encouraging, insightful 2-paragraph summary that:
+1. Highlights key financial achievements and patterns
+2. Provides 1-2 specific, actionable recommendations for next month
 
-      const response = await this.ai.run('@cf/meta/llama-2-7b-chat-int8', {
-        messages: [{ role: 'user', content: prompt }]
+Use a positive, motivating tone while being honest about areas for improvement.`;
+
+      const response = await this.ai.run(this.MODEL, {
+        messages: [
+          { role: 'system', content: 'You are an encouraging financial analyst who helps people improve their finances.' },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 384
       });
 
       return response.response || this.getFallbackSummary(totalIncome, totalSpending);

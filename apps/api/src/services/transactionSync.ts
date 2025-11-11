@@ -9,6 +9,7 @@ import {
 } from '../db/schema';
 import { TrueLayerService } from './truelayer';
 import { persistTransactionsFromImport } from './importProcessor';
+// Removed unused timestamp imports
 import type { Env } from '../types';
 import * as schema from '../db/schema';
 
@@ -52,13 +53,14 @@ export class TransactionSyncService {
       }
 
       // Create sync history record
+      const now = new Date();
       await this.db
         .insert(transactionSyncHistory)
         .values({
           id: syncId,
           connectionId,
           bankAccountId: null, // Will update per-account if needed
-          syncStartedAt: new Date(),
+          syncStartedAt: now,
           syncCompletedAt: null,
           transactionsFetched: 0,
           transactionsImported: 0,
@@ -66,7 +68,7 @@ export class TransactionSyncService {
           transactionsFailed: 0,
           status: 'in_progress',
           errorMessage: null,
-          createdAt: new Date(),
+          createdAt: now,
         })
         .run();
 
@@ -134,9 +136,8 @@ export class TransactionSyncService {
           }
 
           // Determine sync date range (last 90 days or from syncFromDate)
-          const fromDate = bankAccount.syncFromDate
-            ? new Date(bankAccount.syncFromDate)
-            : new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+          const fromDate = bankAccount.syncFromDate ||
+            new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
           const toDate = new Date();
 
           // Fetch transactions from TrueLayer

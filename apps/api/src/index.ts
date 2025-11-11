@@ -139,6 +139,19 @@ app.route('/api/ai', aiRouter);
 app.route('/api/banking', banking);
 app.route('/api/pdf', pdfRouter);
 
+// Diagnostic: identify deployed script & version
+app.get('/api/_whoami', c => {
+  return c.json({
+    success: true,
+    script: 'finhome',
+    env: c.env.ENVIRONMENT,
+    frontend: c.env.FRONTEND_URL,
+    redirectUri: c.env.TRUELAYER_REDIRECT_URI,
+    hasBanking: true,
+    timestamp: new Date().toISOString()
+  });
+});
+
 app.route('/api/global-admin', globalAdmin);
 app.route('/api/admin/mfa', mfaRouter);
 app.route('/api/admin/analytics', adminAnalyticsRouter);

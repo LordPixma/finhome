@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { eq, and, desc } from 'drizzle-orm';
-import { getDb, accounts } from '../db';
+import { getDb, accounts, bankAccounts, bankConnections } from '../db';
 import { authMiddleware, tenantMiddleware } from '../middleware/auth';
 import { validateRequest } from '../middleware/validation';
 import { CreateAccountSchema } from '@finhome360/shared';
@@ -27,6 +27,7 @@ accountsRouter.get('/', async c => {
     const tenantId = c.get('tenantId')!;
     const db = getDb(c.env.DB);
 
+    // Get all accounts for this tenant
     const allAccounts = await db
       .select()
       .from(accounts)
@@ -34,7 +35,35 @@ accountsRouter.get('/', async c => {
       .orderBy(desc(accounts.createdAt))
       .all();
 
-    const normalizedAccounts = allAccounts.map(account => ({
+    // Filter out accounts that belong to disconnected bank connections
+  const filteredAccounts: typeof allAccounts = [];
+    for (const account of allAccounts) {
+      // Check if this account is linked to a bank account
+      const bankAccount = await db
+        .select({ connectionId: bankAccounts.connectionId })
+        .from(bankAccounts)
+        .where(eq(bankAccounts.accountId, account.id))
+        .get();
+
+      if (!bankAccount) {
+        // Manual account (no bank connection) - include it
+        filteredAccounts.push(account);
+      } else {
+        // Check if the connection is active
+        const connection = await db
+          .select({ status: bankConnections.status })
+          .from(bankConnections)
+          .where(eq(bankConnections.id, bankAccount.connectionId))
+          .get();
+
+        // Only include if connection is active
+        if (connection && connection.status === 'active') {
+          filteredAccounts.push(account);
+        }
+      }
+    }
+
+    const normalizedAccounts = filteredAccounts.map(account => ({
       ...account,
       type: fromDbAccountType(account.type as DbAccountType),
     }));
