@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import type { getDb } from '../db';
 import {
   accounts,
@@ -10,7 +10,7 @@ import {
 } from '../db';
 import type { Env } from '../types';
 import { getCurrentTimestamp } from '../utils/timestamp';
-import { TrueLayerService, TrueLayerTransaction } from './truelayer';
+import { TrueLayerService } from './truelayer';
 import { categorizeTransaction, getMerchantPatterns, type MerchantPattern } from './categorization';
 
 interface SyncTotals {
@@ -243,20 +243,95 @@ export class TransactionSyncService {
       latestTransactionDate: null,
     };
 
+    // Batch optimization: fetch all existing provider transaction IDs in a single query
+    const providerIds = transactionsFromProvider
+      .map(t => t.transaction_id)
+      .filter((id): id is string => Boolean(id));
+
+    const existingProviderIds = new Set<string>();
+    if (providerIds.length > 0) {
+      const existingTransactions = await this.db
+        .select({ providerId: transactions.providerTransactionId })
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.tenantId, this.tenantId),
+            inArray(transactions.providerTransactionId, providerIds)
+          )
+        )
+        .all();
+
+      existingTransactions.forEach(t => {
+        if (t.providerId) {
+          existingProviderIds.add(t.providerId);
+        }
+      });
+    }
+
+    // Collect transactions to insert
+    const transactionsToInsert: Array<typeof transactions.$inferInsert> = [];
+    const timestamp = getCurrentTimestamp();
+
     for (const tlTransaction of transactionsFromProvider) {
       try {
-    const imported = await this.importTransaction(tlTransaction, account);
-        if (imported) {
-          totals.imported += 1;
-          if (!totals.latestTransactionDate || imported > totals.latestTransactionDate) {
-            totals.latestTransactionDate = imported;
-          }
-        } else {
+        const providerId = tlTransaction.transaction_id;
+        if (!providerId) {
           totals.skipped += 1;
+          continue;
+        }
+
+        // Check if transaction already exists (in-memory lookup)
+        if (existingProviderIds.has(providerId)) {
+          totals.skipped += 1;
+          continue;
+        }
+
+        const description = tlTransaction.description || tlTransaction.merchant_name || 'Bank transaction';
+        const dateString = tlTransaction.booking_date || tlTransaction.timestamp;
+        const transactionDate = dateString ? new Date(dateString) : new Date();
+
+        const isDebit = tlTransaction.transaction_type
+          ? tlTransaction.transaction_type.toUpperCase() === 'DEBIT'
+          : tlTransaction.amount < 0;
+        const amount = Math.abs(tlTransaction.amount);
+        const type: 'income' | 'expense' = isDebit ? 'expense' : 'income';
+
+        const categoryId = await this.resolveCategoryId(description, type);
+
+        transactionsToInsert.push({
+          id: crypto.randomUUID(),
+          tenantId: this.tenantId,
+          accountId: account.id,
+          categoryId,
+          amount,
+          description,
+          date: transactionDate,
+          type,
+          notes: tlTransaction.merchant_name && tlTransaction.merchant_name !== description ? tlTransaction.merchant_name : null,
+          providerTransactionId: providerId,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        });
+
+        // Track latest transaction date
+        if (!totals.latestTransactionDate || transactionDate > totals.latestTransactionDate) {
+          totals.latestTransactionDate = transactionDate;
         }
       } catch (error) {
         totals.failed += 1;
-        console.error('Failed to import TrueLayer transaction:', error);
+        console.error('Failed to process TrueLayer transaction:', error);
+      }
+    }
+
+    // Batch insert all new transactions
+    if (transactionsToInsert.length > 0) {
+      try {
+        await this.db.insert(transactions).values(transactionsToInsert).run();
+        totals.imported = transactionsToInsert.length;
+      } catch (error) {
+        console.error('Failed to batch insert transactions:', error);
+        totals.failed += transactionsToInsert.length;
+        totals.imported = 0;
       }
     }
 
@@ -302,64 +377,6 @@ export class TransactionSyncService {
     }
 
     return totals;
-  }
-
-  private async importTransaction(
-    tlTransaction: TrueLayerTransaction,
-    account: AccountRecord
-  ): Promise<Date | null> {
-    const providerId = tlTransaction.transaction_id;
-    if (!providerId) {
-      return null;
-    }
-
-    const existing = await this.db
-      .select({ id: transactions.id })
-      .from(transactions)
-      .where(
-        and(
-          eq(transactions.providerTransactionId, providerId),
-          eq(transactions.tenantId, this.tenantId)
-        )
-      )
-      .get();
-
-    if (existing) {
-      return null;
-    }
-
-    const description = tlTransaction.description || tlTransaction.merchant_name || 'Bank transaction';
-    const dateString = tlTransaction.booking_date || tlTransaction.timestamp;
-    const transactionDate = dateString ? new Date(dateString) : new Date();
-
-    const isDebit = tlTransaction.transaction_type
-      ? tlTransaction.transaction_type.toUpperCase() === 'DEBIT'
-      : tlTransaction.amount < 0;
-    const amount = Math.abs(tlTransaction.amount);
-    const type: 'income' | 'expense' = isDebit ? 'expense' : 'income';
-
-    const categoryId = await this.resolveCategoryId(description, type);
-    const now = getCurrentTimestamp();
-
-    await this.db
-      .insert(transactions)
-      .values({
-        id: crypto.randomUUID(),
-        tenantId: this.tenantId,
-        accountId: account.id,
-        categoryId,
-        amount,
-        description,
-        date: transactionDate,
-        type,
-        notes: tlTransaction.merchant_name && tlTransaction.merchant_name !== description ? tlTransaction.merchant_name : null,
-        providerTransactionId: providerId,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .run();
-
-    return transactionDate;
   }
 
   private async resolveCategoryId(description: string, type: 'income' | 'expense'): Promise<string> {
