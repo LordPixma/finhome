@@ -158,7 +158,7 @@ export class TransactionSyncService {
               date: new Date(tx.timestamp),
               type: isIncome ? ('income' as const) : ('expense' as const),
               providerTransactionId: tx.transaction_id,
-              notes: tx.meta?.provider_reference || null,
+              notes: tx.meta?.provider_reference || undefined,
             };
           });
 
