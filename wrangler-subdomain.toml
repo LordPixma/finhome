@@ -1,8 +1,10 @@
 name = "finhome-subdomain-router"
 main = "subdomain-router.js"
-compatibility_date = "2024-10-06"
+# Keep compatibility_date reasonably recent; adjust if Cloudflare warns.
+compatibility_date = "2025-01-01"
 
-# Route configuration for wildcard subdomain handling
+# Route configuration for base + wildcard subdomains
+# Using zone_name (legacy style). If switching to custom_domain, remove zone_name and add custom_domain=true.
 [[routes]]
 pattern = "finhome360.com/*"
 zone_name = "finhome360.com"
@@ -11,10 +13,18 @@ zone_name = "finhome360.com"
 pattern = "*.finhome360.com/*"
 zone_name = "finhome360.com"
 
+# Production environment block (optional override). Leaving name identical avoids duplicate script creation.
 [env.production]
 name = "finhome-subdomain-router"
 
 [vars]
+# Non-sensitive configuration values injected at runtime.
 ENVIRONMENT = "production"
+# Pages deployment host (auto-populated when you deploy the Pages site). Update if it changes.
 PAGES_HOSTNAME = "d00a4a8d.finhome360-app.pages.dev"
-API_HOSTNAME = "finhome-api.samuel-1e5.workers.dev"
+# Active API Worker hostname (updated to new script name). Prefer setting through env var rather than code.
+API_HOSTNAME = "finhome.samuel-1e5.workers.dev"
+
+# Future overrides (uncomment if needed):
+# TENANT_CACHE_TTL = "300"
+# METRICS_ENABLED = "true"
