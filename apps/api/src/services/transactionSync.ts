@@ -1,557 +1,479 @@
-import { eq, and } from 'drizzle-orm';
-import type { DrizzleD1Database } from 'drizzle-orm/d1';
+import { and, eq } from 'drizzle-orm';
+import type { getDb } from '../db';
 import {
-  bankConnections,
-  bankAccounts,
-  transactionSyncHistory,
   accounts,
+  bankAccounts,
+  bankConnections,
   categories,
+  transactionSyncHistory,
   transactions,
-  recurringTransactions,
-} from '../db/schema';
-import { TrueLayerService } from './truelayer';
-import { persistTransactionsFromImport } from './importProcessor';
-import { CloudflareAIService } from './workersai.service';
+} from '../db';
 import type { Env } from '../types';
-import * as schema from '../db/schema';
+import { getCurrentTimestamp } from '../utils/timestamp';
+import { TrueLayerService, TrueLayerTransaction } from './truelayer';
+import { categorizeTransaction, getMerchantPatterns, type MerchantPattern } from './categorization';
 
-interface SyncResult {
-  syncId: string;
-  status: 'success' | 'failed';
-  transactionsFetched: number;
-  transactionsImported: number;
-  transactionsSkipped: number;
-  transactionsFailed: number;
-  totalTransactions?: number;
-  error?: string;
+interface SyncTotals {
+  fetched: number;
+  imported: number;
+  skipped: number;
+  failed: number;
+  latestTransactionDate?: Date | null;
 }
 
-export class TransactionSyncService {
-  constructor(
-    private db: DrizzleD1Database<typeof schema> & { $client: D1Database },
-    private env: Env['Bindings']
-  ) {}
+type Database = ReturnType<typeof getDb>;
 
-  /**
-   * Sync transactions for a single bank connection
-   */
-  async syncConnection(connectionId: string): Promise<SyncResult> {
+type BankAccountRecord = typeof bankAccounts.$inferSelect;
+type AccountRecord = typeof accounts.$inferSelect;
+type BankConnectionRecord = typeof bankConnections.$inferSelect;
+
+export class TransactionSyncService {
+  private readonly trueLayer: TrueLayerService;
+  private expenseFallbackCategoryId?: string;
+  private incomeFallbackCategoryId?: string;
+  private merchantPatterns?: Map<string, MerchantPattern>;
+
+  constructor(
+    private readonly db: Database,
+    env: Env['Bindings'],
+    private readonly tenantId: string
+  ) {
+    this.trueLayer = new TrueLayerService(env);
+  }
+
+  async forceSyncConnection(connectionId: string): Promise<void> {
+    const connection = await this.db
+      .select()
+      .from(bankConnections)
+      .where(and(eq(bankConnections.id, connectionId), eq(bankConnections.tenantId, this.tenantId)))
+      .get();
+
+    if (!connection) {
+      throw new Error('Bank connection not found');
+    }
+
+    const linkedAccounts = await this.db
+      .select({ bankAccount: bankAccounts, account: accounts })
+      .from(bankAccounts)
+      .innerJoin(accounts, eq(bankAccounts.accountId, accounts.id))
+      .where(eq(bankAccounts.connectionId, connectionId))
+      .all();
+
+    if (linkedAccounts.length === 0) {
+      throw new Error('No linked accounts found for connection');
+    }
+
+    const now = getCurrentTimestamp();
     const syncId = crypto.randomUUID();
-    const startedAt = Date.now();
+
+    await this.db
+      .insert(transactionSyncHistory)
+      .values({
+        id: syncId,
+        connectionId: connection.id,
+        bankAccountId: null,
+        syncStartedAt: now,
+        status: 'in_progress',
+        transactionsFetched: 0,
+        transactionsImported: 0,
+        transactionsSkipped: 0,
+        transactionsFailed: 0,
+        createdAt: now,
+      })
+      .run();
 
     try {
-      // Fetch connection details
-      const connection = await this.db
-        .select()
-        .from(bankConnections)
-        .where(eq(bankConnections.id, connectionId))
-        .get();
+      const accessToken = await this.ensureAccessToken(connection);
+      this.merchantPatterns = await getMerchantPatterns(this.db, this.tenantId);
 
-      if (!connection) {
-        throw new Error(`Connection ${connectionId} not found`);
-      }
-
-      if (connection.status !== 'active') {
-        throw new Error(`Connection ${connectionId} is not active (status: ${connection.status})`);
-      }
-
-      // Create sync history record
-      const now = new Date();
-      await this.db
-        .insert(transactionSyncHistory)
-        .values({
-          id: syncId,
-          connectionId,
-          bankAccountId: null, // Will update per-account if needed
-          syncStartedAt: now,
-          syncCompletedAt: null,
-          transactionsFetched: 0,
-          transactionsImported: 0,
-          transactionsSkipped: 0,
-          transactionsFailed: 0,
-          status: 'in_progress',
-          errorMessage: null,
-          createdAt: now,
-        })
-        .run();
-
-      // Initialize TrueLayer service
-      const truelayer = new TrueLayerService(
-        this.env.TRUELAYER_CLIENT_ID,
-        this.env.TRUELAYER_CLIENT_SECRET,
-        this.env.TRUELAYER_REDIRECT_URI
-      );
-
-      // Check if token is expired and refresh if needed
-      let accessToken = connection.accessToken;
-      if (connection.tokenExpiresAt && new Date(connection.tokenExpiresAt) < new Date()) {
-        if (!connection.refreshToken) {
-          throw new Error('Access token expired and no refresh token available');
-        }
-
-        const tokenResponse = await truelayer.refreshAccessToken(connection.refreshToken);
-        accessToken = tokenResponse.access_token;
-
-        // Update connection with new tokens
-        await this.db
-          .update(bankConnections)
-          .set({
-            accessToken: tokenResponse.access_token,
-            refreshToken: tokenResponse.refresh_token || connection.refreshToken,
-            tokenExpiresAt: tokenResponse.expires_in
-              ? new Date(Date.now() + tokenResponse.expires_in * 1000)
-              : null,
-            updatedAt: new Date(),
-          })
-          .where(eq(bankConnections.id, connectionId))
-          .run();
-      }
-
-      // Fetch linked bank accounts
-      const linkedAccounts = await this.db
-        .select()
-        .from(bankAccounts)
-        .where(eq(bankAccounts.connectionId, connectionId))
-        .all();
-
-      if (linkedAccounts.length === 0) {
-        throw new Error('No linked accounts found for this connection');
-      }
-
-      let totalFetched = 0;
-      let totalImported = 0;
-      let totalSkipped = 0;
-      let totalFailed = 0;
-
-      // Sync each account
-      for (const bankAccount of linkedAccounts) {
-        try {
-          // Fetch Finhome account details
-          const finhomeAccount = await this.db
-            .select()
-            .from(accounts)
-            .where(eq(accounts.id, bankAccount.accountId))
-            .get();
-
-          if (!finhomeAccount) {
-            console.warn(`Finhome account ${bankAccount.accountId} not found, skipping`);
-            continue;
-          }
-
-          // Determine sync date range (last 90 days or from syncFromDate)
-          const fromDate = bankAccount.syncFromDate ||
-            new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
-          const toDate = new Date();
-
-          // Fetch transactions from TrueLayer
-          const truelayerTransactions = await truelayer.getTransactions(
-            accessToken!,
-            bankAccount.providerAccountId,
-            fromDate.toISOString().split('T')[0],
-            toDate.toISOString().split('T')[0]
-          );
-
-          totalFetched += truelayerTransactions.length;
-
-          // Map TrueLayer transactions to internal format
-          const mappedTransactions = truelayerTransactions.map((tx) => {
-            const isIncome = tx.amount > 0;
-            return {
-              description: tx.description || 'Transaction',
-              amount: Math.abs(tx.amount),
-              date: new Date(tx.timestamp),
-              type: isIncome ? ('income' as const) : ('expense' as const),
-              providerTransactionId: tx.transaction_id,
-              notes: tx.meta?.provider_reference || undefined,
-            };
-          });
-
-          // Get or create default category for uncategorized transactions
-          const defaultCategory = await this.db
-            .select()
-            .from(categories)
-            .where(
-              and(
-                eq(categories.tenantId, connection.tenantId),
-                eq(categories.name, 'Uncategorized')
-              )
-            )
-            .get();
-
-          const defaultCategoryId =
-            defaultCategory?.id ||
-            (await this.createDefaultCategory(connection.tenantId, 'expense'));
-
-          // Persist transactions using shared import logic
-          const result = await persistTransactionsFromImport({
-            db: this.db,
-            tenantId: connection.tenantId,
-            account: finhomeAccount,
-            defaultCategoryId,
-            parsedTransactions: mappedTransactions,
-            logId: null, // No import log for automated sync
-            startedAt,
-          });
-
-          totalImported += result.transactionsImported;
-          totalSkipped += result.transactionsSkipped;
-          totalFailed += result.transactionsFailed;
-
-          // Auto-categorize newly imported transactions using AI
-          if (result.transactionsImported > 0 && this.env.AI) {
-            try {
-              await this.autoCategorizeTransactions(connection.tenantId, finhomeAccount.id);
-              console.log(`Auto-categorized ${result.transactionsImported} transactions for account ${finhomeAccount.id}`);
-            } catch (categorizationError) {
-              console.error('Auto-categorization failed:', categorizationError);
-              // Don't fail the sync if categorization fails
-            }
-          }
-
-          // Detect and create recurring transactions
-          if (result.transactionsImported > 0) {
-            try {
-              await this.detectRecurringTransactions(connection.tenantId, finhomeAccount.id);
-              console.log(`Detected recurring transactions for account ${finhomeAccount.id}`);
-            } catch (recurringError) {
-              console.error('Recurring transaction detection failed:', recurringError);
-              // Don't fail the sync if detection fails
-            }
-          }
-
-          // Update bank account sync date
-          await this.db
-            .update(bankAccounts)
-            .set({
-              syncFromDate: toDate,
-              updatedAt: new Date(),
-            })
-            .where(eq(bankAccounts.id, bankAccount.id))
-            .run();
-        } catch (accountError) {
-          console.error(`Error syncing account ${bankAccount.id}:`, accountError);
-          totalFailed += 1;
-        }
-      }
-
-      // Update connection last sync
-      await this.db
-        .update(bankConnections)
-        .set({
-          lastSyncAt: new Date(),
-          lastError: null,
-          updatedAt: new Date(),
-        })
-        .where(eq(bankConnections.id, connectionId))
-        .run();
-
-      // Update sync history with results
-      await this.db
-        .update(transactionSyncHistory)
-        .set({
-          syncCompletedAt: new Date(),
-          transactionsFetched: totalFetched,
-          transactionsImported: totalImported,
-          transactionsSkipped: totalSkipped,
-          transactionsFailed: totalFailed,
-          status: 'completed',
-        })
-        .where(eq(transactionSyncHistory.id, syncId))
-        .run();
-
-      return {
-        syncId,
-        status: 'success',
-        transactionsFetched: totalFetched,
-        transactionsImported: totalImported,
-        transactionsSkipped: totalSkipped,
-        transactionsFailed: totalFailed,
+      const totals: SyncTotals = {
+        fetched: 0,
+        imported: 0,
+        skipped: 0,
+        failed: 0,
+        latestTransactionDate: null,
       };
-    } catch (error) {
-      console.error(`Sync failed for connection ${connectionId}:`, error);
 
-      const errorMessage = error instanceof Error ? error.message : 'Unknown sync error';
+      for (const record of linkedAccounts) {
+        const accountTotals = await this.syncBankAccount(
+          record.bankAccount,
+          record.account,
+          accessToken
+        );
 
-      // Update sync history with error
+        totals.fetched += accountTotals.fetched;
+        totals.imported += accountTotals.imported;
+        totals.skipped += accountTotals.skipped;
+        totals.failed += accountTotals.failed;
+
+        if (accountTotals.latestTransactionDate) {
+          if (!totals.latestTransactionDate || accountTotals.latestTransactionDate > totals.latestTransactionDate) {
+            totals.latestTransactionDate = accountTotals.latestTransactionDate;
+          }
+        }
+      }
+
+      const completionTime = getCurrentTimestamp();
+      const status = totals.failed === 0 ? 'completed' : totals.imported > 0 ? 'completed' : 'failed';
+      const errorMessage = totals.failed > 0 ? 'Some transactions failed to import. Check logs for details.' : null;
+
       await this.db
         .update(transactionSyncHistory)
         .set({
-          syncCompletedAt: new Date(),
-          status: 'failed',
+          status,
+          syncCompletedAt: completionTime,
+          transactionsFetched: totals.fetched,
+          transactionsImported: totals.imported,
+          transactionsSkipped: totals.skipped,
+          transactionsFailed: totals.failed,
           errorMessage,
         })
         .where(eq(transactionSyncHistory.id, syncId))
         .run();
 
-      // Update connection with error
       await this.db
         .update(bankConnections)
         .set({
+          lastSyncAt: completionTime,
+          status: totals.failed > 0 ? 'error' : 'active',
           lastError: errorMessage,
-          updatedAt: new Date(),
+          updatedAt: completionTime,
         })
-        .where(eq(bankConnections.id, connectionId))
+        .where(eq(bankConnections.id, connection.id))
+        .run();
+    } catch (error) {
+      console.error('Transaction sync failed:', error);
+
+      await this.db
+        .update(transactionSyncHistory)
+        .set({
+          status: 'failed',
+          syncCompletedAt: getCurrentTimestamp(),
+          errorMessage: error instanceof Error ? error.message : 'Transaction sync failed',
+        })
+        .where(eq(transactionSyncHistory.id, syncId))
         .run();
 
-      return {
-        syncId,
-        status: 'failed',
-        transactionsFetched: 0,
-        transactionsImported: 0,
-        transactionsSkipped: 0,
-        transactionsFailed: 0,
-        error: errorMessage,
-      };
+      await this.db
+        .update(bankConnections)
+        .set({
+          status: 'error',
+          lastError: error instanceof Error ? error.message : 'Transaction sync failed',
+          updatedAt: getCurrentTimestamp(),
+        })
+        .where(eq(bankConnections.id, connection.id))
+        .run();
+
+      throw error;
     }
   }
 
-  /**
-   * Sync all active connections for a tenant
-   */
-  async syncAllConnectionsForTenant(tenantId: string): Promise<SyncResult[]> {
-    const connections = await this.db
-      .select({ id: bankConnections.id })
-      .from(bankConnections)
-      .where(and(eq(bankConnections.tenantId, tenantId), eq(bankConnections.status, 'active')))
-      .all();
+  private async ensureAccessToken(connection: BankConnectionRecord): Promise<string> {
+    const expiresAt = connection.tokenExpiresAt instanceof Date
+      ? connection.tokenExpiresAt
+      : connection.tokenExpiresAt
+        ? new Date(connection.tokenExpiresAt)
+        : null;
 
-    const results = await Promise.allSettled(
-      connections.map((conn) => this.syncConnection(conn.id))
+    if (connection.accessToken && expiresAt && expiresAt.getTime() > Date.now() + 60_000) {
+      return connection.accessToken;
+    }
+
+    if (!connection.refreshToken) {
+      throw new Error('Missing refresh token for connection');
+    }
+
+    const refreshed = await this.trueLayer.refreshAccessToken(connection.refreshToken);
+    const newAccessToken = refreshed.access_token;
+    const newRefreshToken = refreshed.refresh_token ?? connection.refreshToken;
+    const newExpiry = new Date(Date.now() + refreshed.expires_in * 1000);
+    const now = getCurrentTimestamp();
+
+    await this.db
+      .update(bankConnections)
+      .set({
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+        tokenExpiresAt: newExpiry,
+        updatedAt: now,
+      })
+      .where(eq(bankConnections.id, connection.id))
+      .run();
+
+    connection.accessToken = newAccessToken;
+    connection.refreshToken = newRefreshToken;
+    connection.tokenExpiresAt = newExpiry;
+
+    return newAccessToken;
+  }
+
+  private async syncBankAccount(
+    bankAccount: BankAccountRecord,
+    account: AccountRecord,
+    accessToken: string
+  ): Promise<SyncTotals> {
+    const now = new Date();
+    const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+    const fromDate = bankAccount.syncFromDate instanceof Date
+      ? bankAccount.syncFromDate
+      : bankAccount.syncFromDate
+        ? new Date(bankAccount.syncFromDate)
+        : ninetyDaysAgo;
+
+    const fromParam = this.formatDate(fromDate);
+    const toParam = this.formatDate(now);
+
+    const transactionsFromProvider = await this.trueLayer.getTransactions(
+      accessToken,
+      bankAccount.providerAccountId,
+      fromParam,
+      toParam
     );
 
-    return results.map((result) => {
-      if (result.status === 'fulfilled') {
-        return result.value;
-      } else {
-        return {
-          syncId: crypto.randomUUID(),
-          status: 'failed',
-          transactionsFetched: 0,
-          transactionsImported: 0,
-          transactionsSkipped: 0,
-          transactionsFailed: 0,
-          error: result.reason instanceof Error ? result.reason.message : 'Unknown error',
-        };
-      }
+    const balance = await this.trueLayer.getAccountBalance(accessToken, bankAccount.providerAccountId).catch(error => {
+      console.warn('Failed to fetch account balance from TrueLayer:', error);
+      return null;
     });
-  }
 
-  /**
-   * Detect recurring transactions and create recurring transaction records
-   */
-  private async detectRecurringTransactions(tenantId: string, accountId: string): Promise<void> {
-    // Get all transactions from last 6 months for pattern detection
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const totals: SyncTotals = {
+      fetched: transactionsFromProvider.length,
+      imported: 0,
+      skipped: 0,
+      failed: 0,
+      latestTransactionDate: null,
+    };
 
-    const allTransactions = await this.db
-      .select()
-      .from(transactions)
-      .where(
-        and(
-          eq(transactions.tenantId, tenantId),
-          eq(transactions.accountId, accountId)
-        )
-      )
-      .all();
-
-    // Group transactions by similar description (fuzzy match)
-    const transactionGroups = new Map<string, typeof allTransactions>();
-
-    for (const transaction of allTransactions) {
-      const normalizedDesc = this.normalizeDescription(transaction.description);
-
-      if (!transactionGroups.has(normalizedDesc)) {
-        transactionGroups.set(normalizedDesc, []);
-      }
-      transactionGroups.get(normalizedDesc)!.push(transaction);
-    }
-
-    // Find groups with 3+ transactions (potential recurring)
-    for (const [, group] of transactionGroups.entries()) {
-      if (group.length < 3) continue;
-
-      // Sort by date
-      group.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-      // Calculate intervals between transactions
-      const intervals: number[] = [];
-      for (let i = 1; i < group.length; i++) {
-        const daysDiff = Math.round(
-          (new Date(group[i].date).getTime() - new Date(group[i - 1].date).getTime()) /
-          (1000 * 60 * 60 * 24)
-        );
-        intervals.push(daysDiff);
-      }
-
-      // Check for consistent pattern (monthly: ~28-32 days, weekly: ~6-8 days)
-      const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
-      const isMonthly = avgInterval >= 25 && avgInterval <= 35;
-      const isWeekly = avgInterval >= 6 && avgInterval <= 8;
-      const isBiweekly = avgInterval >= 13 && avgInterval <= 15;
-
-      if (isMonthly || isWeekly || isBiweekly) {
-        // Check if this recurring transaction already exists
-        const existingRecurring = await this.db
-          .select()
-          .from(recurringTransactions)
-          .where(
-            and(
-              eq(recurringTransactions.tenantId, tenantId),
-              eq(recurringTransactions.accountId, accountId),
-              eq(recurringTransactions.description, group[0].description)
-            )
-          )
-          .get();
-
-        if (!existingRecurring) {
-          // Create new recurring transaction
-          const frequency = isWeekly ? 'weekly' : isBiweekly ? 'biweekly' : 'monthly';
-          const lastTransaction = group[group.length - 1];
-
-          // Skip if transaction type is 'transfer' (recurring transactions only support 'income' or 'expense')
-          if (lastTransaction.type === 'transfer') continue;
-
-          // Calculate next occurrence
-          const nextDate = new Date(lastTransaction.date);
-          if (frequency === 'weekly') {
-            nextDate.setDate(nextDate.getDate() + 7);
-          } else if (frequency === 'biweekly') {
-            nextDate.setDate(nextDate.getDate() + 14);
-          } else {
-            nextDate.setMonth(nextDate.getMonth() + 1);
-          }
-
-          await this.db
-            .insert(recurringTransactions)
-            .values({
-              id: crypto.randomUUID(),
-              tenantId,
-              accountId: accountId,
-              categoryId: lastTransaction.categoryId,
-              description: lastTransaction.description,
-              amount: lastTransaction.amount,
-              type: lastTransaction.type as 'income' | 'expense',
-              frequency,
-              startDate: new Date(group[0].date),
-              nextDate: nextDate,
-              endDate: null,
-              status: 'active',
-              autoCreate: true,
-              notes: `Auto-detected from ${group.length} similar transactions`,
-              createdAt: new Date(),
-              updatedAt: new Date(),
-            })
-            .run();
-
-          console.log(`Created recurring transaction: "${lastTransaction.description}" (${frequency})`);
-        }
-      }
-    }
-  }
-
-  /**
-   * Normalize transaction description for pattern matching
-   */
-  private normalizeDescription(description: string): string {
-    return description
-      .toLowerCase()
-      .replace(/\d+/g, '') // Remove numbers
-      .replace(/[^a-z\s]/g, '') // Remove special characters
-      .replace(/\s+/g, ' ') // Normalize whitespace
-      .trim();
-  }
-
-  /**
-   * Auto-categorize uncategorized transactions using AI
-   */
-  private async autoCategorizeTransactions(tenantId: string, accountId: string): Promise<void> {
-    // Find all uncategorized transactions for this account
-    const uncategorizedCategory = await this.db
-      .select()
-      .from(categories)
-      .where(and(eq(categories.tenantId, tenantId), eq(categories.name, 'Uncategorized')))
-      .get();
-
-    if (!uncategorizedCategory) return;
-
-    const uncategorizedTransactions = await this.db
-      .select()
-      .from(transactions)
-      .where(
-        and(
-          eq(transactions.tenantId, tenantId),
-          eq(transactions.accountId, accountId),
-          eq(transactions.categoryId, uncategorizedCategory.id)
-        )
-      )
-      .limit(50) // Categorize up to 50 transactions per sync
-      .all();
-
-    if (uncategorizedTransactions.length === 0) return;
-
-    // Get all available categories for this tenant
-    const allCategories = await this.db
-      .select()
-      .from(categories)
-      .where(eq(categories.tenantId, tenantId))
-      .all();
-
-    const aiService = new CloudflareAIService(this.env.AI);
-
-    // Categorize each transaction
-    for (const transaction of uncategorizedTransactions) {
+    for (const tlTransaction of transactionsFromProvider) {
       try {
-        const suggestion = await aiService.categorizeTransaction(
-          transaction.description,
-          transaction.amount
-        );
-
-        // Find matching category
-        const matchingCategory = allCategories.find(
-          (cat) => cat.name.toLowerCase() === suggestion.category.toLowerCase()
-        );
-
-        if (matchingCategory) {
-          // Update transaction with AI-suggested category
-          await this.db
-            .update(transactions)
-            .set({
-              categoryId: matchingCategory.id,
-              updatedAt: new Date(),
-            })
-            .where(eq(transactions.id, transaction.id))
-            .run();
-
-          console.log(`Auto-categorized "${transaction.description}" as "${matchingCategory.name}"`);
+    const imported = await this.importTransaction(tlTransaction, account);
+        if (imported) {
+          totals.imported += 1;
+          if (!totals.latestTransactionDate || imported > totals.latestTransactionDate) {
+            totals.latestTransactionDate = imported;
+          }
+        } else {
+          totals.skipped += 1;
         }
       } catch (error) {
-        console.error(`Failed to categorize transaction ${transaction.id}:`, error);
-        // Continue with next transaction
+        totals.failed += 1;
+        console.error('Failed to import TrueLayer transaction:', error);
       }
     }
+
+    const updatedAt = getCurrentTimestamp();
+
+    if (totals.latestTransactionDate) {
+      await this.db
+        .update(bankAccounts)
+        .set({
+          syncFromDate: totals.latestTransactionDate,
+          updatedAt,
+        })
+        .where(eq(bankAccounts.id, bankAccount.id))
+        .run();
+    } else {
+      await this.db
+        .update(bankAccounts)
+        .set({
+          updatedAt,
+        })
+        .where(eq(bankAccounts.id, bankAccount.id))
+        .run();
+    }
+
+    if (balance) {
+      await this.db
+        .update(accounts)
+        .set({
+          balance: balance.current ?? balance.available ?? account.balance,
+          currency: balance.currency ?? account.currency,
+          updatedAt,
+        })
+        .where(eq(accounts.id, account.id))
+        .run();
+    } else {
+      await this.db
+        .update(accounts)
+        .set({
+          updatedAt,
+        })
+        .where(eq(accounts.id, account.id))
+        .run();
+    }
+
+    return totals;
   }
 
-  /**
-   * Create default "Uncategorized" category if it doesn't exist
-   */
-  private async createDefaultCategory(tenantId: string, type: 'income' | 'expense'): Promise<string> {
-    const categoryId = crypto.randomUUID();
+  private async importTransaction(
+    tlTransaction: TrueLayerTransaction,
+    account: AccountRecord
+  ): Promise<Date | null> {
+    const providerId = tlTransaction.transaction_id;
+    if (!providerId) {
+      return null;
+    }
+
+    const existing = await this.db
+      .select({ id: transactions.id })
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.providerTransactionId, providerId),
+          eq(transactions.tenantId, this.tenantId)
+        )
+      )
+      .get();
+
+    if (existing) {
+      return null;
+    }
+
+    const description = tlTransaction.description || tlTransaction.merchant_name || 'Bank transaction';
+    const dateString = tlTransaction.booking_date || tlTransaction.timestamp;
+    const transactionDate = dateString ? new Date(dateString) : new Date();
+
+    const isDebit = tlTransaction.transaction_type
+      ? tlTransaction.transaction_type.toUpperCase() === 'DEBIT'
+      : tlTransaction.amount < 0;
+    const amount = Math.abs(tlTransaction.amount);
+    const type: 'income' | 'expense' = isDebit ? 'expense' : 'income';
+
+    const categoryId = await this.resolveCategoryId(description, type);
+    const now = getCurrentTimestamp();
+
     await this.db
-      .insert(categories)
+      .insert(transactions)
       .values({
-        id: categoryId,
-        tenantId,
-        name: 'Uncategorized',
+        id: crypto.randomUUID(),
+        tenantId: this.tenantId,
+        accountId: account.id,
+        categoryId,
+        amount,
+        description,
+        date: transactionDate,
         type,
-        color: '#9CA3AF',
-        icon: '📦',
-        parentId: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        notes: tlTransaction.merchant_name && tlTransaction.merchant_name !== description ? tlTransaction.merchant_name : null,
+        providerTransactionId: providerId,
+        createdAt: now,
+        updatedAt: now,
       })
       .run();
 
-    return categoryId;
+    return transactionDate;
+  }
+
+  private async resolveCategoryId(description: string, type: 'income' | 'expense'): Promise<string> {
+    if (!this.merchantPatterns) {
+      this.merchantPatterns = await getMerchantPatterns(this.db, this.tenantId);
+    }
+
+    const categorization = await categorizeTransaction(
+      this.db,
+      this.tenantId,
+      description,
+      this.merchantPatterns
+    );
+
+    if (categorization.action === 'auto-assign' && categorization.suggestedCategoryId) {
+      return categorization.suggestedCategoryId;
+    }
+
+    return type === 'income'
+      ? await this.getIncomeFallbackCategory()
+      : await this.getExpenseFallbackCategory();
+  }
+
+  private async getExpenseFallbackCategory(): Promise<string> {
+    if (this.expenseFallbackCategoryId) {
+      return this.expenseFallbackCategoryId;
+    }
+
+    const existing = await this.db
+      .select({ id: categories.id })
+      .from(categories)
+      .where(
+        and(
+          eq(categories.tenantId, this.tenantId),
+          eq(categories.name, 'Uncategorized')
+        )
+      )
+      .get();
+
+    if (existing) {
+      this.expenseFallbackCategoryId = existing.id;
+      return existing.id;
+    }
+
+    const now = getCurrentTimestamp();
+    const id = crypto.randomUUID();
+
+    await this.db
+      .insert(categories)
+      .values({
+        id,
+        tenantId: this.tenantId,
+        name: 'Uncategorized',
+        type: 'expense',
+        color: '#9E9E9E',
+        icon: '❓',
+        parentId: null,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run();
+
+    this.expenseFallbackCategoryId = id;
+    return id;
+  }
+
+  private async getIncomeFallbackCategory(): Promise<string> {
+    if (this.incomeFallbackCategoryId) {
+      return this.incomeFallbackCategoryId;
+    }
+
+    const existing = await this.db
+      .select({ id: categories.id })
+      .from(categories)
+      .where(
+        and(
+          eq(categories.tenantId, this.tenantId),
+          eq(categories.type, 'income')
+        )
+      )
+      .orderBy(categories.createdAt)
+      .get();
+
+    if (existing) {
+      this.incomeFallbackCategoryId = existing.id;
+      return existing.id;
+    }
+
+    const now = getCurrentTimestamp();
+    const id = crypto.randomUUID();
+
+    await this.db
+      .insert(categories)
+      .values({
+        id,
+        tenantId: this.tenantId,
+        name: 'General Income',
+        type: 'income',
+        color: '#4CAF50',
+        icon: '💰',
+        parentId: null,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run();
+
+    this.incomeFallbackCategoryId = id;
+    return id;
+  }
+
+  private formatDate(date: Date): string {
+    const year = date.getUTCFullYear();
+    const month = `${date.getUTCMonth() + 1}`.padStart(2, '0');
+    const day = `${date.getUTCDate()}`.padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 }

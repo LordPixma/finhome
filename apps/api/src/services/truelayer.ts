@@ -1,293 +1,260 @@
-/**
- * TrueLayer API Service
- * Handles OAuth flow, token management, and data fetching from TrueLayer
- */
+import type { Env } from '../types';
 
-interface TrueLayerTokenResponse {
+const PROD_AUTH_BASE = 'https://auth.truelayer.com';
+const PROD_API_BASE = 'https://api.truelayer.com/data/v1';
+const SANDBOX_AUTH_BASE = 'https://auth.truelayer-sandbox.com';
+const SANDBOX_API_BASE = 'https://api.truelayer-sandbox.com/data/v1';
+
+export interface TrueLayerTokenResponse {
   access_token: string;
   refresh_token?: string;
-  token_type: string;
   expires_in: number;
+  token_type: string;
   scope?: string;
 }
 
-interface TrueLayerAccount {
-  account_id: string;
-  account_type: string;
-  display_name?: string;
-  currency: string;
-  account_number?: {
-    iban?: string;
-    number?: string;
-    sort_code?: string;
-    swift_bic?: string;
-  };
-  provider?: {
-    provider_id: string;
-    display_name: string;
-  };
-  update_timestamp: string;
+export interface TrueLayerAccountNumber {
+  iban?: string;
+  number?: string;
+  sort_code?: string;
+  swift_bic?: string;
 }
 
-interface TrueLayerTransaction {
+export interface TrueLayerAccountProvider {
+  display_name?: string;
+  provider_id?: string;
+  logo_uri?: string;
+}
+
+export interface TrueLayerAccount {
+  account_id: string;
+  account_type?: string;
+  account_subtype?: string;
+  currency?: string;
+  display_name?: string;
+  account_number?: TrueLayerAccountNumber;
+  provider?: TrueLayerAccountProvider;
+}
+
+export interface TrueLayerBalance {
+  currency: string;
+  available?: number;
+  current?: number;
+  overdraft?: number;
+  update_timestamp?: string;
+}
+
+export interface TrueLayerTransaction {
   transaction_id: string;
-  timestamp: string;
-  description: string;
-  transaction_type: string;
-  transaction_category: string;
-  transaction_classification: string[];
   amount: number;
   currency: string;
-  meta?: {
-    provider_transaction_id?: string;
-    provider_reference?: string;
-    [key: string]: any;
-  };
-  running_balance?: {
-    amount: number;
-    currency: string;
-  };
+  description: string;
+  timestamp?: string;
+  booking_date?: string;
+  merchant_name?: string;
+  transaction_type?: 'DEBIT' | 'CREDIT';
+  provider_transaction_category?: string;
+  meta?: Record<string, unknown>;
 }
 
-interface TrueLayerMetadata {
-  credentials_id: string;
-  provider?: {
-    provider_id: string;
-    display_name: string;
-    logo_uri?: string;
-  };
+export interface TrueLayerInfo {
+  user_id?: string;
+  consent_id?: string;
+  expires_at?: string;
+  scope?: string[];
+  client_id?: string;
+}
+
+interface AuthorizationUrlOptions {
+  scope?: string;
+  state: string;
+  nonce: string;
+  enableMock?: boolean;
 }
 
 export class TrueLayerService {
-  private clientId: string;
-  private clientSecret: string;
-  private redirectUri: string;
-  private providers?: string;
-  private baseUrl: string = 'https://api.truelayer.com';
-  private authUrl: string = 'https://auth.truelayer.com';
+  private readonly clientId: string;
+  private readonly clientSecret: string;
+  private readonly redirectUri: string;
 
-  constructor(clientId: string, clientSecret: string, redirectUri: string, providers?: string) {
-    this.clientId = clientId;
-    this.clientSecret = clientSecret;
-    this.redirectUri = redirectUri;
-    this.providers = providers;
+  constructor(env: Env['Bindings']) {
+    this.clientId = env.TRUELAYER_CLIENT_ID;
+    this.clientSecret = env.TRUELAYER_CLIENT_SECRET;
+    this.redirectUri = env.TRUELAYER_REDIRECT_URI;
   }
 
-  /**
-   * Generate TrueLayer authorization URL
-   */
-  getAuthorizationUrl(state: string): string {
+  private get authBase(): string {
+    const redirect = this.redirectUri.toLowerCase();
+    if (redirect.includes('localhost') || redirect.includes('127.0.0.1')) {
+      return SANDBOX_AUTH_BASE;
+    }
+    return PROD_AUTH_BASE;
+  }
+
+  private get apiBase(): string {
+    const redirect = this.redirectUri.toLowerCase();
+    if (redirect.includes('localhost') || redirect.includes('127.0.0.1')) {
+      return SANDBOX_API_BASE;
+    }
+    return PROD_API_BASE;
+  }
+
+  createAuthorizationUrl({ state, nonce, scope = 'accounts balance transactions', enableMock }: AuthorizationUrlOptions): string {
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: this.clientId,
       redirect_uri: this.redirectUri,
-      scope: 'info accounts transactions balance offline_access',
+      scope,
+      providers: 'uk-ob-all',
       state,
+      nonce,
     });
 
-    // Only include providers if explicitly configured. This avoids upstream errors
-    // if a provider group is not supported for the current client/environment.
-    if (this.providers && this.providers.trim().length > 0) {
-      params.set('providers', this.providers);
+    if (enableMock) {
+      params.set('enable_mock', 'true');
     }
 
-    return `${this.authUrl}/?${params.toString()}`;
+    return `${this.authBase}/?${params.toString()}`;
   }
 
-  /**
-   * Exchange authorization code for access token
-   */
-  async exchangeCodeForToken(code: string): Promise<TrueLayerTokenResponse> {
-    const response = await fetch(`${this.authUrl}/connect/token`, {
+  async exchangeCodeForTokens(code: string): Promise<TrueLayerTokenResponse> {
+    const body = new URLSearchParams({
+      grant_type: 'authorization_code',
+      client_id: this.clientId,
+      client_secret: this.clientSecret,
+      redirect_uri: this.redirectUri,
+      code,
+    });
+
+    const response = await fetch(`${this.authBase}/connect/token`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        client_id: this.clientId,
-        client_secret: this.clientSecret,
-        redirect_uri: this.redirectUri,
-        code,
-      }),
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Token exchange failed: ${error}`);
+      const text = await response.text();
+      throw new Error(`TrueLayer token exchange failed (${response.status}): ${text}`);
     }
 
     return response.json();
   }
 
-  /**
-   * Refresh access token using refresh token
-   */
   async refreshAccessToken(refreshToken: string): Promise<TrueLayerTokenResponse> {
-    const response = await fetch(`${this.authUrl}/connect/token`, {
+    const body = new URLSearchParams({
+      grant_type: 'refresh_token',
+      client_id: this.clientId,
+      client_secret: this.clientSecret,
+      refresh_token: refreshToken,
+    });
+
+    const response = await fetch(`${this.authBase}/connect/token`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        grant_type: 'refresh_token',
-        client_id: this.clientId,
-        client_secret: this.clientSecret,
-        refresh_token: refreshToken,
-      }),
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Token refresh failed: ${error}`);
+      const text = await response.text();
+      throw new Error(`TrueLayer token refresh failed (${response.status}): ${text}`);
     }
 
     return response.json();
   }
 
-  /**
-   * Get account metadata (provider info, credentials ID)
-   */
-  async getAccountsMetadata(accessToken: string): Promise<TrueLayerMetadata> {
-    const response = await fetch(`${this.baseUrl}/data/v1/me`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
+  async revokeToken(refreshToken: string): Promise<void> {
+    const body = new URLSearchParams({
+      token: refreshToken,
+      token_type_hint: 'refresh_token',
+      client_id: this.clientId,
+      client_secret: this.clientSecret,
+    });
+
+    const response = await fetch(`${this.authBase}/connect/revoke`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Metadata fetch failed: ${error}`);
+      const text = await response.text();
+      throw new Error(`TrueLayer token revocation failed (${response.status}): ${text}`);
+    }
+  }
+
+  async getInfo(accessToken: string): Promise<TrueLayerInfo | null> {
+    const response = await fetch(`${this.apiBase}/info`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`TrueLayer info request failed (${response.status}): ${text}`);
     }
 
     const data = (await response.json()) as any;
+    const results: TrueLayerInfo[] = data.results || [];
+    return results[0] ?? null;
+  }
+
+  async getAccounts(accessToken: string): Promise<TrueLayerAccount[]> {
+    const response = await fetch(`${this.apiBase}/accounts`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`TrueLayer accounts request failed (${response.status}): ${text}`);
+    }
+
+    const data = (await response.json()) as any;
+    return data.results || [];
+  }
+
+  async getAccountBalance(accessToken: string, accountId: string): Promise<TrueLayerBalance | null> {
+    const response = await fetch(`${this.apiBase}/accounts/${accountId}/balance`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`TrueLayer balance request failed (${response.status}): ${text}`);
+    }
+
+    const data = (await response.json()) as any;
+    const results: { currency: string; available: number; current: number }[] = data.results || [];
+    if (results.length === 0) {
+      return null;
+    }
+
+    const balance = results[0];
     return {
-      credentials_id: data.credentials_id || crypto.randomUUID(),
-      provider: data.provider,
+      currency: balance.currency,
+      available: balance.available,
+      current: balance.current,
     };
   }
 
-  /**
-   * Fetch all accounts for the authenticated user
-   */
-  async getAccounts(accessToken: string): Promise<TrueLayerAccount[]> {
-    const response = await fetch(`${this.baseUrl}/data/v1/accounts`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
+  async getTransactions(accessToken: string, accountId: string, from: string, to: string): Promise<TrueLayerTransaction[]> {
+    const results: TrueLayerTransaction[] = [];
+    let nextUrl: string | null = `${this.apiBase}/accounts/${accountId}/transactions?from=${from}&to=${to}`;
 
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Accounts fetch failed: ${error}`);
-    }
-
-    const data = (await response.json()) as any;
-    return data.results || [];
-  }
-
-  /**
-   * Fetch account balance
-   */
-  async getAccountBalance(accessToken: string, accountId: string): Promise<any> {
-    const response = await fetch(`${this.baseUrl}/data/v1/accounts/${accountId}/balance`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Balance fetch failed: ${error}`);
-    }
-
-    const data = (await response.json()) as any;
-    return data.results?.[0];
-  }
-
-  /**
-   * Fetch transactions for an account with pagination support
-   * @param from ISO date string (e.g., '2024-01-01')
-   * @param to ISO date string (e.g., '2024-12-31')
-   * @returns All transactions across all pages
-   */
-  async getTransactions(
-    accessToken: string,
-    accountId: string,
-    from: string,
-    to: string
-  ): Promise<TrueLayerTransaction[]> {
-    const allTransactions: TrueLayerTransaction[] = [];
-    let cursor: string | null = null;
-    let pageCount = 0;
-    const maxPages = 50; // Safety limit to prevent infinite loops (50 pages * ~100 transactions = ~5000 transactions)
-
-    do {
-      const url = `${this.baseUrl}/data/v1/accounts/${accountId}/transactions`;
-      const params = new URLSearchParams({ from, to });
-
-      // Add cursor if we're fetching subsequent pages
-      if (cursor) {
-        params.append('cursor', cursor);
-      }
-
-      const response = await fetch(`${url}?${params.toString()}`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
+    while (nextUrl) {
+      const response = await fetch(nextUrl, {
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
 
       if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`Transactions fetch failed: ${error}`);
+        const text = await response.text();
+        throw new Error(`TrueLayer transactions request failed (${response.status}): ${text}`);
       }
 
       const data = (await response.json()) as any;
-      const results = data.results || [];
-      allTransactions.push(...results);
-
-      // Check for next page cursor
-      cursor = data.cursor || null;
-      pageCount++;
-
-      // Log pagination progress
-      console.log(`[TrueLayer] Fetched page ${pageCount}: ${results.length} transactions, total: ${allTransactions.length}, has more: ${!!cursor}`);
-
-      // Safety check to prevent infinite loops
-      if (pageCount >= maxPages) {
-        console.warn(`[TrueLayer] Reached maximum page limit (${maxPages}), stopping pagination`);
-        break;
-      }
-
-    } while (cursor); // Continue while there's a cursor for next page
-
-    console.log(`[TrueLayer] Completed fetch: ${allTransactions.length} total transactions across ${pageCount} pages`);
-    return allTransactions;
-  }
-
-  /**
-   * Get all pending transactions
-   */
-  async getPendingTransactions(accessToken: string, accountId: string): Promise<TrueLayerTransaction[]> {
-    const response = await fetch(
-      `${this.baseUrl}/data/v1/accounts/${accountId}/transactions/pending`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      // Pending transactions may not be supported by all providers
-      if (response.status === 404) {
-        return [];
-      }
-      const error = await response.text();
-      throw new Error(`Pending transactions fetch failed: ${error}`);
+      const pageResults: TrueLayerTransaction[] = data.results || [];
+      results.push(...pageResults);
+      nextUrl = data.next_page ?? null;
     }
 
-    const data = (await response.json()) as any;
-    return data.results || [];
+    return results;
   }
 }

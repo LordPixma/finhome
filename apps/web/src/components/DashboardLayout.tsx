@@ -9,6 +9,7 @@ import TextLogo from './TextLogo';
 import {
   HomeIcon,
   BanknotesIcon,
+  ShieldCheckIcon,
   CreditCardIcon,
   ArrowPathIcon,
   ChartBarIcon,
@@ -37,7 +38,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
-    { name: 'Accounts & Banking', href: '/dashboard/accounts', icon: BanknotesIcon },
+    { name: 'Accounts', href: '/dashboard/accounts', icon: BanknotesIcon },
+    { name: 'Banking', href: '/dashboard/banking', icon: ShieldCheckIcon },
     { name: 'Transactions', href: '/dashboard/transactions', icon: CreditCardIcon },
     { name: 'Recurring', href: '/dashboard/recurring', icon: ArrowPathIcon },
     { name: 'Budgets', href: '/dashboard/budgets', icon: ChartBarIcon },
