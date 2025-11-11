@@ -118,3 +118,34 @@ export interface CategorizationStats {
     category: string;
   }[];
 }
+
+// Open Banking / TrueLayer Types
+export interface BankConnectionSummary {
+  id: string;
+  provider: string;
+  institutionName: string | null;
+  status: 'active' | 'disconnected' | 'expired' | 'error';
+  lastSyncAt: Date | null;
+  lastError: string | null;
+  createdAt: Date;
+  accountCount: number;
+}
+
+export interface BankLinkRequest {
+  redirectUrl?: string;
+}
+
+export interface BankLinkResponse {
+  authorizationUrl: string;
+  state: string;
+}
+
+export interface SyncResult {
+  syncId: string;
+  status: 'success' | 'failed';
+  transactionsFetched: number;
+  transactionsImported: number;
+  transactionsSkipped: number;
+  transactionsFailed: number;
+  error?: string;
+}

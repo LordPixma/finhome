@@ -16,6 +16,7 @@ import tenantMembers from './routes/tenantMembers';
 import profile from './routes/profile';
 import tenant from './routes/tenant';
 import aiRouter from './routes/ai';
+import banking from './routes/banking';
 import globalAdmin from './routes/global-admin';
 import pdfRouter from './routes/pdf';
 import { mfaRouter } from './routes/admin-mfa';
@@ -132,6 +133,7 @@ app.route('/api/tenant-members', tenantMembers);
 app.route('/api/profile', profile);
 app.route('/api/tenant', tenant);
 app.route('/api/ai', aiRouter);
+app.route('/api/banking', banking);
 app.route('/api/pdf', pdfRouter);
 
 app.route('/api/global-admin', globalAdmin);
@@ -380,9 +382,33 @@ export async function queue(batch: any, env: Env['Bindings']): Promise<void> {
 }
 
 // Scheduled handler (cron) for periodic transaction sync
-export async function scheduled(_event: any, _env: Env['Bindings'], _ctx: any): Promise<void> {
-  // No-op (bank connection sync disabled in Bankless edition)
-  console.log('Scheduled handler running (no scheduled banking tasks in Bankless edition)');
+export async function scheduled(_event: any, env: Env['Bindings'], _ctx: any): Promise<void> {
+  // Sync all active banking connections every 6 hours
+  const db = getDb(env.DB);
+  
+  try {
+    const activeConnections = await db
+      .select({ id: require('./db/schema').bankConnections.id, tenantId: require('./db/schema').bankConnections.tenantId })
+      .from(require('./db/schema').bankConnections)
+      .where(require('drizzle-orm').eq(require('./db/schema').bankConnections.status, 'active'))
+      .all();
+
+    const { TransactionSyncService } = await import('./services/transactionSync');
+    const syncService = new TransactionSyncService(db, env);
+
+    for (const connection of activeConnections) {
+      try {
+        await syncService.syncConnection(connection.id);
+        console.log(`Scheduled sync completed for connection ${connection.id}`);
+      } catch (error) {
+        console.error(`Scheduled sync failed for connection ${connection.id}:`, error);
+      }
+    }
+
+    console.log(`Scheduled sync completed for ${activeConnections.length} connections`);
+  } catch (error) {
+    console.error('Scheduled sync error:', error);
+  }
 }
 
 // Worker export with queue and scheduled handlers

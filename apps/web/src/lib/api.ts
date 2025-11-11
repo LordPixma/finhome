@@ -282,7 +282,19 @@ export const api = {
   getMonthlySummary: () => apiClient('/api/ai/monthly-summary'),
   getBudgetRecommendations: () => apiClient('/api/ai/budget-recommendations'),
 
-  // Banking endpoints removed for Bankless edition
+  // Banking / Open Banking (TrueLayer)
+  createBankLink: (redirectUrl?: string) => 
+    apiClient('/api/banking/link', { 
+      method: 'POST', 
+      body: JSON.stringify({ redirectUrl: redirectUrl || '/dashboard/banking' }) 
+    }),
+  getBankConnections: () => apiClient('/api/banking/connections'),
+  syncBankConnection: (connectionId: string) => 
+    apiClient(`/api/banking/connections/${connectionId}/sync`, { method: 'POST' }),
+  syncAllBankConnections: () => 
+    apiClient('/api/banking/connections/sync-all', { method: 'POST' }),
+  disconnectBankConnection: (connectionId: string) => 
+    apiClient(`/api/banking/connections/${connectionId}`, { method: 'DELETE' }),
 
   // Global Admin
   globalAdminLogin: (email: string, password: string) =>

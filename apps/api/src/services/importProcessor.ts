@@ -10,7 +10,7 @@ export interface ImportPersistenceParams {
   account: typeof accounts.$inferSelect;
   defaultCategoryId: string;
   parsedTransactions: ParsedTransaction[];
-  logId: string;
+  logId: string | null; // Optional for automated sync
   startedAt: number;
 }
 
@@ -18,6 +18,9 @@ export interface ImportPersistenceResult {
   finalStatus: 'success' | 'partial' | 'failed';
   importedCount: number;
   skippedCount: number;
+  transactionsImported: number; // Alias for compatibility
+  transactionsSkipped: number; // Alias for compatibility
+  transactionsFailed: number; // Alias for compatibility
   total: number;
   createdTransactions: typeof transactions.$inferSelect[];
   errors: string[];
@@ -136,25 +139,31 @@ export async function persistTransactionsFromImport({
   const finalStatus: 'success' | 'partial' | 'failed' =
     skippedCount === 0 ? 'success' : importedCount > 0 ? 'partial' : 'failed';
 
-  await db
-    .update(importLogs)
-    .set({
-      status: finalStatus,
-      transactionsImported: importedCount,
-      transactionsFailed: skippedCount,
-      transactionsTotal: parsedTransactions.length,
-      errorDetails: errors.length > 0 ? JSON.stringify(errors) : null,
-      errorMessage: errors.length > 0 ? `${skippedCount} transaction(s) failed` : null,
-      completedAt: new Date(),
-      processingTimeMs,
-    })
-    .where(eq(importLogs.id, logId))
-    .run();
+  // Only update import log if logId is provided
+  if (logId) {
+    await db
+      .update(importLogs)
+      .set({
+        status: finalStatus,
+        transactionsImported: importedCount,
+        transactionsFailed: skippedCount,
+        transactionsTotal: parsedTransactions.length,
+        errorDetails: errors.length > 0 ? JSON.stringify(errors) : null,
+        errorMessage: errors.length > 0 ? `${skippedCount} transaction(s) failed` : null,
+        completedAt: new Date(),
+        processingTimeMs,
+      })
+      .where(eq(importLogs.id, logId))
+      .run();
+  }
 
   return {
     finalStatus,
     importedCount,
     skippedCount,
+    transactionsImported: importedCount, // Alias for compatibility
+    transactionsSkipped: skippedCount, // Alias for compatibility
+    transactionsFailed: errors.length, // Alias for compatibility
     total: parsedTransactions.length,
     createdTransactions,
     errors,
