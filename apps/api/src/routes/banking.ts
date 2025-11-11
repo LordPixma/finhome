@@ -88,16 +88,29 @@ protectedRoutes.get('/connections', async c => {
         .select({ bankAccount: bankAccounts, account: accounts })
         .from(bankAccounts)
         .innerJoin(accounts, eq(bankAccounts.accountId, accounts.id))
-        .where(eq(bankAccounts.connectionId, connection.id))
+        .where(
+          and(
+            eq(bankAccounts.connectionId, connection.id),
+            eq(accounts.tenantId, tenantId)
+          )
+        )
         .all();
 
-      const latestSync = await db
-        .select()
+      const latestSyncResult = await db
+        .select({ sync: transactionSyncHistory })
         .from(transactionSyncHistory)
-        .where(eq(transactionSyncHistory.connectionId, connection.id))
+        .innerJoin(bankConnections, eq(transactionSyncHistory.connectionId, bankConnections.id))
+        .where(
+          and(
+            eq(transactionSyncHistory.connectionId, connection.id),
+            eq(bankConnections.tenantId, tenantId)
+          )
+        )
         .orderBy(desc(transactionSyncHistory.syncStartedAt))
         .limit(1)
         .get();
+      
+      const latestSync = latestSyncResult?.sync;
 
       const formattedAccounts = linkedAccounts.map(({ bankAccount, account }) => {
         const rawType = account.type as unknown as string;
