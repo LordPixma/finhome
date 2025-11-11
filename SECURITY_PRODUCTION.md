@@ -26,7 +26,7 @@ wrangler secret put JWT_SECRET
 wrangler secret put RESEND_API_KEY
 
 # Set TrueLayer credentials (from https://console.truelayer.com)
-wrangler secret put TRUELAYER_CLIENT_ID
+# Note: TRUELAYER_CLIENT_ID is set in wrangler.toml [vars] section (it's public)
 wrangler secret put TRUELAYER_CLIENT_SECRET
 
 # Set admin fix secret (optional, for temporary admin endpoint)
@@ -72,9 +72,10 @@ wrangler secret list
 You should see:
 - JWT_SECRET
 - RESEND_API_KEY
-- TRUELAYER_CLIENT_ID
 - TRUELAYER_CLIENT_SECRET
 - ADMIN_FIX_SECRET_KEY (if set)
+
+Note: `TRUELAYER_CLIENT_ID` is in `wrangler.toml` as a public environment variable, not a secret.
 
 ### 7. Security Checklist
 
@@ -110,6 +111,7 @@ TRUELAYER_CLIENT_SECRET = "387d8151-cb75-481d-8dc3-bab84ba4fd36" ❌
 ENVIRONMENT = "production"
 FRONTEND_URL = "https://app.finhome360.com"
 TRUELAYER_REDIRECT_URI = "https://api.finhome360.com/api/banking/callback"
+TRUELAYER_CLIENT_ID = "finhome360-366caa"  # Public OAuth client ID ✅
 
 # Secrets set via: wrangler secret put <SECRET_NAME> ✅
 ```
