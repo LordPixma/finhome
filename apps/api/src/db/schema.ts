@@ -376,6 +376,9 @@ export const bankConnections = sqliteTable('bank_connections', {
 // Linked Bank Accounts Table
 export const bankAccounts = sqliteTable('bank_accounts', {
   id: text('id').primaryKey(),
+  tenantId: text('tenant_id')
+    .notNull()
+    .references(() => tenants.id),
   connectionId: text('connection_id')
     .notNull()
     .references(() => bankConnections.id),
@@ -392,6 +395,7 @@ export const bankAccounts = sqliteTable('bank_accounts', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 }, (table) => ({
+  tenantIdx: index('idx_bank_accounts_tenant').on(table.tenantId),
   connectionIdx: index('idx_bank_accounts_connection').on(table.connectionId),
   accountIdx: index('idx_bank_accounts_account').on(table.accountId),
   providerAccountIdx: index('idx_bank_accounts_provider').on(table.providerAccountId),

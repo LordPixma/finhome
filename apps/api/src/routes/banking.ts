@@ -443,6 +443,7 @@ banking.get('/callback', async c => {
         .insert(bankAccounts)
         .values({
           id: bankAccountId,
+          tenantId: statePayload.tenantId,
           connectionId,
           accountId,
           providerAccountId: tlAccount.account_id,
