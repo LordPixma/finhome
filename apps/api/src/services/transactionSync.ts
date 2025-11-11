@@ -56,7 +56,12 @@ export class TransactionSyncService {
       .select({ bankAccount: bankAccounts, account: accounts })
       .from(bankAccounts)
       .innerJoin(accounts, eq(bankAccounts.accountId, accounts.id))
-      .where(eq(bankAccounts.connectionId, connectionId))
+      .where(
+        and(
+          eq(bankAccounts.connectionId, connectionId),
+          eq(bankAccounts.tenantId, this.tenantId)
+        )
+      )
       .all();
 
     if (linkedAccounts.length === 0) {
@@ -70,6 +75,7 @@ export class TransactionSyncService {
       .insert(transactionSyncHistory)
       .values({
         id: syncId,
+        tenantId: this.tenantId,
         connectionId: connection.id,
         bankAccountId: null,
         syncStartedAt: now,
@@ -243,9 +249,25 @@ export class TransactionSyncService {
       latestTransactionDate: null,
     };
 
+    // Performance optimization: Fetch all existing provider transaction IDs in one query
+    const existingProviderIds = new Set(
+      (await this.db
+        .select({ providerId: transactions.providerTransactionId })
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.tenantId, this.tenantId),
+            eq(transactions.accountId, account.id)
+          )
+        )
+        .all())
+        .map(r => r.providerId)
+        .filter((id): id is string => !!id)
+    );
+
     for (const tlTransaction of transactionsFromProvider) {
       try {
-    const imported = await this.importTransaction(tlTransaction, account);
+        const imported = await this.importTransaction(tlTransaction, account, existingProviderIds);
         if (imported) {
           totals.imported += 1;
           if (!totals.latestTransactionDate || imported > totals.latestTransactionDate) {
@@ -269,7 +291,12 @@ export class TransactionSyncService {
           syncFromDate: totals.latestTransactionDate,
           updatedAt,
         })
-        .where(eq(bankAccounts.id, bankAccount.id))
+        .where(
+          and(
+            eq(bankAccounts.id, bankAccount.id),
+            eq(bankAccounts.tenantId, this.tenantId)
+          )
+        )
         .run();
     } else {
       await this.db
@@ -277,7 +304,12 @@ export class TransactionSyncService {
         .set({
           updatedAt,
         })
-        .where(eq(bankAccounts.id, bankAccount.id))
+        .where(
+          and(
+            eq(bankAccounts.id, bankAccount.id),
+            eq(bankAccounts.tenantId, this.tenantId)
+          )
+        )
         .run();
     }
 
@@ -289,7 +321,12 @@ export class TransactionSyncService {
           currency: balance.currency ?? account.currency,
           updatedAt,
         })
-        .where(eq(accounts.id, account.id))
+        .where(
+          and(
+            eq(accounts.id, account.id),
+            eq(accounts.tenantId, this.tenantId)
+          )
+        )
         .run();
     } else {
       await this.db
@@ -297,7 +334,12 @@ export class TransactionSyncService {
         .set({
           updatedAt,
         })
-        .where(eq(accounts.id, account.id))
+        .where(
+          and(
+            eq(accounts.id, account.id),
+            eq(accounts.tenantId, this.tenantId)
+          )
+        )
         .run();
     }
 
@@ -306,25 +348,16 @@ export class TransactionSyncService {
 
   private async importTransaction(
     tlTransaction: TrueLayerTransaction,
-    account: AccountRecord
+    account: AccountRecord,
+    existingProviderIds: Set<string>
   ): Promise<Date | null> {
     const providerId = tlTransaction.transaction_id;
     if (!providerId) {
       return null;
     }
 
-    const existing = await this.db
-      .select({ id: transactions.id })
-      .from(transactions)
-      .where(
-        and(
-          eq(transactions.providerTransactionId, providerId),
-          eq(transactions.tenantId, this.tenantId)
-        )
-      )
-      .get();
-
-    if (existing) {
+    // Check against the pre-fetched set instead of querying the database
+    if (existingProviderIds.has(providerId)) {
       return null;
     }
 
@@ -358,6 +391,9 @@ export class TransactionSyncService {
         updatedAt: now,
       })
       .run();
+
+    // Add to the set so subsequent checks in the same sync won't try to insert duplicates
+    existingProviderIds.add(providerId);
 
     return transactionDate;
   }

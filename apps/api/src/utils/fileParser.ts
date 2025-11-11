@@ -572,6 +572,22 @@ export async function parseBankPdf(
   };
 }
 
+// Parse a single text line against a bank PDF template
+// Useful for unit tests and safer refactors around regex groups
+export function parsePdfLine(
+  template: BankPdfTemplate,
+  line: string
+): ParsedTransaction | null {
+  const clean = sanitizeLine(line);
+  if (!clean) return null;
+
+  const match = template.rowPattern.exec(clean);
+  template.rowPattern.lastIndex = 0;
+  if (!match) return null;
+
+  return buildTransactionFromMatch(template, match);
+}
+
 // Excel/XLS Parser (basic TSV/CSV-like parsing)
 export function parseXLS(xlsContent: string): ParsedTransaction[] {
   // For basic XLS files exported as text, treat similar to CSV with tabs
@@ -676,20 +692,18 @@ function buildTransactionFromMatch(
   template: BankPdfTemplate,
   match: RegExpMatchArray
 ): ParsedTransaction | null {
-  if (!match.groups) return null;
-
-  const rawDate = match.groups[template.groups.date];
-  const rawDescription = match.groups[template.groups.description] || '';
+  const rawDate = match[template.groups.date];
+  const rawDescription = match[template.groups.description] || '';
 
   const date = parseTemplateDate(rawDate, template.dateFormat);
   if (!date) return null;
 
   if (template.amountStyle === 'debitCredit') {
-    const debitGroupKey = template.groups.debit;
-    const creditGroupKey = template.groups.credit;
+  const debitGroupKey = template.groups.debit;
+  const creditGroupKey = template.groups.credit;
 
-    const debitValue = debitGroupKey ? parseCurrency(match.groups[debitGroupKey]) : null;
-    const creditValue = creditGroupKey ? parseCurrency(match.groups[creditGroupKey]) : null;
+  const debitValue = debitGroupKey ? parseCurrency(match[debitGroupKey]) : null;
+  const creditValue = creditGroupKey ? parseCurrency(match[creditGroupKey]) : null;
 
     if (creditValue && creditValue > 0) {
       return {
@@ -713,7 +727,7 @@ function buildTransactionFromMatch(
   }
 
   const amountGroupKey = template.groups.amount;
-  const amountValue = amountGroupKey ? parseCurrency(match.groups[amountGroupKey]) : null;
+  const amountValue = amountGroupKey ? parseCurrency(match[amountGroupKey]) : null;
 
   if (amountValue === null || amountValue === 0) {
     return null;
