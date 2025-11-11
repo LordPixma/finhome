@@ -289,7 +289,12 @@ export class TransactionSyncService {
           currency: balance.currency ?? account.currency,
           updatedAt,
         })
-        .where(eq(accounts.id, account.id))
+        .where(
+          and(
+            eq(accounts.id, account.id),
+            eq(accounts.tenantId, this.tenantId)
+          )
+        )
         .run();
     } else {
       await this.db
@@ -297,7 +302,12 @@ export class TransactionSyncService {
         .set({
           updatedAt,
         })
-        .where(eq(accounts.id, account.id))
+        .where(
+          and(
+            eq(accounts.id, account.id),
+            eq(accounts.tenantId, this.tenantId)
+          )
+        )
         .run();
     }
 
