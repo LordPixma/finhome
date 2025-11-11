@@ -119,13 +119,22 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-      - name: Verify D1 schema (banking tables absent)
+      - name: Verify D1 schema (banking tables present)
         run: |
           set -e
           npx wrangler d1 execute finhome-db --config apps/api/wrangler.toml --remote \
-            --command "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('bank_connections','bank_accounts','transaction_sync_history');" | tee /tmp/d1_absent.txt
-          if grep -E 'bank_connections|bank_accounts|transaction_sync_history' /tmp/d1_absent.txt; then
-            echo "Unexpected banking tables found after migrations" >&2
+            --command "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('bank_connections','bank_accounts','transaction_sync_history');" | tee /tmp/d1_banking.txt
+          # Verify all three banking tables exist
+          if ! grep -q 'bank_connections' /tmp/d1_banking.txt; then
+            echo "Missing bank_connections table" >&2
+            exit 1
+          fi
+          if ! grep -q 'bank_accounts' /tmp/d1_banking.txt; then
+            echo "Missing bank_accounts table" >&2
+            exit 1
+          fi
+          if ! grep -q 'transaction_sync_history' /tmp/d1_banking.txt; then
+            echo "Missing transaction_sync_history table" >&2
             exit 1
           fi
         env:
@@ -190,13 +199,22 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-      - name: Verify D1 schema (banking tables absent)
+      - name: Verify D1 schema (banking tables present)
         run: |
           set -e
           npx wrangler d1 execute finhome-db --config apps/api/wrangler.toml --remote \
-            --command "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('bank_connections','bank_accounts','transaction_sync_history');" | tee /tmp/d1_absent.txt
-          if grep -E 'bank_connections|bank_accounts|transaction_sync_history' /tmp/d1_absent.txt; then
-            echo "Unexpected banking tables found after migrations" >&2
+            --command "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('bank_connections','bank_accounts','transaction_sync_history');" | tee /tmp/d1_banking.txt
+          # Verify all three banking tables exist
+          if ! grep -q 'bank_connections' /tmp/d1_banking.txt; then
+            echo "Missing bank_connections table" >&2
+            exit 1
+          fi
+          if ! grep -q 'bank_accounts' /tmp/d1_banking.txt; then
+            echo "Missing bank_accounts table" >&2
+            exit 1
+          fi
+          if ! grep -q 'transaction_sync_history' /tmp/d1_banking.txt; then
+            echo "Missing transaction_sync_history table" >&2
             exit 1
           fi
         env:
