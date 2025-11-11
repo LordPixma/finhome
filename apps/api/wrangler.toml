@@ -60,13 +60,14 @@ binding = "AI"
 # Environment Variables
 [vars]
 ENVIRONMENT = "production"
-JWT_SECRET = "gBk9Lm3Np2Qr5Ts8Wv1Yx4Za7Cd0Ef3Hi6Jl9Mo2Pr5Su8Vx1Za4Cd7Ff0Hi3"
 FRONTEND_URL = "https://app.finhome360.com"
-RESEND_API_KEY = "re_joNCiaUb_4q5et1qJxxfpNbXPhUbq2pFL"
-# TRUELAYER_CLIENT_ID and TRUELAYER_CLIENT_SECRET must be set as Cloudflare secrets:
+TRUELAYER_REDIRECT_URI = "https://api.finhome360.com/api/banking/callback"
+
+# Sensitive credentials must be set as Cloudflare secrets:
+# Run: wrangler secret put JWT_SECRET
+# Run: wrangler secret put RESEND_API_KEY
 # Run: wrangler secret put TRUELAYER_CLIENT_ID
 # Run: wrangler secret put TRUELAYER_CLIENT_SECRET
-TRUELAYER_REDIRECT_URI = "https://api.finhome360.com/api/banking/callback"
 # Durable Objects (for future use)
 # [[durable_objects.bindings]]
 # name = "ANALYTICS"
