@@ -51,13 +51,18 @@ queue = "finhome-transaction-sync"
 max_batch_size = 5
 max_batch_timeout = 30
 
-# Cron triggers removed (no scheduled banking sync tasks in Bankless edition)
+# Cron triggers (banking sync scheduled jobs can be added here if needed)
 
 # AI Binding
 [ai]
 binding = "AI"
 
 # Environment Variables
+# SECURITY: Sensitive credentials should be moved to Cloudflare secrets:
+# - wrangler secret put JWT_SECRET
+# - wrangler secret put RESEND_API_KEY
+# - wrangler secret put TRUELAYER_CLIENT_ID
+# - wrangler secret put TRUELAYER_CLIENT_SECRET
 [vars]
 ENVIRONMENT = "production"
 JWT_SECRET = "gBk9Lm3Np2Qr5Ts8Wv1Yx4Za7Cd0Ef3Hi6Jl9Mo2Pr5Su8Vx1Za4Cd7Ff0Hi3"

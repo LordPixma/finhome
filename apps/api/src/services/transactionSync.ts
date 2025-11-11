@@ -56,7 +56,12 @@ export class TransactionSyncService {
       .select({ bankAccount: bankAccounts, account: accounts })
       .from(bankAccounts)
       .innerJoin(accounts, eq(bankAccounts.accountId, accounts.id))
-      .where(eq(bankAccounts.connectionId, connectionId))
+      .where(
+        and(
+          eq(bankAccounts.connectionId, connectionId),
+          eq(bankAccounts.tenantId, this.tenantId)
+        )
+      )
       .all();
 
     if (linkedAccounts.length === 0) {
@@ -70,6 +75,7 @@ export class TransactionSyncService {
       .insert(transactionSyncHistory)
       .values({
         id: syncId,
+        tenantId: this.tenantId,
         connectionId: connection.id,
         bankAccountId: null,
         syncStartedAt: now,
@@ -245,7 +251,7 @@ export class TransactionSyncService {
 
     for (const tlTransaction of transactionsFromProvider) {
       try {
-    const imported = await this.importTransaction(tlTransaction, account);
+        const imported = await this.importTransaction(tlTransaction, account);
         if (imported) {
           totals.imported += 1;
           if (!totals.latestTransactionDate || imported > totals.latestTransactionDate) {
@@ -269,7 +275,12 @@ export class TransactionSyncService {
           syncFromDate: totals.latestTransactionDate,
           updatedAt,
         })
-        .where(eq(bankAccounts.id, bankAccount.id))
+        .where(
+          and(
+            eq(bankAccounts.id, bankAccount.id),
+            eq(bankAccounts.tenantId, this.tenantId)
+          )
+        )
         .run();
     } else {
       await this.db
@@ -277,7 +288,12 @@ export class TransactionSyncService {
         .set({
           updatedAt,
         })
-        .where(eq(bankAccounts.id, bankAccount.id))
+        .where(
+          and(
+            eq(bankAccounts.id, bankAccount.id),
+            eq(bankAccounts.tenantId, this.tenantId)
+          )
+        )
         .run();
     }
 
@@ -289,7 +305,12 @@ export class TransactionSyncService {
           currency: balance.currency ?? account.currency,
           updatedAt,
         })
-        .where(eq(accounts.id, account.id))
+        .where(
+          and(
+            eq(accounts.id, account.id),
+            eq(accounts.tenantId, this.tenantId)
+          )
+        )
         .run();
     } else {
       await this.db
@@ -297,7 +318,12 @@ export class TransactionSyncService {
         .set({
           updatedAt,
         })
-        .where(eq(accounts.id, account.id))
+        .where(
+          and(
+            eq(accounts.id, account.id),
+            eq(accounts.tenantId, this.tenantId)
+          )
+        )
         .run();
     }
 
