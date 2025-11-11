@@ -1,0 +1,17 @@
+# Local Development Environment Variables
+# Copy this file to .dev.vars and fill in your actual values
+# NEVER commit .dev.vars to version control!
+
+# JWT Secret - Generate a strong random string (min 32 characters)
+# You can generate one with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+JWT_SECRET=your-jwt-secret-key-min-32-chars-change-this
+
+# Resend API Key for email notifications (get from https://resend.com)
+RESEND_API_KEY=re_your_resend_api_key_here
+
+# TrueLayer OAuth Credentials (get from https://console.truelayer.com)
+TRUELAYER_CLIENT_ID=your-truelayer-client-id
+TRUELAYER_CLIENT_SECRET=your-truelayer-client-secret
+
+# Admin Fix Secret (only for temporary admin database fixes)
+ADMIN_FIX_SECRET_KEY=your-admin-fix-secret-key

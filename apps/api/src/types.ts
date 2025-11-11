@@ -17,6 +17,7 @@ export interface Env {
     TRUELAYER_CLIENT_ID: string;
     TRUELAYER_CLIENT_SECRET: string;
     TRUELAYER_REDIRECT_URI: string;
+    ADMIN_FIX_SECRET_KEY?: string; // Temporary admin fix endpoint secret
   };
   Variables: {
     user?: AuthUser;

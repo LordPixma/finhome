@@ -47,7 +47,10 @@ app.post('/api/fix-global-admin-database', async (c) => {
   try {
     const { secretKey } = await c.req.json();
     
-    if (secretKey !== 'fix-global-admin-2025') {
+    // Secret should be set via: wrangler secret put ADMIN_FIX_SECRET_KEY
+    const expectedSecret = c.env.ADMIN_FIX_SECRET_KEY;
+    
+    if (!expectedSecret || secretKey !== expectedSecret) {
       return c.json(
         {
           success: false,

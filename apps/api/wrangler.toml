@@ -51,14 +51,18 @@ max_batch_timeout = 30
 binding = "AI"
 
 # Environment Variables
+# Non-sensitive configuration
 [vars]
 ENVIRONMENT = "production"
-JWT_SECRET = "gBk9Lm3Np2Qr5Ts8Wv1Yx4Za7Cd0Ef3Hi6Jl9Mo2Pr5Su8Vx1Za4Cd7Ff0Hi3"
 FRONTEND_URL = "https://app.finhome360.com"
-RESEND_API_KEY = "re_joNCiaUb_4q5et1qJxxfpNbXPhUbq2pFL"
-TRUELAYER_CLIENT_ID = "finhome360-366caa"
-TRUELAYER_CLIENT_SECRET = "387d8151-cb75-481d-8dc3-bab84ba4fd36"
 TRUELAYER_REDIRECT_URI = "https://api.finhome360.com/api/banking/callback"
+
+# Sensitive values should be set via wrangler secret put command or GitHub Actions secrets:
+# wrangler secret put JWT_SECRET
+# wrangler secret put RESEND_API_KEY
+# wrangler secret put TRUELAYER_CLIENT_ID
+# wrangler secret put TRUELAYER_CLIENT_SECRET
+# wrangler secret put ADMIN_FIX_SECRET_KEY
 # Durable Objects (for future use)
 # [[durable_objects.bindings]]
 # name = "ANALYTICS"
