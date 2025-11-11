@@ -4,6 +4,21 @@ export default {
     const url = new URL(request.url);
     const hostname = url.hostname;
     
+    // Diagnostic endpoint: show router configuration
+    if (url.pathname === '/_router-info') {
+      return new Response(JSON.stringify({
+        router: 'finhome-subdomain-router',
+        env: env.ENVIRONMENT || 'unknown',
+        apiHostname: env.API_HOSTNAME || 'finhome.samuel-1e5.workers.dev',
+        pagesHostname: env.PAGES_HOSTNAME || 'd00a4a8d.finhome360-app.pages.dev',
+        requestHost: hostname,
+        timestamp: new Date().toISOString()
+      }, null, 2), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
     // Check if this is a subdomain request
     const subdomainMatch = hostname.match(/^([^.]+)\.finhome360\.com$/);
     
