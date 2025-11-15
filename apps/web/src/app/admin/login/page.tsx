@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -11,7 +11,33 @@ export default function GlobalAdminLogin() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const router = useRouter();
+
+  // Check if user is already authenticated as global admin
+  useEffect(() => {
+    const checkExistingAuth = () => {
+      try {
+        const token = tokenManager.getAccessToken();
+        if (token) {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          const isGlobalAdmin = payload.isGlobalAdmin || payload.is_global_admin;
+          const localStorageFlag = localStorage.getItem('isGlobalAdmin') === 'true';
+          
+          if (isGlobalAdmin || localStorageFlag) {
+            router.push('/admin');
+            return;
+          }
+        }
+      } catch (error) {
+        console.log('No valid existing auth found');
+      } finally {
+        setIsCheckingAuth(false);
+      }
+    };
+
+    checkExistingAuth();
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,6 +68,17 @@ export default function GlobalAdminLogin() {
       setIsLoading(false);
     }
   };
+
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-sm text-gray-600">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">

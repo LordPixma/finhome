@@ -72,12 +72,46 @@ export class TenantManagementService {
   }
 
   /**
-   * Get list of all tenants
+   * Get list of all tenants with enriched data
    */
   static async getAllTenants(c: AppContext) {
     const db = getDb(c.env.DB);
     
-    return await db.select().from(tenants).orderBy(desc(tenants.createdAt));
+    // Get basic tenant info
+    const tenantsData = await db.select().from(tenants).orderBy(desc(tenants.createdAt));
+    
+    // Enrich with user counts and status
+    const enrichedTenants = await Promise.all(tenantsData.map(async (tenant) => {
+      // Get user count for this tenant
+      const userCountResult = await db
+        .select()
+        .from(users)
+        .where(eq(users.tenantId, tenant.id));
+      
+      // Check if tenant is suspended via feature flags
+      const suspendedFeature = await db
+        .select()
+        .from(tenantFeatures)
+        .where(and(
+          eq(tenantFeatures.tenantId, tenant.id),
+          eq(tenantFeatures.featureKey, 'account_suspended')
+        ))
+        .get();
+      
+      const isSuspended = suspendedFeature?.isEnabled || false;
+      
+      return {
+        id: tenant.id,
+        name: tenant.name,
+        subdomain: tenant.subdomain,
+        createdAt: tenant.createdAt.toISOString(),
+        updatedAt: tenant.updatedAt.toISOString(),
+        userCount: userCountResult.length,
+        status: isSuspended ? 'suspended' : 'active' as 'active' | 'suspended' | 'pending'
+      };
+    }));
+    
+    return enrichedTenants;
   }
 
   /**

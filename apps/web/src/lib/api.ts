@@ -355,6 +355,10 @@ export const api = {
     getTenant: (id: string) => apiClient(`/api/admin/tenants/${id}`),
     createTenant: (data: any) => apiClient('/api/admin/tenants', { method: 'POST', body: JSON.stringify(data) }),
     updateTenant: (id: string, data: any) => apiClient(`/api/admin/tenants/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    updateTenantStatus: (id: string, suspended: boolean) => apiClient(`/api/admin/tenants/${id}/status`, { 
+      method: 'PUT', 
+      body: JSON.stringify({ suspended }) 
+    }),
     suspendTenant: (id: string) => apiClient(`/api/admin/tenants/${id}/suspend`, { method: 'POST' }),
     activateTenant: (id: string) => apiClient(`/api/admin/tenants/${id}/activate`, { method: 'POST' }),
     

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import TextLogo from '@/components/TextLogo';
+import GlobalAdminGuard from '@/components/GlobalAdminGuard';
 import {
   HomeIcon,
   UserGroupIcon,
@@ -44,6 +45,7 @@ export default function AdminLayout({
   const pathname = usePathname();
 
   return (
+    <GlobalAdminGuard>
     <div className="h-screen flex overflow-hidden bg-gray-50">
       {/* Mobile sidebar */}
       <div className={classNames(
@@ -164,5 +166,6 @@ export default function AdminLayout({
         </main>
       </div>
     </div>
+    </GlobalAdminGuard>
   );
 }

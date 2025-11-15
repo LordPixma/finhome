@@ -11,7 +11,7 @@ interface Tenant {
   createdAt: string;
   updatedAt: string;
   userCount: number;
-  status: 'active' | 'suspended' | 'pending';
+  status?: 'active' | 'suspended' | 'pending';
 }
 
 export default function TenantsPage() {
@@ -40,8 +40,8 @@ export default function TenantsPage() {
   };
 
   const filteredTenants = tenants.filter(tenant => {
-    const matchesSearch = tenant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         tenant.subdomain.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (tenant.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (tenant.subdomain || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || tenant.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -57,7 +57,8 @@ export default function TenantsPage() {
   const handleSuspendTenant = async (tenant: Tenant) => {
     if (confirm(`Are you sure you want to suspend ${tenant.name}?`)) {
       try {
-        await api.admin.suspendTenant(tenant.id);
+        // Use the status API endpoint instead
+        await api.admin.updateTenantStatus(tenant.id, true);
         await fetchTenants(); // Refresh the list
         alert(`${tenant.name} has been suspended`);
       } catch (err) {
@@ -70,7 +71,8 @@ export default function TenantsPage() {
   const handleActivateTenant = async (tenant: Tenant) => {
     if (confirm(`Are you sure you want to activate ${tenant.name}?`)) {
       try {
-        await api.admin.activateTenant(tenant.id);
+        // Use the status API endpoint instead
+        await api.admin.updateTenantStatus(tenant.id, false);
         await fetchTenants(); // Refresh the list
         alert(`${tenant.name} has been activated`);
       } catch (err) {
@@ -80,7 +82,7 @@ export default function TenantsPage() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string | undefined) => {
     const baseClasses = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium';
     switch (status) {
       case 'active':
@@ -274,23 +276,23 @@ export default function TenantsPage() {
                           </div>
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">{tenant.name}</div>
+                          <div className="text-sm font-medium text-gray-900">{tenant.name || 'Unnamed Tenant'}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{tenant.subdomain}.finhome360.com</div>
+                      <div className="text-sm text-gray-900">{tenant.subdomain || 'unknown'}.finhome360.com</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{tenant.userCount}</div>
+                      <div className="text-sm text-gray-900">{tenant.userCount || 0}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={getStatusBadge(tenant.status)}>
-                        {tenant.status.charAt(0).toUpperCase() + tenant.status.slice(1)}
+                        {tenant.status ? tenant.status.charAt(0).toUpperCase() + tenant.status.slice(1) : 'Unknown'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(tenant.createdAt).toLocaleDateString()}
+                      {tenant.createdAt ? new Date(tenant.createdAt).toLocaleDateString() : 'Unknown'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                       <button
