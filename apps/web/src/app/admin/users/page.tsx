@@ -10,7 +10,7 @@ interface User {
   firstName: string;
   lastName: string;
   tenantName: string;
-  role: 'user' | 'admin' | 'super_admin';
+  role: 'member' | 'admin' | 'super_admin';
   status: 'active' | 'suspended' | 'pending';
   lastLogin: string | null;
   createdAt: string;
@@ -20,7 +20,7 @@ interface User {
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'user' | 'admin' | 'super_admin'>('all');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'member' | 'admin' | 'super_admin'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'suspended' | 'pending'>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -93,7 +93,7 @@ export default function UsersPage() {
         lastName,
         password,
         tenantId,
-        role: 'user'
+        role: 'member'
       };
       
       const response = await api.admin.createUser(userData);
@@ -178,7 +178,7 @@ export default function UsersPage() {
         return `${baseClasses} bg-purple-100 text-purple-800`;
       case 'admin':
         return `${baseClasses} bg-blue-100 text-blue-800`;
-      case 'user':
+      case 'member':
         return `${baseClasses} bg-gray-100 text-gray-800`;
       default:
         return `${baseClasses} bg-gray-100 text-gray-800`;
@@ -255,7 +255,7 @@ export default function UsersPage() {
               className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md"
             >
               <option value="all">All Roles</option>
-              <option value="user">User</option>
+              <option value="member">Member</option>
               <option value="admin">Admin</option>
               <option value="super_admin">Super Admin</option>
             </select>
