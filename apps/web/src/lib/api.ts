@@ -372,6 +372,17 @@ export const api = {
     
     // MFA
     getMFAStats: () => apiClient('/api/admin/mfa/stats'),
+    
+    // Analytics
+    getAnalyticsDashboard: () => apiClient('/api/admin/analytics/dashboard'),
+    getGlobalAnalytics: (startDate: string, endDate: string) => apiClient('/api/admin/analytics/global', { 
+      method: 'POST', 
+      body: JSON.stringify({ startDate, endDate }) 
+    }),
+    getTopTenants: (startDate: string, endDate: string, metric = 'transactions', limit = 10) => apiClient('/api/admin/analytics/top-tenants', { 
+      method: 'POST', 
+      body: JSON.stringify({ startDate, endDate, metric, limit }) 
+    }),
     getMFAUsers: () => apiClient('/api/admin/mfa/users'),
     getMFASettings: () => apiClient('/api/admin/mfa/settings'),
     updateMFASettings: (data: any) => apiClient('/api/admin/mfa/settings', { method: 'PUT', body: JSON.stringify(data) }),
@@ -393,15 +404,45 @@ export const api = {
     // Analytics
     getTenantAnalytics: () => apiClient('/api/admin/tenant-analytics/overview'),
     getTenantMetrics: (tenantId: string) => apiClient(`/api/admin/tenant-analytics/tenant/${tenantId}`),
-    getTopTenants: () => apiClient('/api/admin/tenant-analytics/top-tenants'),
+    getTopTenantsAnalytics: () => apiClient('/api/admin/tenant-analytics/top-tenants'),
     getUserActivity: () => apiClient('/api/admin/tenant-analytics/user-activity'),
     
     // Metrics
     getSystemMetrics: () => apiClient('/api/admin/metrics/overview'),
-    getAPIUsage: () => apiClient('/api/admin/metrics/api-usage'),
+    getAPIUsage: (timeRange?: { startDate: string; endDate: string }) => {
+      if (timeRange) {
+        return apiClient('/api/admin/metrics/api-analytics', {
+          method: 'POST',
+          body: JSON.stringify(timeRange)
+        });
+      }
+      // Default to last 24 hours if no time range provided
+      const endDate = new Date().toISOString();
+      const startDate = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      return apiClient('/api/admin/metrics/api-analytics', {
+        method: 'POST',
+        body: JSON.stringify({ startDate, endDate })
+      });
+    },
     getPerformanceMetrics: () => apiClient('/api/admin/metrics/performance'),
-    getErrorMetrics: () => apiClient('/api/admin/metrics/errors'),
+    getErrorMetrics: (timeRange?: { startDate: string; endDate: string }) => {
+      if (timeRange) {
+        return apiClient('/api/admin/metrics/errors', {
+          method: 'POST',
+          body: JSON.stringify(timeRange)
+        });
+      }
+      // Default to last 24 hours if no time range provided
+      const endDate = new Date().toISOString();
+      const startDate = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      return apiClient('/api/admin/metrics/errors', {
+        method: 'POST',
+        body: JSON.stringify({ startDate, endDate })
+      });
+    },
     getHealthCheck: () => apiClient('/api/admin/metrics/health'),
+    getSystemDashboard: () => apiClient('/api/admin/metrics/dashboard'),
+    getResourceMetrics: () => apiClient('/api/admin/metrics/resources'),
     
     // Alerts
     getAlerts: () => apiClient('/api/admin/metrics/alerts'),

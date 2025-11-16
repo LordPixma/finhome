@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { api } from '@/lib/api';
 import { 
   BellIcon, 
   ExclamationTriangleIcon, 
@@ -40,91 +41,7 @@ interface AlertRule {
   recipients: string[];
 }
 
-const mockAlerts: Alert[] = [
-  {
-    id: '1',
-    type: 'system',
-    severity: 'critical',
-    status: 'active',
-    title: 'High API Error Rate',
-    message: 'API error rate has exceeded 5% threshold for the last 10 minutes',
-    source: 'System Monitor',
-    createdAt: '2024-01-22T14:30:00Z',
-    updatedAt: '2024-01-22T14:30:00Z',
-    metadata: { errorRate: 7.3, threshold: 5.0 }
-  },
-  {
-    id: '2',
-    type: 'security',
-    severity: 'high',
-    status: 'acknowledged',
-    title: 'Multiple Failed Login Attempts',
-    message: 'User john.doe@acme.corp has 15 failed login attempts in 10 minutes',
-    source: 'Security Monitor',
-    tenantId: '1',
-    tenantName: 'Acme Corporation',
-    userId: '1',
-    userEmail: 'john.doe@acme.corp',
-    createdAt: '2024-01-22T13:15:00Z',
-    updatedAt: '2024-01-22T13:45:00Z',
-    acknowledgedBy: 'admin@finhome360.com'
-  },
-  {
-    id: '3',
-    type: 'performance',
-    severity: 'medium',
-    status: 'resolved',
-    title: 'High Response Time',
-    message: 'Average API response time exceeded 500ms for 5 minutes',
-    source: 'Performance Monitor',
-    createdAt: '2024-01-22T12:00:00Z',
-    updatedAt: '2024-01-22T12:30:00Z',
-    resolvedAt: '2024-01-22T12:30:00Z',
-    metadata: { avgResponseTime: 650, threshold: 500 }
-  },
-  {
-    id: '4',
-    type: 'user',
-    severity: 'low',
-    status: 'active',
-    title: 'New User Registration Spike',
-    message: '50+ new user registrations in the last hour (normal: 10-20)',
-    source: 'User Analytics',
-    createdAt: '2024-01-22T11:30:00Z',
-    updatedAt: '2024-01-22T11:30:00Z',
-    metadata: { newUsers: 53, normalRange: '10-20' }
-  }
-];
 
-const mockAlertRules: AlertRule[] = [
-  {
-    id: '1',
-    name: 'High Error Rate',
-    type: 'system',
-    condition: 'error_rate > threshold',
-    threshold: 5,
-    enabled: true,
-    recipients: ['admin@finhome360.com', 'alerts@finhome360.com']
-  },
-  {
-    id: '2',
-    name: 'Failed Login Attempts',
-    type: 'security',
-    condition: 'failed_attempts > threshold',
-    threshold: 10,
-    enabled: true,
-    recipients: ['security@finhome360.com']
-  },
-  {
-    id: '3',
-    name: 'High Response Time',
-    type: 'performance',
-    condition: 'avg_response_time > threshold',
-    threshold: 500,
-    enabled: true,
-    recipients: ['ops@finhome360.com']
-  }
-];
 
 export default function AlertsPage() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
@@ -134,16 +51,35 @@ export default function AlertsPage() {
   const [typeFilter, setTypeFilter] = useState<'all' | 'system' | 'security' | 'performance' | 'user' | 'billing'>('all');
   const [activeTab, setActiveTab] = useState<'alerts' | 'rules'>('alerts');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Simulate API call
-    const timer = setTimeout(() => {
-      setAlerts(mockAlerts);
-      setAlertRules(mockAlertRules);
-      setLoading(false);
-    }, 1000);
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const [alertsResponse, rulesResponse] = await Promise.all([
+          api.admin.getAlerts(),
+          api.admin.getAlertRules()
+        ]);
+        
+        if (alertsResponse.success) {
+          setAlerts(alertsResponse.data as Alert[]);
+        }
+        
+        if (rulesResponse.success) {
+          setAlertRules(rulesResponse.data as AlertRule[]);
+        }
+      } catch (error) {
+        console.error('Error fetching alerts data:', error);
+        setError('Failed to load alerts data');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    return () => clearTimeout(timer);
+    fetchData();
   }, []);
 
   const filteredAlerts = alerts.filter(alert => {
@@ -153,37 +89,97 @@ export default function AlertsPage() {
     return matchesStatus && matchesSeverity && matchesType;
   });
 
-  const handleAcknowledgeAlert = (alert: Alert) => {
-    if (confirm(`Acknowledge alert: ${alert.title}?`)) {
-      alert.status = 'acknowledged';
-      alert.acknowledgedBy = 'current-admin@finhome360.com';
-      setAlerts([...alerts]);
+  const handleAcknowledgeAlert = async (alert: Alert) => {
+    if (!confirm(`Acknowledge alert: ${alert.title}?`)) return;
+    
+    try {
+      const response = await api.admin.acknowledgeAlert(alert.id);
+      if (response.success) {
+        setAlerts(alerts.map(a => 
+          a.id === alert.id 
+            ? { ...a, status: 'acknowledged', acknowledgedBy: 'current-admin@finhome360.com' }
+            : a
+        ));
+      } else {
+        window.alert('Failed to acknowledge alert: ' + (response.error?.message || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error acknowledging alert:', error);
+      window.alert('Failed to acknowledge alert');
     }
   };
 
-  const handleResolveAlert = (alert: Alert) => {
-    if (confirm(`Mark alert as resolved: ${alert.title}?`)) {
-      alert.status = 'resolved';
-      alert.resolvedAt = new Date().toISOString();
-      setAlerts([...alerts]);
+  const handleResolveAlert = async (alert: Alert) => {
+    if (!confirm(`Mark alert as resolved: ${alert.title}?`)) return;
+    
+    try {
+      const response = await api.admin.resolveAlert(alert.id);
+      if (response.success) {
+        setAlerts(alerts.map(a => 
+          a.id === alert.id 
+            ? { ...a, status: 'resolved', resolvedAt: new Date().toISOString() }
+            : a
+        ));
+      } else {
+        window.alert('Failed to resolve alert: ' + (response.error?.message || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error resolving alert:', error);
+      window.alert('Failed to resolve alert');
     }
   };
 
-  const handleDismissAlert = (alert: Alert) => {
-    if (confirm(`Dismiss alert: ${alert.title}?`)) {
-      alert.status = 'dismissed';
-      setAlerts([...alerts]);
+  const handleDismissAlert = async (alert: Alert) => {
+    if (!confirm(`Dismiss alert: ${alert.title}?`)) return;
+    
+    try {
+      const response = await api.admin.dismissAlert(alert.id);
+      if (response.success) {
+        setAlerts(alerts.map(a => 
+          a.id === alert.id 
+            ? { ...a, status: 'dismissed' }
+            : a
+        ));
+      } else {
+        window.alert('Failed to dismiss alert: ' + (response.error?.message || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error dismissing alert:', error);
+      window.alert('Failed to dismiss alert');
     }
   };
 
-  const handleViewAlert = (alertItem: Alert) => {
-    alert(`Alert Details:\n\n${JSON.stringify(alertItem, null, 2)}`);
+  const handleViewAlert = async (alertItem: Alert) => {
+    try {
+      const response = await api.admin.getAlert(alertItem.id);
+      if (response.success) {
+        window.alert(`Alert Details:\n\n${JSON.stringify(response.data, null, 2)}`);
+      } else {
+        window.alert('Failed to fetch alert details: ' + (response.error?.message || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error fetching alert details:', error);
+      window.alert('Failed to fetch alert details');
+    }
   };
 
-  const handleToggleRule = (rule: AlertRule) => {
-    rule.enabled = !rule.enabled;
-    setAlertRules([...alertRules]);
-    alert(`Rule "${rule.name}" ${rule.enabled ? 'enabled' : 'disabled'}`);
+  const handleToggleRule = async (rule: AlertRule) => {
+    try {
+      const response = await api.admin.toggleAlertRule(rule.id);
+      if (response.success) {
+        setAlertRules(alertRules.map(r => 
+          r.id === rule.id 
+            ? { ...r, enabled: !r.enabled }
+            : r
+        ));
+        window.alert(`Rule "${rule.name}" ${!rule.enabled ? 'enabled' : 'disabled'}`);
+      } else {
+        window.alert('Failed to toggle rule: ' + (response.error?.message || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error toggling rule:', error);
+      window.alert('Failed to toggle rule');
+    }
   };
 
   const getSeverityBadge = (severity: string) => {
@@ -239,6 +235,24 @@ export default function AlertsPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <ExclamationTriangleIcon className="h-12 w-12 text-red-500" />
+        <div className="text-center">
+          <h3 className="text-lg font-medium text-gray-900">Failed to load alerts</h3>
+          <p className="text-gray-600">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }

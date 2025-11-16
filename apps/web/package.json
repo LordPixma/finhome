@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "clean": "rm -rf .next",
+    "generate-icons": "node generate-icons.js",
     "deploy": "echo 'Deployment handled by Cloudflare Pages. Build completed successfully.'"
   },
   "dependencies": {
@@ -30,6 +31,7 @@
     "eslint": "^8.56.0",
     "eslint-config-next": "14.0.4",
     "postcss": "^8.4.32",
+    "sharp": "^0.34.5",
     "tailwindcss": "^3.3.6",
     "typescript": "^5.3.0"
   }

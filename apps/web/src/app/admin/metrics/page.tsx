@@ -11,40 +11,90 @@ import {
 import { api } from '@/lib/api';
 
 interface SystemMetrics {
-  apiUsage: {
-    totalRequests: number;
-    requestsPerHour: number;
-    averageResponseTime: number;
-    errorRate: number;
+  health: {
+    status: 'healthy' | 'unhealthy';
+    checks: Array<{
+      name: string;
+      status: 'healthy' | 'unhealthy';
+      responseTime?: number;
+      error?: string;
+      details?: any;
+    }>;
+    timestamp: string;
   };
   performance: {
-    cpuUsage: number;
-    memoryUsage: number;
-    diskUsage: number;
-    activeConnections: number;
+    database: {
+      totalRecords: {
+        users: number;
+        tenants: number;
+        transactions: number;
+        accounts: number;
+      };
+      recentActivity: {
+        transactionsLast24h: number;
+        usersLast24h: number;
+      };
+    };
+    api: {
+      avgResponseTime: number;
+      p95ResponseTime: number;
+      requestsLastHour: number;
+      errorsLastHour: number;
+    };
+    timestamp: string;
+  };
+  apiUsage: {
+    summary: {
+      totalRequests: number;
+      avgResponseTime: number;
+      errorRate: number;
+      totalErrors: number;
+    };
+    hourlyData: Array<{
+      hour: number;
+      totalRequests: number;
+      totalResponseTime: number;
+      statusCodes: Record<string, number>;
+      endpoints: Record<string, number>;
+      errors: number;
+    }>;
+    statusCodes: Record<string, number>;
+    topEndpoints: Array<{
+      endpoint: string;
+      count: number;
+    }>;
   };
   errors: {
-    total24h: number;
-    criticalErrors: number;
-    warningCount: number;
-    resolved: number;
+    totalErrors: number;
+    errorsByStatus: Record<string, number>;
+    topErrorEndpoints: Array<{
+      endpoint: string;
+      count: number;
+    }>;
+    errorsByHour: Array<{
+      hour: number;
+      count: number;
+    }>;
   };
-  health: {
-    api: 'healthy' | 'degraded' | 'down';
-    database: 'healthy' | 'degraded' | 'down';
-    cache: 'healthy' | 'degraded' | 'down';
-    queue: 'healthy' | 'degraded' | 'down';
+  resources: {
+    database: {
+      tables: Record<string, number>;
+      totalStorageKB: number;
+      totalStorageMB: number;
+    };
+    keyValue: {
+      sessions: {
+        keyCount: number;
+        estimatedSizeKB: number;
+      };
+      cache: {
+        keyCount: number;
+        estimatedSizeKB: number;
+      };
+    };
+    timestamp: string;
   };
 }
-
-const mockTimeSeriesData = [
-  { time: '00:00', requests: 1200, errors: 5, responseTime: 150 },
-  { time: '04:00', requests: 800, errors: 2, responseTime: 140 },
-  { time: '08:00', requests: 2400, errors: 8, responseTime: 180 },
-  { time: '12:00', requests: 3200, errors: 12, responseTime: 220 },
-  { time: '16:00', requests: 2800, errors: 6, responseTime: 190 },
-  { time: '20:00', requests: 1600, errors: 3, responseTime: 160 }
-];
 
 export default function MetricsPage() {
   const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
@@ -56,53 +106,58 @@ export default function MetricsPage() {
 
   useEffect(() => {
     fetchMetrics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeRange]);
 
   const fetchMetrics = async () => {
     try {
       setLoading(true);
-      const [healthResponse, apiUsageResponse, performanceResponse, errorsResponse] = await Promise.all([
+      
+      // Calculate time range based on selected timeRange
+      const getTimeRangeForAPI = () => {
+        const end = new Date();
+        const start = new Date();
+        
+        switch (timeRange) {
+          case '1h':
+            start.setHours(start.getHours() - 1);
+            break;
+          case '24h':
+            start.setDate(start.getDate() - 1);
+            break;
+          case '7d':
+            start.setDate(start.getDate() - 7);
+            break;
+          case '30d':
+            start.setDate(start.getDate() - 30);
+            break;
+          default:
+            start.setDate(start.getDate() - 1); // Default to 24h
+        }
+        
+        return {
+          startDate: start.toISOString(),
+          endDate: end.toISOString()
+        };
+      };
+
+      const timeRangeParams = getTimeRangeForAPI();
+
+      const [healthResponse, apiUsageResponse, performanceResponse, errorsResponse, resourcesResponse] = await Promise.all([
         api.admin.getHealthCheck(),
-        api.admin.getAPIUsage(),  
+        api.admin.getAPIUsage(timeRangeParams),
         api.admin.getPerformanceMetrics(),
-        api.admin.getErrorMetrics()
+        api.admin.getErrorMetrics(timeRangeParams),
+        api.admin.getResourceMetrics()
       ]);
-
-      // Set defaults for missing data
-      const defaultApiUsage = {
-        totalRequests: 0,
-        requestsPerHour: 0,
-        averageResponseTime: 0,
-        errorRate: 0
-      };
-
-      const defaultPerformance = {
-        cpuUsage: 0,
-        memoryUsage: 0,
-        diskUsage: 0,
-        activeConnections: 0
-      };
-
-      const defaultErrors = {
-        total24h: 0,
-        criticalErrors: 0,
-        warningCount: 0,
-        resolved: 0
-      };
-
-      const defaultHealth = {
-        api: 'healthy' as const,
-        database: 'healthy' as const,
-        cache: 'healthy' as const,
-        queue: 'healthy' as const
-      };
 
       // Combine all the data into our expected format
       const combinedMetrics: SystemMetrics = {
-        apiUsage: (apiUsageResponse.data as any) || defaultApiUsage,
-        performance: (performanceResponse.data as any) || defaultPerformance,
-        errors: (errorsResponse.data as any) || defaultErrors,
-        health: (healthResponse.data as any) || defaultHealth
+        health: healthResponse.data as SystemMetrics['health'],
+        apiUsage: apiUsageResponse.data as SystemMetrics['apiUsage'],
+        performance: performanceResponse.data as SystemMetrics['performance'],
+        errors: errorsResponse.data as SystemMetrics['errors'],
+        resources: resourcesResponse.data as SystemMetrics['resources']
       };
 
       setMetrics(combinedMetrics);
@@ -111,6 +166,52 @@ export default function MetricsPage() {
     } catch (err) {
       console.error('Failed to fetch metrics:', err);
       setError('Failed to load system metrics. Please try again.');
+      
+      // Set empty/default metrics structure for display
+      setMetrics({
+        health: {
+          status: 'unhealthy',
+          checks: [],
+          timestamp: new Date().toISOString()
+        },
+        apiUsage: {
+          summary: { totalRequests: 0, avgResponseTime: 0, errorRate: 0, totalErrors: 0 },
+          hourlyData: [],
+          statusCodes: {},
+          topEndpoints: []
+        },
+        performance: {
+          database: {
+            totalRecords: { users: 0, tenants: 0, transactions: 0, accounts: 0 },
+            recentActivity: { transactionsLast24h: 0, usersLast24h: 0 }
+          },
+          api: {
+            avgResponseTime: 0,
+            p95ResponseTime: 0,
+            requestsLastHour: 0,
+            errorsLastHour: 0
+          },
+          timestamp: new Date().toISOString()
+        },
+        errors: {
+          totalErrors: 0,
+          errorsByStatus: {},
+          topErrorEndpoints: [],
+          errorsByHour: []
+        },
+        resources: {
+          database: {
+            tables: {},
+            totalStorageKB: 0,
+            totalStorageMB: 0
+          },
+          keyValue: {
+            sessions: { keyCount: 0, estimatedSizeKB: 0 },
+            cache: { keyCount: 0, estimatedSizeKB: 0 }
+          },
+          timestamp: new Date().toISOString()
+        }
+      });
     } finally {
       setLoading(false);
     }
@@ -119,18 +220,20 @@ export default function MetricsPage() {
   useEffect(() => {
     // Auto-refresh metrics
     const interval = setInterval(() => {
-      setLastUpdated(new Date());
-      // In real app, would refetch metrics here
+      fetchMetrics();
     }, refreshInterval * 1000);
 
     return () => clearInterval(interval);
-  }, [refreshInterval]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshInterval, timeRange]);
 
   const getHealthBadge = (status: string) => {
     const baseClasses = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium';
     switch (status) {
       case 'healthy':
         return `${baseClasses} bg-green-100 text-green-800`;
+      case 'unhealthy':
+        return `${baseClasses} bg-red-100 text-red-800`;
       case 'degraded':
         return `${baseClasses} bg-yellow-100 text-yellow-800`;
       case 'down':
@@ -144,6 +247,8 @@ export default function MetricsPage() {
     switch (status) {
       case 'healthy':
         return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
+      case 'unhealthy':
+        return <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />;
       case 'degraded':
         return <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500" />;
       case 'down':
@@ -250,16 +355,30 @@ export default function MetricsPage() {
       <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">
           <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">System Health</h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {Object.entries(metrics.health).map(([service, status]) => (
-              <div key={service} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+          <div className="mb-4">
+            <div className="flex items-center space-x-2">
+              {getHealthIcon(metrics.health.status)}
+              <span className={getHealthBadge(metrics.health.status)}>
+                Overall Status: {metrics.health.status.charAt(0).toUpperCase() + metrics.health.status.slice(1)}
+              </span>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {metrics.health.checks.map((check, index) => (
+              <div key={index} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
                 <div className="flex items-center space-x-3">
-                  {getHealthIcon(status)}
+                  {getHealthIcon(check.status)}
                   <div>
-                    <div className="text-sm font-medium text-gray-900 capitalize">{service}</div>
-                    <span className={getHealthBadge(status)}>
-                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    <div className="text-sm font-medium text-gray-900">{check.name}</div>
+                    <span className={getHealthBadge(check.status)}>
+                      {check.status.charAt(0).toUpperCase() + check.status.slice(1)}
                     </span>
+                    {check.responseTime && (
+                      <div className="text-xs text-gray-500">{check.responseTime}ms</div>
+                    )}
+                    {check.error && (
+                      <div className="text-xs text-red-600 mt-1">{check.error}</div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -280,7 +399,7 @@ export default function MetricsPage() {
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Total Requests</dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {formatNumber(metrics.apiUsage.totalRequests)}
+                    {formatNumber(metrics.apiUsage.summary.totalRequests)}
                   </dd>
                 </dl>
               </div>
@@ -295,9 +414,9 @@ export default function MetricsPage() {
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Requests/Hour</dt>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Avg Response Time</dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {formatNumber(metrics.apiUsage.requestsPerHour)}
+                    {metrics.apiUsage.summary.avgResponseTime}ms
                   </dd>
                 </dl>
               </div>
@@ -312,9 +431,9 @@ export default function MetricsPage() {
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Avg Response Time</dt>
+                  <dt className="text-sm font-medium text-gray-500 truncate">P95 Response Time</dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {metrics.apiUsage.averageResponseTime}ms
+                    {metrics.performance.api.p95ResponseTime}ms
                   </dd>
                 </dl>
               </div>
@@ -331,7 +450,7 @@ export default function MetricsPage() {
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Error Rate</dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {(metrics.apiUsage.errorRate * 100).toFixed(2)}%
+                    {metrics.apiUsage.summary.errorRate.toFixed(2)}%
                   </dd>
                 </dl>
               </div>
@@ -343,51 +462,75 @@ export default function MetricsPage() {
       {/* Performance Metrics */}
       <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Performance Metrics</h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">CPU Usage</span>
-                <span className="text-sm text-gray-500">{metrics.performance.cpuUsage}%</span>
+          <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">System Performance</h3>
+          
+          {/* Database Metrics */}
+          <div className="mb-6">
+            <h4 className="text-md font-medium text-gray-800 mb-3">Database Records</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center p-3 bg-blue-50 rounded-lg">
+                <div className="text-2xl font-bold text-blue-600">{formatNumber(metrics.performance.database.totalRecords.users)}</div>
+                <div className="text-sm text-gray-600">Users</div>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-blue-600 h-2 rounded-full" 
-                  style={{ width: `${metrics.performance.cpuUsage}%` }}
-                ></div>
+              <div className="text-center p-3 bg-green-50 rounded-lg">
+                <div className="text-2xl font-bold text-green-600">{formatNumber(metrics.performance.database.totalRecords.tenants)}</div>
+                <div className="text-sm text-gray-600">Tenants</div>
               </div>
-            </div>
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">Memory Usage</span>
-                <span className="text-sm text-gray-500">{metrics.performance.memoryUsage}%</span>
+              <div className="text-center p-3 bg-purple-50 rounded-lg">
+                <div className="text-2xl font-bold text-purple-600">{formatNumber(metrics.performance.database.totalRecords.transactions)}</div>
+                <div className="text-sm text-gray-600">Transactions</div>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-green-600 h-2 rounded-full" 
-                  style={{ width: `${metrics.performance.memoryUsage}%` }}
-                ></div>
+              <div className="text-center p-3 bg-yellow-50 rounded-lg">
+                <div className="text-2xl font-bold text-yellow-600">{formatNumber(metrics.performance.database.totalRecords.accounts)}</div>
+                <div className="text-sm text-gray-600">Accounts</div>
               </div>
             </div>
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">Disk Usage</span>
-                <span className="text-sm text-gray-500">{metrics.performance.diskUsage}%</span>
+          </div>
+
+          {/* Recent Activity */}
+          <div className="mb-6">
+            <h4 className="text-md font-medium text-gray-800 mb-3">Recent Activity (24h)</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg">
+                <div className="flex-shrink-0">
+                  <ChartBarIcon className="h-6 w-6 text-green-400" />
+                </div>
+                <div>
+                  <div className="text-lg font-medium text-gray-900">{formatNumber(metrics.performance.database.recentActivity.transactionsLast24h)}</div>
+                  <div className="text-sm text-gray-500">New Transactions</div>
+                </div>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-yellow-600 h-2 rounded-full" 
-                  style={{ width: `${metrics.performance.diskUsage}%` }}
-                ></div>
+              <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg">
+                <div className="flex-shrink-0">
+                  <ChartBarIcon className="h-6 w-6 text-blue-400" />
+                </div>
+                <div>
+                  <div className="text-lg font-medium text-gray-900">{formatNumber(metrics.performance.database.recentActivity.usersLast24h)}</div>
+                  <div className="text-sm text-gray-500">New Users</div>
+                </div>
               </div>
             </div>
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">Active Connections</span>
-                <span className="text-sm text-gray-500">{metrics.performance.activeConnections}</span>
+          </div>
+
+          {/* API Performance */}
+          <div>
+            <h4 className="text-md font-medium text-gray-800 mb-3">API Performance</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center p-3 bg-indigo-50 rounded-lg">
+                <div className="text-2xl font-bold text-indigo-600">{metrics.performance.api.avgResponseTime}ms</div>
+                <div className="text-sm text-gray-600">Avg Response</div>
               </div>
-              <div className="text-2xl font-bold text-gray-900">
-                {metrics.performance.activeConnections}
+              <div className="text-center p-3 bg-red-50 rounded-lg">
+                <div className="text-2xl font-bold text-red-600">{metrics.performance.api.p95ResponseTime}ms</div>
+                <div className="text-sm text-gray-600">95th Percentile</div>
+              </div>
+              <div className="text-center p-3 bg-green-50 rounded-lg">
+                <div className="text-2xl font-bold text-green-600">{formatNumber(metrics.performance.api.requestsLastHour)}</div>
+                <div className="text-sm text-gray-600">Requests/Hour</div>
+              </div>
+              <div className="text-center p-3 bg-orange-50 rounded-lg">
+                <div className="text-2xl font-bold text-orange-600">{formatNumber(metrics.performance.api.errorsLastHour)}</div>
+                <div className="text-sm text-gray-600">Errors/Hour</div>
               </div>
             </div>
           </div>
@@ -395,88 +538,178 @@ export default function MetricsPage() {
       </div>
 
       {/* Error Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <ExclamationTriangleIcon className="h-6 w-6 text-gray-400" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Total Errors (24h)</dt>
-                  <dd className="text-lg font-medium text-gray-900">{metrics.errors.total24h}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 w-2 h-2 bg-red-400 rounded-full"></div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Critical</dt>
-                  <dd className="text-lg font-medium text-gray-900">{metrics.errors.criticalErrors}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 w-2 h-2 bg-yellow-400 rounded-full"></div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Warnings</dt>
-                  <dd className="text-lg font-medium text-gray-900">{metrics.errors.warningCount}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <CheckCircleIcon className="h-6 w-6 text-green-400" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Resolved</dt>
-                  <dd className="text-lg font-medium text-gray-900">{metrics.errors.resolved}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* API Usage Chart Placeholder */}
       <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">API Usage Over Time</h3>
-          <div className="h-64 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg">
-            <div className="text-center">
-              <ChartBarIcon className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">API Usage Chart</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Chart component would be integrated here (Chart.js, Recharts, etc.)
-              </p>
-              <div className="mt-4 grid grid-cols-6 gap-4 text-xs">
-                {mockTimeSeriesData.map((data, index) => (
-                  <div key={index} className="text-center">
-                    <div className="text-gray-500">{data.time}</div>
-                    <div className="text-blue-600 font-medium">{formatNumber(data.requests)}</div>
-                    <div className="text-red-500">{data.errors}</div>
-                    <div className="text-green-600">{data.responseTime}ms</div>
+          <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Error Analysis ({timeRange})</h3>
+          
+          {/* Error Overview */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="bg-red-50 overflow-hidden rounded-lg p-4">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <ExclamationTriangleIcon className="h-6 w-6 text-red-400" />
+                </div>
+                <div className="ml-3">
+                  <dt className="text-sm font-medium text-gray-500 truncate">Total Errors</dt>
+                  <dd className="text-lg font-medium text-gray-900">{metrics.errors.totalErrors}</dd>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-orange-50 overflow-hidden rounded-lg p-4">
+              <div className="flex items-center">
+                <div className="flex-shrink-0 w-2 h-2 bg-orange-400 rounded-full"></div>
+                <div className="ml-3">
+                  <dt className="text-sm font-medium text-gray-500 truncate">4xx Errors</dt>
+                  <dd className="text-lg font-medium text-gray-900">
+                    {Object.entries(metrics.errors.errorsByStatus)
+                      .filter(([status]) => status.startsWith('4'))
+                      .reduce((sum, [, count]) => sum + count, 0)}
+                  </dd>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-red-50 overflow-hidden rounded-lg p-4">
+              <div className="flex items-center">
+                <div className="flex-shrink-0 w-2 h-2 bg-red-400 rounded-full"></div>
+                <div className="ml-3">
+                  <dt className="text-sm font-medium text-gray-500 truncate">5xx Errors</dt>
+                  <dd className="text-lg font-medium text-gray-900">
+                    {Object.entries(metrics.errors.errorsByStatus)
+                      .filter(([status]) => status.startsWith('5'))
+                      .reduce((sum, [, count]) => sum + count, 0)}
+                  </dd>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 overflow-hidden rounded-lg p-4">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <ChartBarIcon className="h-6 w-6 text-blue-400" />
+                </div>
+                <div className="ml-3">
+                  <dt className="text-sm font-medium text-gray-500 truncate">Avg/Hour</dt>
+                  <dd className="text-lg font-medium text-gray-900">
+                    {metrics.errors.errorsByHour.length > 0 
+                      ? Math.round(metrics.errors.totalErrors / metrics.errors.errorsByHour.length)
+                      : 0}
+                  </dd>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Top Error Endpoints */}
+          {metrics.errors.topErrorEndpoints.length > 0 && (
+            <div>
+              <h4 className="text-md font-medium text-gray-800 mb-3">Top Error Endpoints</h4>
+              <div className="space-y-2">
+                {metrics.errors.topErrorEndpoints.slice(0, 5).map((endpoint, index) => (
+                  <div key={index} className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded">
+                    <span className="text-sm font-mono text-gray-600">{endpoint.endpoint}</span>
+                    <span className="text-sm font-medium text-red-600">{endpoint.count} errors</span>
                   </div>
                 ))}
               </div>
             </div>
+          )}
+
+          {metrics.errors.totalErrors === 0 && (
+            <div className="text-center py-8">
+              <CheckCircleIcon className="mx-auto h-12 w-12 text-green-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No Errors Found</h3>
+              <p className="mt-1 text-sm text-gray-500">
+                No errors recorded in the selected time range.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Resources & Storage */}
+      <div className="bg-white shadow rounded-lg">
+        <div className="px-4 py-5 sm:p-6">
+          <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Resource Utilization</h3>
+          
+          {/* Database Storage */}
+          <div className="mb-6">
+            <h4 className="text-md font-medium text-gray-800 mb-3">Database Storage</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div className="text-center p-3 bg-blue-50 rounded-lg">
+                <div className="text-2xl font-bold text-blue-600">{metrics.resources.database.totalStorageMB} MB</div>
+                <div className="text-sm text-gray-600">Total Storage</div>
+              </div>
+              <div className="text-center p-3 bg-green-50 rounded-lg">
+                <div className="text-2xl font-bold text-green-600">{metrics.resources.database.totalStorageKB} KB</div>
+                <div className="text-sm text-gray-600">Raw Storage</div>
+              </div>
+              <div className="text-center p-3 bg-purple-50 rounded-lg">
+                <div className="text-2xl font-bold text-purple-600">
+                  {Object.keys(metrics.resources.database.tables).length}
+                </div>
+                <div className="text-sm text-gray-600">Tables</div>
+              </div>
+            </div>
+
+            {/* Storage by table */}
+            {Object.keys(metrics.resources.database.tables).length > 0 && (
+              <div>
+                <h5 className="text-sm font-medium text-gray-700 mb-2">Storage by Table (KB)</h5>
+                <div className="space-y-2">
+                  {Object.entries(metrics.resources.database.tables)
+                    .sort(([,a], [,b]) => b - a)
+                    .map(([table, sizeKB]) => (
+                    <div key={table} className="flex items-center justify-between py-1">
+                      <span className="text-sm text-gray-600 capitalize">{table}</span>
+                      <span className="text-sm font-medium">{sizeKB.toFixed(1)} KB</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* KV Storage */}
+          <div>
+            <h4 className="text-md font-medium text-gray-800 mb-3">Key-Value Storage</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 border border-gray-200 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">Sessions</span>
+                  <span className="text-sm text-gray-500">{metrics.resources.keyValue.sessions.keyCount} keys</span>
+                </div>
+                <div className="text-lg font-bold text-blue-600">
+                  {metrics.resources.keyValue.sessions.estimatedSizeKB} KB
+                </div>
+              </div>
+              <div className="p-4 border border-gray-200 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">Cache</span>
+                  <span className="text-sm text-gray-500">{metrics.resources.keyValue.cache.keyCount} keys</span>
+                </div>
+                <div className="text-lg font-bold text-green-600">
+                  {metrics.resources.keyValue.cache.estimatedSizeKB} KB
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* API Usage Summary */}
+          {metrics.apiUsage.topEndpoints.length > 0 && (
+            <div className="mt-6">
+              <h4 className="text-md font-medium text-gray-800 mb-3">Top API Endpoints ({timeRange})</h4>
+              <div className="space-y-2">
+                {metrics.apiUsage.topEndpoints.slice(0, 8).map((endpoint, index) => (
+                  <div key={index} className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded">
+                    <span className="text-sm font-mono text-gray-600">{endpoint.endpoint}</span>
+                    <span className="text-sm font-medium text-blue-600">{formatNumber(endpoint.count)} requests</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

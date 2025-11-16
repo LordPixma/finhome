@@ -53,8 +53,60 @@ export default function UsersPage() {
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  const handleCreateUser = () => {
-    alert('Create user functionality - would open a modal or form');
+  const handleCreateUser = async () => {
+    // Simple prompt-based user creation for now
+    const email = prompt('Enter user email:');
+    if (!email) return;
+    
+    const firstName = prompt('Enter first name:');
+    if (!firstName) return;
+    
+    const lastName = prompt('Enter last name:');
+    if (!lastName) return;
+    
+    const password = prompt('Enter initial password (min 8 characters):');
+    if (!password || password.length < 8) {
+      alert('Password must be at least 8 characters');
+      return;
+    }
+    
+    try {
+      // For now, we'll need to get tenant ID - let's fetch tenants first
+      const tenantsResponse = await api.admin.getTenants();
+      const tenantsData = tenantsResponse.data as any[];
+      if (!tenantsResponse.success || !tenantsData?.length) {
+        alert('No active tenants found. Please create a tenant first.');
+        return;
+      }
+      
+      // Use the first active tenant for now (in a real implementation, this would be a dropdown)
+      const activeTenants = tenantsData.filter((t: any) => t.status === 'active');
+      if (!activeTenants.length) {
+        alert('No active tenants found. Please activate a tenant first.');
+        return;
+      }
+      
+      const tenantId = activeTenants[0].id;
+      const userData = {
+        email,
+        firstName,
+        lastName,
+        password,
+        tenantId,
+        role: 'user'
+      };
+      
+      const response = await api.admin.createUser(userData);
+      if (response.success) {
+        alert('User created successfully!');
+        fetchUsers(); // Refresh the list
+      } else {
+        alert('Failed to create user: ' + (response.error?.message || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error creating user:', error);
+      alert('Failed to create user. Please try again.');
+    }
   };
 
   const handleViewUser = (user: User) => {

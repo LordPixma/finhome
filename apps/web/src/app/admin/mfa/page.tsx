@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { api } from '@/lib/api';
 import { 
   ShieldCheckIcon, 
   ShieldExclamationIcon, 
@@ -32,52 +33,7 @@ interface MFASettings {
   gracePeriodDays: number;
 }
 
-const mockMFAUsers: MFAStatus[] = [
-  {
-    userId: '1',
-    email: 'john.doe@acme.corp',
-    firstName: 'John',
-    lastName: 'Doe',
-    tenantName: 'Acme Corporation',
-    mfaEnabled: true,
-    mfaMethod: 'app',
-    backupCodes: 8,
-    lastMFASetup: '2024-01-15T10:30:00Z',
-    lastMFAUsed: '2024-01-22T14:30:00Z',
-    failedAttempts: 0
-  },
-  {
-    userId: '2',
-    email: 'jane.smith@techstart.com',
-    firstName: 'Jane',
-    lastName: 'Smith',
-    tenantName: 'TechStart Inc',
-    mfaEnabled: false,
-    backupCodes: 0,
-    failedAttempts: 0
-  },
-  {
-    userId: '3',
-    email: 'admin@globalfinance.com',
-    firstName: 'Robert',
-    lastName: 'Johnson',
-    tenantName: 'Global Finance Ltd',
-    mfaEnabled: true,
-    mfaMethod: 'sms',
-    backupCodes: 5,
-    lastMFASetup: '2024-01-05T11:20:00Z',
-    lastMFAUsed: '2024-01-21T09:15:00Z',
-    failedAttempts: 2
-  }
-];
 
-const mockMFASettings: MFASettings = {
-  enforceMFA: false,
-  allowedMethods: ['app', 'sms', 'email'],
-  maxFailedAttempts: 5,
-  backupCodesRequired: true,
-  gracePeriodDays: 30
-};
 
 export default function MFAPage() {
   const [mfaUsers, setMfaUsers] = useState<MFAStatus[]>([]);
@@ -85,17 +41,35 @@ export default function MFAPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [mfaFilter, setMfaFilter] = useState<'all' | 'enabled' | 'disabled'>('all');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Simulate API call
-    const timer = setTimeout(() => {
-      setMfaUsers(mockMFAUsers);
-      setMfaSettings(mockMFASettings);
-      setLoading(false);
-    }, 1000);
-
-    return () => clearTimeout(timer);
+    fetchMFAData();
   }, []);
+
+  const fetchMFAData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const [usersResponse, settingsResponse] = await Promise.all([
+        api.admin.getMFAUsers(),
+        api.admin.getMFASettings()
+      ]);
+
+      if (usersResponse.success && settingsResponse.success) {
+        setMfaUsers((usersResponse.data as MFAStatus[]) || []);
+        setMfaSettings((settingsResponse.data as MFASettings) || null);
+      } else {
+        setError('Failed to load MFA data');
+      }
+    } catch (err) {
+      console.error('MFA fetch error:', err);
+      setError('Failed to load MFA data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredUsers = mfaUsers.filter(user => {
     const matchesSearch = user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -110,32 +84,88 @@ export default function MFAPage() {
     return matchesSearch && matchesMFA;
   });
 
-  const handleEnableMFA = (user: MFAStatus) => {
+  const handleEnableMFA = async (user: MFAStatus) => {
     if (confirm(`Enable MFA for ${user.firstName} ${user.lastName}?`)) {
-      alert(`MFA setup email sent to ${user.email}`);
+      try {
+        const response = await api.admin.enableUserMFA(user.userId);
+        if (response.success) {
+          alert(`MFA setup initiated for ${user.firstName} ${user.lastName}`);
+          fetchMFAData(); // Refresh data
+        } else {
+          alert('Failed to enable MFA');
+        }
+      } catch (err) {
+        console.error('Enable MFA error:', err);
+        alert('Failed to enable MFA');
+      }
     }
   };
 
-  const handleDisableMFA = (user: MFAStatus) => {
+  const handleDisableMFA = async (user: MFAStatus) => {
     if (confirm(`Disable MFA for ${user.firstName} ${user.lastName}? This will reduce account security.`)) {
-      alert(`MFA has been disabled for ${user.firstName} ${user.lastName}`);
+      try {
+        const response = await api.admin.disableUserMFA(user.userId);
+        if (response.success) {
+          alert(`MFA has been disabled for ${user.firstName} ${user.lastName}`);
+          fetchMFAData(); // Refresh data
+        } else {
+          alert('Failed to disable MFA');
+        }
+      } catch (err) {
+        console.error('Disable MFA error:', err);
+        alert('Failed to disable MFA');
+      }
     }
   };
 
-  const handleResetMFA = (user: MFAStatus) => {
+  const handleResetMFA = async (user: MFAStatus) => {
     if (confirm(`Reset MFA for ${user.firstName} ${user.lastName}? They will need to set it up again.`)) {
-      alert(`MFA has been reset for ${user.firstName} ${user.lastName}`);
+      try {
+        const response = await api.admin.resetUserMFA(user.userId);
+        if (response.success) {
+          alert(`MFA has been reset for ${user.firstName} ${user.lastName}`);
+          fetchMFAData(); // Refresh data
+        } else {
+          alert('Failed to reset MFA');
+        }
+      } catch (err) {
+        console.error('Reset MFA error:', err);
+        alert('Failed to reset MFA');
+      }
     }
   };
 
-  const handleGenerateBackupCodes = (user: MFAStatus) => {
+  const handleGenerateBackupCodes = async (user: MFAStatus) => {
     if (confirm(`Generate new backup codes for ${user.firstName} ${user.lastName}?`)) {
-      alert(`New backup codes generated and sent to ${user.email}`);
+      try {
+        const response = await api.admin.generateBackupCodes(user.userId);
+        if (response.success) {
+          alert(`New backup codes generated for ${user.firstName} ${user.lastName}`);
+          fetchMFAData(); // Refresh data
+        } else {
+          alert('Failed to generate backup codes');
+        }
+      } catch (err) {
+        console.error('Generate backup codes error:', err);
+        alert('Failed to generate backup codes');
+      }
     }
   };
 
-  const handleUpdateSettings = () => {
-    alert('MFA settings would be updated here');
+  const handleUpdateSettings = async () => {
+    if (!mfaSettings) return;
+    
+    try {
+      const response = await api.admin.updateMFASettings(mfaSettings);
+      if (response.success) {
+        alert('MFA settings updated successfully');
+      } else {
+        alert('Failed to update MFA settings');
+      }
+    } catch (err) {
+      console.error('Update settings error:', err);
+      alert('Failed to update MFA settings');
+    }
   };
 
   const getMFAMethodBadge = (method?: string) => {
@@ -177,8 +207,36 @@ export default function MFAPage() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Multi-Factor Authentication</h1>
+        </div>
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <div className="text-red-800">{error}</div>
+          <button 
+            onClick={() => fetchMFAData()} 
+            className="mt-2 text-red-600 hover:text-red-800 underline"
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (!mfaSettings) {
-    return <div>No MFA settings available</div>;
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Multi-Factor Authentication</h1>
+        </div>
+        <div className="text-center py-8">
+          <div className="text-gray-500">No MFA settings available</div>
+        </div>
+      </div>
+    );
   }
 
   return (

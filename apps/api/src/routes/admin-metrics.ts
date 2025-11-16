@@ -348,4 +348,227 @@ systemMetrics.post('/alerts/:id/resolve', async (c) => {
   }
 });
 
+/**
+ * GET /api/admin/metrics/alerts/:id
+ * Get a specific alert by ID
+ */
+systemMetrics.get('/alerts/:id', async (c) => {
+  try {
+    const alertId = c.req.param('id');
+    const alertData = await c.env.CACHE.get(`alert:${alertId}`);
+    
+    if (!alertData) {
+      return c.json({
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Alert not found'
+        }
+      }, 404);
+    }
+
+    return c.json({
+      success: true,
+      data: JSON.parse(alertData)
+    });
+  } catch (error) {
+    console.error('Error getting alert:', error);
+    return c.json({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to retrieve alert'
+      }
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/admin/metrics/alerts/:id/dismiss
+ * Dismiss an alert
+ */
+systemMetrics.post('/alerts/:id/dismiss', async (c) => {
+  try {
+    const alertId = c.req.param('id');
+    
+    const alertData = await c.env.CACHE.get(`alert:${alertId}`);
+    if (!alertData) {
+      return c.json({
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Alert not found'
+        }
+      }, 404);
+    }
+
+    const alert = JSON.parse(alertData);
+    alert.status = 'dismissed';
+    alert.updatedAt = new Date().toISOString();
+
+    await c.env.CACHE.put(`alert:${alertId}`, JSON.stringify(alert), {
+      expirationTtl: 30 * 86400 // 30 days
+    });
+
+    // Remove from active alerts
+    const activeAlerts = await c.env.CACHE.get('alerts:active') || '[]';
+    const alerts = JSON.parse(activeAlerts);
+    const updatedAlerts = alerts.filter(id => id !== alertId);
+    
+    await c.env.CACHE.put('alerts:active', JSON.stringify(updatedAlerts), {
+      expirationTtl: 30 * 86400
+    });
+
+    return c.json({
+      success: true,
+      data: { message: 'Alert dismissed successfully' }
+    });
+  } catch (error) {
+    console.error('Error dismissing alert:', error);
+    return c.json({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to dismiss alert'
+      }
+    }, 500);
+  }
+});
+
+/**
+ * GET /api/admin/metrics/alert-rules
+ * Get all alert rules
+ */
+systemMetrics.get('/alert-rules', async (c) => {
+  try {
+    // For now, return default alert rules
+    // In a full implementation, these would be stored in the database
+    const alertRules = [
+      {
+        id: '1',
+        name: 'High API Error Rate',
+        type: 'system',
+        condition: 'error_rate > threshold',
+        threshold: 5.0,
+        enabled: true,
+        recipients: ['admin@finhome360.com']
+      },
+      {
+        id: '2',
+        name: 'Failed Login Attempts',
+        type: 'security',
+        condition: 'failed_attempts > threshold',
+        threshold: 10,
+        enabled: true,
+        recipients: ['security@finhome360.com']
+      },
+      {
+        id: '3',
+        name: 'High Response Time',
+        type: 'performance',
+        condition: 'avg_response_time > threshold',
+        threshold: 500,
+        enabled: true,
+        recipients: ['ops@finhome360.com']
+      }
+    ];
+
+    return c.json({
+      success: true,
+      data: alertRules
+    });
+  } catch (error) {
+    console.error('Error getting alert rules:', error);
+    return c.json({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to retrieve alert rules'
+      }
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/admin/metrics/alert-rules
+ * Create a new alert rule
+ */
+systemMetrics.post('/alert-rules', async (c) => {
+  try {
+    const body = await c.req.json();
+    
+    // In a full implementation, store in database
+    const newRule = {
+      id: crypto.randomUUID(),
+      ...body,
+      createdAt: new Date().toISOString()
+    };
+
+    return c.json({
+      success: true,
+      data: { message: 'Alert rule created successfully', rule: newRule }
+    }, 201);
+  } catch (error) {
+    console.error('Error creating alert rule:', error);
+    return c.json({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to create alert rule'
+      }
+    }, 500);
+  }
+});
+
+/**
+ * PUT /api/admin/metrics/alert-rules/:id
+ * Update an alert rule
+ */
+systemMetrics.put('/alert-rules/:id', async (c) => {
+  try {
+    const ruleId = c.req.param('id');
+    const body = await c.req.json();
+    
+    // In a full implementation, update in database
+    return c.json({
+      success: true,
+      data: { message: 'Alert rule updated successfully' }
+    });
+  } catch (error) {
+    console.error('Error updating alert rule:', error);
+    return c.json({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to update alert rule'
+      }
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/admin/metrics/alert-rules/:id/toggle
+ * Toggle an alert rule enabled/disabled
+ */
+systemMetrics.post('/alert-rules/:id/toggle', async (c) => {
+  try {
+    const ruleId = c.req.param('id');
+    
+    // In a full implementation, toggle in database
+    return c.json({
+      success: true,
+      data: { message: 'Alert rule toggled successfully' }
+    });
+  } catch (error) {
+    console.error('Error toggling alert rule:', error);
+    return c.json({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to toggle alert rule'
+      }
+    }, 500);
+  }
+});
+
 export default systemMetrics;

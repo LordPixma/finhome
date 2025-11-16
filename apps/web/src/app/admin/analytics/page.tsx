@@ -5,110 +5,69 @@ import {
   ChartBarIcon, 
   UsersIcon, 
   BuildingOfficeIcon,
-  CurrencyDollarIcon,
-  ArrowTrendingUpIcon,
-  ArrowTrendingDownIcon
+  CurrencyDollarIcon
 } from '@heroicons/react/24/outline';
+import { api } from '@/lib/api';
 
 interface AnalyticsData {
-  overview: {
-    totalTenants: number;
-    totalUsers: number;
+  period: {
+    startDate: string;
+    endDate: string;
+  };
+  totals: {
+    totalActiveUsers: number;
     totalTransactions: number;
-    totalRevenue: number;
-    monthlyGrowth: {
-      tenants: number;
-      users: number;
-      transactions: number;
-      revenue: number;
-    };
+    totalAmount: number;
+    totalApiRequests: number;
+    totalStorageUsed: number;
   };
-  tenantAnalytics: {
-    topTenants: Array<{
-      id: string;
-      name: string;
-      userCount: number;
-      transactionCount: number;
-      revenue: number;
-    }>;
-    tenantsByPlan: {
-      free: number;
-      basic: number;
-      premium: number;
-      enterprise: number;
-    };
-  };
-  userActivity: {
-    dailyActiveUsers: number;
-    weeklyActiveUsers: number;
-    monthlyActiveUsers: number;
-    newUsers: number;
-    churnRate: number;
-  };
-  usage: {
-    apiCalls: number;
-    storageUsed: number;
-    bandwidthUsed: number;
-    averageSessionDuration: number;
-  };
+  dailyAnalytics: Array<{
+    date: string;
+    totalActiveUsers: number;
+    totalTransactions: number;
+    totalAmount: number;
+    totalApiRequests: number;
+    totalStorageUsed: number;
+  }>;
+  topTenantsByTransactions: Array<{
+    tenantId: string;
+    tenantName: string;
+    metricValue: number;
+  }>;
+  topTenantsByAmount: Array<{
+    tenantId: string;
+    tenantName: string;
+    metricValue: number;
+  }>;
 }
-
-const mockAnalytics: AnalyticsData = {
-  overview: {
-    totalTenants: 1234,
-    totalUsers: 15678,
-    totalTransactions: 456789,
-    totalRevenue: 125000,
-    monthlyGrowth: {
-      tenants: 12.5,
-      users: 18.3,
-      transactions: 25.7,
-      revenue: 22.1
-    }
-  },
-  tenantAnalytics: {
-    topTenants: [
-      { id: '1', name: 'Acme Corporation', userCount: 245, transactionCount: 5432, revenue: 15000 },
-      { id: '2', name: 'TechStart Inc', userCount: 189, transactionCount: 3456, revenue: 12000 },
-      { id: '3', name: 'Global Finance Ltd', userCount: 167, transactionCount: 2987, revenue: 9500 },
-      { id: '4', name: 'Innovation Labs', userCount: 134, transactionCount: 2234, revenue: 8200 },
-      { id: '5', name: 'Digital Solutions', userCount: 123, transactionCount: 1876, revenue: 7100 }
-    ],
-    tenantsByPlan: {
-      free: 456,
-      basic: 567,
-      premium: 189,
-      enterprise: 22
-    }
-  },
-  userActivity: {
-    dailyActiveUsers: 8932,
-    weeklyActiveUsers: 12456,
-    monthlyActiveUsers: 14567,
-    newUsers: 234,
-    churnRate: 3.2
-  },
-  usage: {
-    apiCalls: 2456789,
-    storageUsed: 1.2, // TB
-    bandwidthUsed: 3.4, // TB
-    averageSessionDuration: 18.5 // minutes
-  }
-};
 
 export default function AnalyticsPage() {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Simulate API call
-    const timer = setTimeout(() => {
-      setAnalytics(mockAnalytics);
-      setLoading(false);
-    }, 1000);
+    const fetchAnalytics = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await api.admin.getAnalyticsDashboard();
+        
+        if (response.success && response.data) {
+          setAnalytics(response.data as AnalyticsData);
+        } else {
+          setError('Failed to load analytics data');
+        }
+      } catch (err) {
+        console.error('Analytics fetch error:', err);
+        setError('Failed to load analytics data');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    return () => clearTimeout(timer);
+    fetchAnalytics();
   }, [timeRange]);
 
   const formatNumber = (num: number) => {
@@ -128,22 +87,33 @@ export default function AnalyticsPage() {
     }).format(amount);
   };
 
-  const getTrendIcon = (value: number) => {
-    return value >= 0 ? (
-      <ArrowTrendingUpIcon className="h-5 w-5 text-green-500" />
-    ) : (
-      <ArrowTrendingDownIcon className="h-5 w-5 text-red-500" />
-    );
-  };
 
-  const getTrendColor = (value: number) => {
-    return value >= 0 ? 'text-green-600' : 'text-red-600';
-  };
+
+
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
+        </div>
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <div className="text-red-800">{error}</div>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-2 text-red-600 hover:text-red-800 underline"
+          >
+            Try again
+          </button>
+        </div>
       </div>
     );
   }
@@ -182,42 +152,14 @@ export default function AnalyticsPage() {
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <BuildingOfficeIcon className="h-6 w-6 text-blue-400" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Total Tenants</dt>
-                  <dd className="flex items-center">
-                    <div className="text-lg font-medium text-gray-900">
-                      {formatNumber(analytics.overview.totalTenants)}
-                    </div>
-                    <div className={`ml-2 flex items-center text-sm ${getTrendColor(analytics.overview.monthlyGrowth.tenants)}`}>
-                      {getTrendIcon(analytics.overview.monthlyGrowth.tenants)}
-                      <span className="ml-1">{Math.abs(analytics.overview.monthlyGrowth.tenants)}%</span>
-                    </div>
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
                 <UsersIcon className="h-6 w-6 text-green-400" />
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Total Users</dt>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Active Users</dt>
                   <dd className="flex items-center">
                     <div className="text-lg font-medium text-gray-900">
-                      {formatNumber(analytics.overview.totalUsers)}
-                    </div>
-                    <div className={`ml-2 flex items-center text-sm ${getTrendColor(analytics.overview.monthlyGrowth.users)}`}>
-                      {getTrendIcon(analytics.overview.monthlyGrowth.users)}
-                      <span className="ml-1">{Math.abs(analytics.overview.monthlyGrowth.users)}%</span>
+                      {formatNumber(analytics.totals.totalActiveUsers)}
                     </div>
                   </dd>
                 </dl>
@@ -237,11 +179,7 @@ export default function AnalyticsPage() {
                   <dt className="text-sm font-medium text-gray-500 truncate">Total Transactions</dt>
                   <dd className="flex items-center">
                     <div className="text-lg font-medium text-gray-900">
-                      {formatNumber(analytics.overview.totalTransactions)}
-                    </div>
-                    <div className={`ml-2 flex items-center text-sm ${getTrendColor(analytics.overview.monthlyGrowth.transactions)}`}>
-                      {getTrendIcon(analytics.overview.monthlyGrowth.transactions)}
-                      <span className="ml-1">{Math.abs(analytics.overview.monthlyGrowth.transactions)}%</span>
+                      {formatNumber(analytics.totals.totalTransactions)}
                     </div>
                   </dd>
                 </dl>
@@ -258,14 +196,30 @@ export default function AnalyticsPage() {
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Total Revenue</dt>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Transaction Amount</dt>
                   <dd className="flex items-center">
                     <div className="text-lg font-medium text-gray-900">
-                      {formatCurrency(analytics.overview.totalRevenue)}
+                      {formatCurrency(analytics.totals.totalAmount)}
                     </div>
-                    <div className={`ml-2 flex items-center text-sm ${getTrendColor(analytics.overview.monthlyGrowth.revenue)}`}>
-                      {getTrendIcon(analytics.overview.monthlyGrowth.revenue)}
-                      <span className="ml-1">{Math.abs(analytics.overview.monthlyGrowth.revenue)}%</span>
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <BuildingOfficeIcon className="h-6 w-6 text-blue-400" />
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">API Requests</dt>
+                  <dd className="flex items-center">
+                    <div className="text-lg font-medium text-gray-900">
+                      {formatNumber(analytics.totals.totalApiRequests)}
                     </div>
                   </dd>
                 </dl>
@@ -275,98 +229,56 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* User Activity */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 w-2 h-2 bg-blue-400 rounded-full"></div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Daily Active</dt>
-                  <dd className="text-lg font-medium text-gray-900">
-                    {formatNumber(analytics.userActivity.dailyActiveUsers)}
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 w-2 h-2 bg-green-400 rounded-full"></div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Weekly Active</dt>
-                  <dd className="text-lg font-medium text-gray-900">
-                    {formatNumber(analytics.userActivity.weeklyActiveUsers)}
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 w-2 h-2 bg-purple-400 rounded-full"></div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Monthly Active</dt>
-                  <dd className="text-lg font-medium text-gray-900">
-                    {formatNumber(analytics.userActivity.monthlyActiveUsers)}
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 w-2 h-2 bg-yellow-400 rounded-full"></div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">New Users</dt>
-                  <dd className="text-lg font-medium text-gray-900">
-                    {formatNumber(analytics.userActivity.newUsers)}
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 w-2 h-2 bg-red-400 rounded-full"></div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Churn Rate</dt>
-                  <dd className="text-lg font-medium text-gray-900">
-                    {analytics.userActivity.churnRate}%
-                  </dd>
-                </dl>
-              </div>
-            </div>
+      {/* Daily Analytics (Last 7 Days) */}
+      <div className="bg-white shadow rounded-lg">
+        <div className="px-4 py-5 sm:p-6">
+          <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Daily Analytics (Last 7 Days)</h3>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Active Users</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Transactions</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Storage</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {analytics.dailyAnalytics.map((day) => (
+                  <tr key={day.date}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {new Date(day.date).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {formatNumber(day.totalActiveUsers)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {formatNumber(day.totalTransactions)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {formatCurrency(day.totalAmount)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {day.totalStorageUsed.toFixed(2)} GB
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
 
-      {/* Top Tenants & Plan Distribution */}
+      {/* Top Tenants */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Tenants */}
+        {/* Top Tenants by Transactions */}
         <div className="bg-white shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Top Tenants</h3>
+            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Top Tenants by Transactions</h3>
             <div className="space-y-3">
-              {analytics.tenantAnalytics.topTenants.map((tenant, index) => (
-                <div key={tenant.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              {analytics.topTenantsByTransactions.map((tenant, index) => (
+                <div key={tenant.tenantId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center space-x-3">
                     <div className="flex-shrink-0">
                       <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
@@ -374,93 +286,71 @@ export default function AnalyticsPage() {
                       </div>
                     </div>
                     <div>
-                      <div className="text-sm font-medium text-gray-900">{tenant.name}</div>
+                      <div className="text-sm font-medium text-gray-900">{tenant.tenantName}</div>
                       <div className="text-xs text-gray-500">
-                        {tenant.userCount} users • {formatNumber(tenant.transactionCount)} transactions
+                        {formatNumber(tenant.metricValue)} transactions
                       </div>
                     </div>
                   </div>
-                  <div className="text-sm font-medium text-gray-900">
-                    {formatCurrency(tenant.revenue)}
-                  </div>
                 </div>
               ))}
+              {analytics.topTenantsByTransactions.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  No transaction data available
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Plan Distribution */}
+        {/* Top Tenants by Amount */}
         <div className="bg-white shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Tenants by Plan</h3>
-            <div className="space-y-4">
-              {Object.entries(analytics.tenantAnalytics.tenantsByPlan).map(([plan, count]) => (
-                <div key={plan}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-700 capitalize">{plan}</span>
-                    <span className="text-sm text-gray-500">{count} tenants</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className={`h-2 rounded-full ${
-                        plan === 'enterprise' ? 'bg-purple-600' :
-                        plan === 'premium' ? 'bg-blue-600' :
-                        plan === 'basic' ? 'bg-green-600' : 'bg-gray-400'
-                      }`} 
-                      style={{ width: `${(count / analytics.overview.totalTenants) * 100}%` }}
-                    ></div>
+            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Top Tenants by Amount</h3>
+            <div className="space-y-3">
+              {analytics.topTenantsByAmount.map((tenant, index) => (
+                <div key={tenant.tenantId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className="flex-shrink-0">
+                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                        <span className="text-sm font-medium text-green-600">#{index + 1}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">{tenant.tenantName}</div>
+                      <div className="text-xs text-gray-500">
+                        {formatCurrency(tenant.metricValue)}
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
+              {analytics.topTenantsByAmount.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  No transaction data available
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Usage Statistics */}
+      {/* Period Information */}
       <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Usage Statistics</h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">
-                {formatNumber(analytics.usage.apiCalls)}
+          <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Analytics Period</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <div className="text-sm text-gray-500">Period Start</div>
+              <div className="text-lg font-medium text-gray-900">
+                {new Date(analytics.period.startDate).toLocaleDateString()}
               </div>
-              <div className="text-sm text-gray-500">API Calls</div>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">
-                {analytics.usage.storageUsed.toFixed(1)} TB
+            <div>
+              <div className="text-sm text-gray-500">Period End</div>
+              <div className="text-lg font-medium text-gray-900">
+                {new Date(analytics.period.endDate).toLocaleDateString()}
               </div>
-              <div className="text-sm text-gray-500">Storage Used</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">
-                {analytics.usage.bandwidthUsed.toFixed(1)} TB
-              </div>
-              <div className="text-sm text-gray-500">Bandwidth Used</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">
-                {analytics.usage.averageSessionDuration.toFixed(1)} min
-              </div>
-              <div className="text-sm text-gray-500">Avg Session</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Charts Placeholder */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Growth Trends</h3>
-          <div className="h-64 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg">
-            <div className="text-center">
-              <ChartBarIcon className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">Growth Trend Charts</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Chart components would be integrated here showing tenant, user, and revenue growth over time
-              </p>
             </div>
           </div>
         </div>
