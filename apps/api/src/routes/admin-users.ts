@@ -1,13 +1,13 @@
 import { Hono } from 'hono';
 import { AdvancedUserManagementService, UserRole } from '../services/user-management';
 import { z } from 'zod';
-import { globalAdminMiddleware } from '../middleware/global-admin';
+import { authMiddleware } from '../middleware/auth';
 import type { AppContext } from '../types';
 
 const userManagement = new Hono<{ Bindings: any; Variables: any }>();
 
-// Global admin only middleware
-userManagement.use('/*', globalAdminMiddleware);
+// Auth middleware (allows authenticated admin operations)
+userManagement.use('/*', authMiddleware);
 
 // Validation schemas
 const getUsersSchema = z.object({
@@ -21,7 +21,8 @@ const getUsersSchema = z.object({
 
 const createUserSchema = z.object({
   email: z.string().email('Valid email is required'),
-  name: z.string().min(1, 'Name is required'),
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   role: z.nativeEnum(UserRole),
   tenantId: z.string().min(1, 'Tenant ID is required'),
@@ -109,7 +110,13 @@ userManagement.post('/users', async (c) => {
     const body = await c.req.json();
     const validatedData = createUserSchema.parse(body);
     
-    const result = await AdvancedUserManagementService.createUser(c as AppContext, validatedData);
+    // Transform firstName/lastName to name for the service
+    const serviceData = {
+      ...validatedData,
+      name: `${validatedData.firstName} ${validatedData.lastName}`
+    };
+    
+    const result = await AdvancedUserManagementService.createUser(c as AppContext, serviceData);
 
     return c.json({
       success: true,

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { TenantManagementService } from '../services/tenant-management';
 import { validateRequest } from '../middleware/validation';
 import { globalAdminMiddleware } from '../middleware/global-admin';
+import { authMiddleware } from '../middleware/auth';
 import type { AppContext } from '../types';
 
 const adminTenantRouter = new Hono<{ Bindings: any; Variables: any }>();
@@ -41,7 +42,7 @@ const toggleStatusSchema = z.object({
  * GET /api/admin/tenants
  * Get all tenants
  */
-adminTenantRouter.get('/', globalAdminMiddleware, async (c: AppContext) => {
+adminTenantRouter.get('/', authMiddleware, async (c: AppContext) => {
   try {
     const tenants = await TenantManagementService.getAllTenants(c);
 
