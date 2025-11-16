@@ -495,7 +495,7 @@ mfaRouter.get('/settings', globalAdminMiddleware, async (c: AppContext) => {
  */
 mfaRouter.put('/settings', globalAdminMiddleware, async (c: AppContext) => {
   try {
-    const settings = await c.req.json();
+    // TODO: Parse and use settings for MFA configuration
     
     // In a full implementation, store these in globalAdminSettings table
     // For now, just return success
@@ -713,7 +713,7 @@ mfaRouter.post('/users/:userId/backup-codes', globalAdminMiddleware, async (c: A
     if (!mfaData?.isEnabled) {
       return c.json({ 
         success: false, 
-        error: { code: 'MFA_NOT_ENABLED', message: 'MFA is not enabled for this user' } \
+        error: { code: 'MFA_NOT_ENABLED', message: 'MFA is not enabled for this user' } 
       }, 400);
     }
 

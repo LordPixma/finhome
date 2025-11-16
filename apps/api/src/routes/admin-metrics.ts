@@ -526,8 +526,7 @@ systemMetrics.post('/alert-rules', async (c) => {
  */
 systemMetrics.put('/alert-rules/:id', async (c) => {
   try {
-    const ruleId = c.req.param('id');
-    const body = await c.req.json();
+    // TODO: Use ruleId and body to update alert rule in database
     
     // In a full implementation, update in database
     return c.json({
@@ -552,7 +551,7 @@ systemMetrics.put('/alert-rules/:id', async (c) => {
  */
 systemMetrics.post('/alert-rules/:id/toggle', async (c) => {
   try {
-    const ruleId = c.req.param('id');
+    // TODO: Use ruleId to toggle alert rule in database
     
     // In a full implementation, toggle in database
     return c.json({

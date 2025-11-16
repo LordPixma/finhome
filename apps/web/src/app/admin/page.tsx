@@ -60,45 +60,55 @@ export default function AdminDashboard() {
         setError(null);
         
         // Fetch real data from API
-        const [statsResponse, tenantsResponse, auditResponse] = await Promise.all([
-          api.getGlobalAdminStats(),
-          api.getGlobalAdminTenants(1, 10),
-          api.getGlobalAdminAuditLog(1, 10),
+        const [tenantsResponse, usersResponse] = await Promise.all([
+          api.admin.getTenants(),
+          api.admin.getUsers(),
         ]);
         
-        setStats(statsResponse.data as PlatformStats);
-        setTenants((tenantsResponse.data as any)?.tenants || []);
-        setAuditLog((auditResponse.data as any)?.auditLog || []);
+        console.log('Tenants response:', tenantsResponse);
+        console.log('Users response:', usersResponse);
         
-        // Extract users from tenants for the users tab
-        const allUsers: User[] = [];
-        const tenantsList = (tenantsResponse.data as any)?.tenants || [];
+        // Calculate stats from the actual data
+        const tenantData = Array.isArray(tenantsResponse.data) ? tenantsResponse.data : [];
+        const userData = Array.isArray(usersResponse.data) ? usersResponse.data : [];
         
-        for (const tenant of tenantsList) {
-          try {
-            const tenantDetailResponse = await api.getGlobalAdminTenant(tenant.id);
-            const tenantUsers = (tenantDetailResponse.data as any)?.users || [];
-            
-            tenantUsers.forEach((user: any) => {
-              allUsers.push({
-                id: user.id,
-                email: user.email,
-                name: user.name,
-                role: user.role,
-                isGlobalAdmin: user.isGlobalAdmin || false,
-                tenantName: tenant.name,
-                subdomain: tenant.subdomain,
-                createdAt: user.createdAt,
-              });
-            });
-          } catch (error) {
-            console.error(`Failed to fetch users for tenant ${tenant.id}:`, error);
-          }
-        }
+        const calculatedStats: PlatformStats = {
+          totalTenants: tenantData.length,
+          totalUsers: userData.length,
+          totalGlobalAdmins: userData.filter((u: any) => u.role === 'super_admin').length,
+          recentTenants: tenantData.filter((t: any) => {
+            const created = new Date(t.createdAt);
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            return created > thirtyDaysAgo;
+          }).length,
+          recentUsers: userData.filter((u: any) => {
+            const created = new Date(u.createdAt);
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            return created > thirtyDaysAgo;
+          }).length,
+        };
+
+        setStats(calculatedStats);
+        setTenants(tenantData);
         
-        setUsers(allUsers);
+        // Convert user data to the expected format
+        const formattedUsers: User[] = userData.map((user: any) => ({
+          id: user.id,
+          email: user.email,
+          name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
+          role: user.role,
+          isGlobalAdmin: user.role === 'super_admin',
+          tenantName: user.tenantName || 'Unknown',
+          subdomain: user.subdomain || 'unknown',
+          createdAt: user.createdAt,
+        }));
         
-      } catch (err: any) {
+        setUsers(formattedUsers);
+        
+        // Set empty audit log for now (can be implemented later with proper admin audit endpoint)
+        setAuditLog([]);      } catch (err: any) {
         setError(`Failed to fetch admin data: ${err.message}`);
         console.error('Admin fetch error:', err);
       } finally {
@@ -119,22 +129,19 @@ export default function AdminDashboard() {
     });
   };
 
-  const handleMakeGlobalAdmin = async (userId: string, userName: string) => {
+  const handleMakeGlobalAdmin = async (_userId: string, userName: string) => {
     if (!confirm(`Are you sure you want to make ${userName} a global admin?`)) {
       return;
     }
-    
+
     try {
-      await api.makeUserGlobalAdmin(userId);
-      alert(`${userName} is now a global admin`);
-      // Refresh the user list
-      window.location.reload();
+      // For now, this would need to be implemented in the admin API
+      // await api.admin.makeUserGlobalAdmin(userId);
+      alert(`Global admin promotion feature not yet implemented for regular admin interface`);
     } catch (error: any) {
       alert(`Failed to make user global admin: ${error.message}`);
     }
-  };
-
-  const handleViewTenantDetails = (tenant: Tenant) => {
+  };  const handleViewTenantDetails = (tenant: Tenant) => {
     alert(`Viewing details for ${tenant.name} - This would open a detailed view`);
   };
 
