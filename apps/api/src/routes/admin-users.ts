@@ -21,8 +21,7 @@ const getUsersSchema = z.object({
 
 const createUserSchema = z.object({
   email: z.string().email('Valid email is required'),
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
+  name: z.string().min(1, 'Name is required'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   role: z.nativeEnum(UserRole),
   tenantId: z.string().min(1, 'Tenant ID is required'),
@@ -110,11 +109,8 @@ userManagement.post('/users', async (c) => {
     const body = await c.req.json();
     const validatedData = createUserSchema.parse(body);
     
-    // Transform firstName/lastName to name for the service
-    const serviceData = {
-      ...validatedData,
-      name: `${validatedData.firstName} ${validatedData.lastName}`
-    };
+    // Data is already in correct format
+    const serviceData = validatedData;
     
     const result = await AdvancedUserManagementService.createUser(c as AppContext, serviceData);
 

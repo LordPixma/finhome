@@ -7,20 +7,26 @@ import { api } from '@/lib/api';
 interface User {
   id: string;
   email: string;
-  firstName: string;
-  lastName: string;
+  name: string;
   tenantName: string;
-  role: 'member' | 'admin' | 'super_admin';
-  status: 'active' | 'suspended' | 'pending';
-  lastLogin: string | null;
+  tenantId: string;
+  tenantSubdomain?: string;
+  role: 'member' | 'admin';
+  isGlobalAdmin?: boolean;
+  profilePictureUrl?: string | null;
+  phoneNumber?: string | null;
   createdAt: string;
-  mfaEnabled: boolean;
+  updatedAt: string;
+  // Legacy fields that may not be provided by API
+  status?: 'active' | 'suspended' | 'pending';
+  lastLogin?: string | null;
+  mfaEnabled?: boolean;
 }
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'member' | 'admin' | 'super_admin'>('all');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'member' | 'admin'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'suspended' | 'pending'>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +39,9 @@ export default function UsersPage() {
     try {
       setLoading(true);
       const response = await api.admin.getUsers();
-      setUsers(Array.isArray(response.data) ? response.data : []);
+      // API returns { success: true, data: { users: [...], total: 5 } }
+      const users = (response.data as any)?.users || [];
+      setUsers(Array.isArray(users) ? users : []);
       setError(null);
     } catch (err) {
       console.error('Failed to fetch users:', err);
@@ -45,11 +53,12 @@ export default function UsersPage() {
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.tenantName.toLowerCase().includes(searchTerm.toLowerCase());
+                         user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (user.tenantName || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-    const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
+    // For status, default to 'active' if not provided by API
+    const userStatus = user.status || 'active';
+    const matchesStatus = statusFilter === 'all' || userStatus === statusFilter;
     return matchesSearch && matchesRole && matchesStatus;
   });
 
@@ -58,13 +67,8 @@ export default function UsersPage() {
     const email = prompt('Enter user email:');
     if (!email) return;
     
-    const firstName = prompt('Enter first name:');
-    if (!firstName) return;
-    
-    const lastName = prompt('Enter last name:');
-    if (!lastName) return;
-    
-    const password = prompt('Enter initial password (min 8 characters):');
+    const name = prompt('Enter full name:');
+    if (!name) return;    const password = prompt('Enter initial password (min 8 characters):');
     if (!password || password.length < 8) {
       alert('Password must be at least 8 characters');
       return;
@@ -89,8 +93,7 @@ export default function UsersPage() {
       const tenantId = activeTenants[0].id;
       const userData = {
         email,
-        firstName,
-        lastName,
+        name,
         password,
         tenantId,
         role: 'member'
@@ -110,15 +113,15 @@ export default function UsersPage() {
   };
 
   const handleViewUser = (user: User) => {
-    alert(`View details for ${user.firstName} ${user.lastName}`);
+    alert(`View details for ${user.name}`);
   };
 
   const handleSuspendUser = async (user: User) => {
-    if (confirm(`Are you sure you want to suspend ${user.firstName} ${user.lastName}?`)) {
+    if (confirm(`Are you sure you want to suspend ${user.name}?`)) {
       try {
         await api.admin.suspendUser(user.id);
         await fetchUsers(); // Refresh the list
-        alert(`${user.firstName} ${user.lastName} has been suspended`);
+        alert(`${user.name} has been suspended`);
       } catch (err) {
         console.error('Failed to suspend user:', err);
         alert('Failed to suspend user. Please try again.');
@@ -127,11 +130,11 @@ export default function UsersPage() {
   };
 
   const handleActivateUser = async (user: User) => {
-    if (confirm(`Are you sure you want to activate ${user.firstName} ${user.lastName}?`)) {
+    if (confirm(`Are you sure you want to activate ${user.name}?`)) {
       try {
         await api.admin.activateUser(user.id);
         await fetchUsers(); // Refresh the list
-        alert(`${user.firstName} ${user.lastName} has been activated`);
+        alert(`${user.name} has been activated`);
       } catch (err) {
         console.error('Failed to activate user:', err);
         alert('Failed to activate user. Please try again.');
@@ -141,7 +144,7 @@ export default function UsersPage() {
 
   const handleToggleMFA = async (user: User) => {
     const action = user.mfaEnabled ? 'disable' : 'enable';
-    if (confirm(`Are you sure you want to ${action} MFA for ${user.firstName} ${user.lastName}?`)) {
+    if (confirm(`Are you sure you want to ${action} MFA for ${user.name}?`)) {
       try {
         if (user.mfaEnabled) {
           await api.admin.disableUserMFA(user.id);
@@ -149,7 +152,7 @@ export default function UsersPage() {
           await api.admin.enableUserMFA(user.id);
         }
         await fetchUsers(); // Refresh the list
-        alert(`MFA has been ${action}d for ${user.firstName} ${user.lastName}`);
+        alert(`MFA has been ${action}d for ${user.name}`);
       } catch (err) {
         console.error(`Failed to ${action} MFA:`, err);
         alert(`Failed to ${action} MFA. Please try again.`);
@@ -300,7 +303,7 @@ export default function UsersPage() {
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Active</dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {users.filter(u => u.status === 'active').length}
+                    {users.filter(u => (u.status || 'active') === 'active').length}
                   </dd>
                 </dl>
               </div>
@@ -315,7 +318,7 @@ export default function UsersPage() {
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Admins</dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {users.filter(u => u.role === 'admin' || u.role === 'super_admin').length}
+                    {users.filter(u => u.role === 'admin' || u.isGlobalAdmin).length}
                   </dd>
                 </dl>
               </div>
@@ -332,7 +335,7 @@ export default function UsersPage() {
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">MFA Enabled</dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {users.filter(u => u.mfaEnabled).length}
+                    {users.filter(u => u.mfaEnabled || false).length}
                   </dd>
                 </dl>
               </div>
@@ -349,7 +352,7 @@ export default function UsersPage() {
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">No MFA</dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {users.filter(u => !u.mfaEnabled).length}
+                    {users.filter(u => !(u.mfaEnabled || false)).length}
                   </dd>
                 </dl>
               </div>
@@ -400,7 +403,7 @@ export default function UsersPage() {
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">
-                            {user.firstName} {user.lastName}
+                            {user.name}
                           </div>
                           <div className="text-sm text-gray-500">{user.email}</div>
                         </div>
@@ -415,26 +418,26 @@ export default function UsersPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={getStatusBadge(user.status)}>
-                        {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
+                      <span className={getStatusBadge(user.status || 'active')}>
+                        {(user.status || 'active').charAt(0).toUpperCase() + (user.status || 'active').slice(1)}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        {user.mfaEnabled ? (
+                        {(user.mfaEnabled || false) ? (
                           <ShieldCheckIcon className="h-5 w-5 text-green-500" />
                         ) : (
                           <ShieldExclamationIcon className="h-5 w-5 text-red-500" />
                         )}
                         <span className="ml-2 text-sm text-gray-900">
-                          {user.mfaEnabled ? 'Enabled' : 'Disabled'}
+                          {(user.mfaEnabled || false) ? 'Enabled' : 'Disabled'}
                         </span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {user.lastLogin 
                         ? new Date(user.lastLogin).toLocaleDateString()
-                        : 'Never'
+                        : 'Not tracked'
                       }
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
