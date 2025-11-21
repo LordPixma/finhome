@@ -58,7 +58,7 @@ router.post('/', validateRequest(InviteTenantMemberSchema), async (c) => {
     const body = await c.req.json();
 
     // Check if user is admin or owner
-    if (user.role !== 'admin') {
+    if (!['admin', 'owner'].includes(user.role)) {
       return c.json(
         {
           success: false,
@@ -239,7 +239,7 @@ router.put('/:id', validateRequest(UpdateTenantMemberSchema), async (c) => {
     const body = await c.req.json();
 
     // Check if user is admin or owner
-    if (user.role !== 'admin') {
+    if (!['admin', 'owner'].includes(user.role)) {
       return c.json(
         {
           success: false,
@@ -300,7 +300,7 @@ router.delete('/:id', async (c) => {
     const { id } = c.req.param();
 
     // Check if user is admin or owner
-    if (user.role !== 'admin') {
+    if (!['admin', 'owner'].includes(user.role)) {
       return c.json(
         {
           success: false,

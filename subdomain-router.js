@@ -99,11 +99,14 @@ async function serveFromPages(request, env) {
 
 // Helper function to validate if subdomain is a valid tenant
 async function isValidTenant(subdomain, env) {
-  // List of valid tenant subdomains (in production, this would query your database)
-  const validTenants = [
-    'odekunle', 'demofamily', 'family', 'smith', 'johnson', 
-    'williams', 'brown', 'jones', 'garcia', 'miller'
-  ];
-  
-  return validTenants.includes(subdomain);
+  // Basic format validation to avoid obvious invalid requests
+  const isValidFormat = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/i.test(subdomain);
+  if (!isValidFormat) {
+    return false;
+  }
+
+  // We used to rely on a static allowlist which blocked newly created tenants.
+  // Allow all well-formed subdomains to flow through so the app can validate
+  // against the live tenant database and show an appropriate error if needed.
+  return true;
 }
