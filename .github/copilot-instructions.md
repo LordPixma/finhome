@@ -1,39 +1,42 @@
 # Copilot instructions — Finhome (concise)
 
-This repo is a Turborepo monorepo for a multi-tenant budgeting SaaS using Cloudflare Workers (Hono) + Drizzle (D1). Short, actionable guidance for automated code helpers:
+A focused guide for code assistants working in this Turborepo (Cloudflare Workers + Next.js + Drizzle).
 
-1) Big picture (how things flow)
-- apps/api: Cloudflare Worker (Hono) — routes, queue consumers, scheduled handlers. Entry: `apps/api/src/index.ts`.
-- apps/web: Next.js 14 frontend (App Router).
-- packages/shared: canonical Zod schemas and TS types used by both API and web (`packages/shared/src/schemas.ts`, `types.ts`).
+1) Big picture — what to know first
+- `apps/api`: Cloudflare Worker (Hono) — HTTP routes, queue consumers, scheduled jobs. Entry: `apps/api/src/index.ts`.
+- `apps/web`: Next.js 14 (App Router) frontend that consumes the API and uses components under `apps/web/src/components` (see `ai` components for examples).
+- `packages/shared`: canonical Zod schemas and TypeScript types used by API + web (`packages/shared/src/schemas.ts`, `types.ts`).
 
-2) Critical, non-negotiable conventions
-- Multi-tenancy: every persisted row must include `tenantId`. Requests are scoped by subdomain (see `subdomain-router.js`). Never drop tenantId from queries.
-- API envelope: all HTTP responses follow { success: boolean, data?: any, error?: { code: string, message: string } } (see `apps/api/src/index.ts` handlers).
-- Auth: JWT via `jose`. Access tokens ~1h; refresh tokens stored in KV `SESSIONS`. See `apps/api/src/middleware/auth.ts` for tenant vs global-admin checks.
-- Validation: reuse Zod schemas from `packages/shared/src/schemas.ts` and the project's validateRequest() pattern.
+2) Non-negotiable conventions (follow these)
+- Multi-tenancy: every persisted row and API operation must be scoped with `tenantId` (see `packages/shared/src/schemas.ts` and `subdomain-router.js`). Do not remove or ignore `tenantId` in queries.
+- API envelope: all endpoints return { success: boolean, data?: any, error?: { code: string, message?: string } } — preserve this shape for handlers and clients (see `apps/api/src/index.ts`).
+- Auth: JWT via `jose`. Refresh tokens live in KV `SESSIONS`. See `apps/api/src/middleware/auth.ts` for tenant vs global-admin behavior.
+- Validation: reuse Zod schemas from `packages/shared` and the project's `validateRequest()` pattern (search codebase for `validateRequest`).
 
-3) File processing & categorization (common workflow)
-- Upload → store in R2 → enqueue parsing job → parse CSV/OFX (`apps/api/src/utils/fileParser.ts`) → dedupe → categorize (`apps/api/src/services/categorization.ts`) → persist. Examples in `apps/api/src/routes/files.ts`.
-- Categorization confidence rules (implemented in services/categorization.ts): confidence > 0.8 = auto-assign, 0.5–0.8 = suggest, < 0.5 = manual.
+3) Data & async flows to reference
+- File upload flow: Upload → R2 → enqueue parse job → parse CSV/OFX (`apps/api/src/utils/fileParser.ts`) → dedupe → categorize (`apps/api/src/services/categorization.ts`) → persist. See `apps/api/src/routes/files.ts` for wiring.
+- AI categorization: confidence rules in `apps/api/src/services/categorization.ts` (auto >0.8, suggest 0.5–0.8, manual <0.5). Frontend components under `apps/web/src/components/ai` show client usage.
+- DB: Drizzle + D1. Schema in `apps/api/src/db/schema.ts`. Migrations handled with `drizzle-kit` + `wrangler d1 migrations`.
 
-4) Integration points to watch
-- Cloudflare bindings: D1, KV, R2, QUEUE, AI — check `apps/api/wrangler.toml` and `wrangler-subdomain.toml` for required env bindings.
-- Queues: consumers declared in `apps/api/src/index.ts` (exported `queue` function). Follow bill-reminder consumer pattern for new jobs.
+4) Integrations and infra points
+- Cloudflare bindings used: D1, KV, R2, QUEUE, AI — check `apps/api/wrangler.toml` and `wrangler-subdomain.toml` for binding names and env expectations.
+- Queues: consumers are registered from `apps/api/src/index.ts` (exported `queue` function). Copy the bill-reminder consumer pattern when adding new jobs.
 
-5) How to add common things (concrete examples)
-- Add API route: create `apps/api/src/routes/<name>.ts` exporting a Hono router, then register in `apps/api/src/index.ts` with `app.route('/api/<name>', router)`.
-- DB changes: cd `apps/api` -> `npm run db:generate` then `npm run db:migrate` (D1 migrations used).
+5) Common tasks & exact commands
+- Start local dev (root monorepo): `npm run dev` (runs `turbo run dev`).
+- Run API locally: `cd apps/api && npm run dev` (uses `wrangler dev`).
+- Build API: `cd apps/api && npm run build` (`tsc`).
+- Run tests: `npm test` at root (turbo runs all) or `cd apps/api && npm test` for API unit tests (Vitest).
+- DB: `cd apps/api && npm run db:generate` then `npm run db:migrate` (applies D1 migrations via Wrangler).
+- Deploy API: `cd apps/api && npm run deploy` (wrangler deploy).
 
-6) Dev & test quick commands
-- Start local dev (root): `npm run dev` (turbo workspace). API unit tests: `cd apps/api && npm test` (Vitest).
+6) Where to look for examples or patterns
+- Add routes: create `apps/api/src/routes/<name>.ts` exporting a Hono router, then register in `apps/api/src/index.ts` with `app.route('/api/<name>', router)`.
+- Use `packages/shared/src/schemas.ts` for request/response shapes and `packages/shared/src/types.ts` for TS types.
+- AI endpoints and usage examples: `Docs/AI_CATEGORIZATION_IMPLEMENTATION.md`, `Docs/AI_CATEGORIZATION_DEPLOYMENT.md`, and `apps/web/src/components/ai`.
 
-7) Quick references (files to read first)
-- `apps/api/src/index.ts` — worker entry, routes, queue handlers
-- `apps/api/src/db/schema.ts` — Drizzle schema and indexes (transactions heavily indexed)
-- `apps/api/src/middleware/auth.ts` — JWT + tenant/global admin behavior
-- `apps/api/src/services/categorization.ts` — categorization logic and confidence thresholds
-- `apps/api/src/routes/files.ts` & `apps/api/src/utils/fileParser.ts` — upload/parsing flow
-- `packages/shared/src/schemas.ts` & `types.ts` — canonical input/output shapes
+7) Safety, secrets, and production notes
+- Never hardcode production keys. Production bindings and sensitive values belong in Wrangler toml / Cloudflare dashboard (see `wrangler-subdomain.toml` and `apps/api/wrangler.toml`).
+- Follow the `PRODUCTION_DEPLOYMENT_CHECKLIST.md` when preparing releases (R2 bucket names, queues, D1 DB).
 
-If you'd like, I can (a) generate a short route template, (b) add a test scaffold for the categorization service, or (c) expand examples for migrations/queue consumers. Tell me which and I’ll add it.
+If any area is unclear or you want templates (route, consumer, or categorization test scaffold), tell me which and I will add a concrete snippet.

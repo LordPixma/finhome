@@ -31,6 +31,9 @@ yarn-error.log*
 .wrangler/
 .dev.vars
 
+# Ignore generated wrangler folders anywhere in the tree
+**/.wrangler/
+
 # IDEs
 .vscode/
 .idea/
