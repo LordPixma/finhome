@@ -63,6 +63,7 @@ export async function authMiddleware(c: AppContext, next: Next): Promise<Respons
       email: payload.email as string,
       name: payload.name as string,
       tenantId: payload.tenantId as string | null,
+      role: payload.role as 'admin' | 'member' | 'owner' | undefined,
       isGlobalAdmin: isGlobalAdmin,
     });
     
