@@ -299,23 +299,25 @@ export default function DashboardPage() {
             ) : (
               <div className="space-y-3">
                 {accounts.map((account, index) => (
-                  <div 
-                    key={account.id} 
-                    className="flex items-center justify-between p-4 border border-gray-100 rounded-xl hover:shadow-card transition-all duration-200 animate-slide-in"
+                  <div
+                    key={account.id}
+                    className="flex items-center gap-4 p-4 border border-gray-100 rounded-xl hover:shadow-card hover:border-gray-200 transition-all duration-200 animate-slide-in"
                     style={{ '--index': index } as any}
                   >
-                    <div className="flex items-center">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 shadow-card text-white flex items-center justify-center font-semibold text-lg mr-4">
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 shadow-sm text-white flex items-center justify-center font-bold text-lg flex-shrink-0">
                         {account.name[0]?.toUpperCase() || 'A'}
                       </div>
-                      <div>
-                        <p className="font-semibold text-gray-900 text-base">{account.name}</p>
-                        <p className="text-sm text-gray-500 capitalize">{account.type} Account</p>
+                      <div className="flex-1 min-w-0 overflow-hidden">
+                        <p className="font-semibold text-gray-900 text-sm truncate" title={account.name}>
+                          {account.name}
+                        </p>
+                        <p className="text-xs text-gray-500 capitalize">{account.type} Account</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3 flex-shrink-0">
                       <div className="text-right">
-                        <p className={`text-lg font-semibold tabular-nums ${
+                        <p className={`text-base font-bold tabular-nums ${
                           account.balance >= 0 ? 'text-gray-900' : 'text-error-600'
                         }`}>
                           {formatCurrency(account.balance, userSettings?.currency, userSettings?.currencySymbol)}
@@ -324,17 +326,17 @@ export default function DashboardPage() {
                       <button
                         onClick={() => syncAccount(account.id)}
                         disabled={syncingAccounts.has(account.id)}
-                        className={`p-2 rounded-lg border transition-all duration-200 ${
+                        className={`p-2.5 rounded-lg border transition-all duration-200 ${
                           syncingAccounts.has(account.id)
                             ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
                             : 'border-primary-200 bg-primary-50 hover:bg-primary-100 hover:border-primary-300'
                         }`}
                         title="Sync account"
                       >
-                        <ArrowPathIcon 
+                        <ArrowPathIcon
                           className={`w-4 h-4 text-primary-600 ${
                             syncingAccounts.has(account.id) ? 'animate-spin' : ''
-                          }`} 
+                          }`}
                         />
                       </button>
                     </div>
@@ -451,37 +453,43 @@ export default function DashboardPage() {
           ) : (
             <div className="space-y-2">
               {recentTransactions.map((transaction, index) => (
-                <div 
-                  key={transaction.id} 
-                  className="flex items-center p-4 border border-gray-100 rounded-xl hover:shadow-card transition-all duration-200 animate-slide-in"
+                <div
+                  key={transaction.id}
+                  className="flex items-center gap-4 p-4 border border-gray-100 rounded-xl hover:shadow-card hover:border-gray-200 transition-all duration-200 animate-slide-in"
                   style={{ '--index': index } as any}
                 >
-                  <div className="flex items-center flex-1">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-4 shadow-sm ${
-                      transaction.type === 'income' 
-                        ? 'bg-success-50 text-success-600'
-                        : 'bg-error-50 text-error-600'
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm ${
+                      transaction.type === 'income'
+                        ? 'bg-gradient-to-br from-success-50 to-success-100 text-success-600 border border-success-200'
+                        : 'bg-gradient-to-br from-error-50 to-error-100 text-error-600 border border-error-200'
                     }`}>
-                      {transaction.type === 'income' ? <ArrowTrendingUpIcon className="w-5 h-5" /> : <ArrowTrendingDownIcon className="w-5 h-5" />}
+                      {transaction.type === 'income' ? (
+                        <ArrowTrendingUpIcon className="w-5 h-5" />
+                      ) : (
+                        <ArrowTrendingDownIcon className="w-5 h-5" />
+                      )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 truncate" title={transaction.description}>
+                    <div className="flex-1 min-w-0 overflow-hidden">
+                      <p className="font-semibold text-gray-900 text-sm truncate" title={transaction.description}>
                         {transaction.description}
                       </p>
-                      <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
-                        <span>{formatDate(transaction.date)}</span>
+                      <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                        <span className="whitespace-nowrap">{formatDate(transaction.date)}</span>
                         {transaction.category?.name && (
                           <>
                             <span>•</span>
-                            <span className="italic">{transaction.category.name}</span>
+                            <span className="italic truncate">{transaction.category.name}</span>
                           </>
                         )}
                       </div>
                     </div>
                   </div>
-                  <div className="text-right ml-4 flex-shrink-0">
-                    <p className={`currency ${transaction.type === 'income' ? 'currency-positive' : 'currency-negative'}`}>
-                      {transaction.type === 'income' ? '+' : ''}{formatCurrency(transaction.amount, userSettings?.currency, userSettings?.currencySymbol)}
+                  <div className="text-right flex-shrink-0">
+                    <p className={`font-bold text-sm tabular-nums ${
+                      transaction.type === 'income' ? 'text-success-700' : 'text-error-700'
+                    }`}>
+                      {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount, userSettings?.currency, userSettings?.currencySymbol)}
                     </p>
                   </div>
                 </div>
