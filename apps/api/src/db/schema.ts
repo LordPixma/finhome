@@ -442,6 +442,33 @@ export const globalAdminActions = sqliteTable('global_admin_actions', {
   dateIdx: index('idx_global_admin_actions_date').on(table.createdAt),
 }));
 
+// Comprehensive Audit Log Table (All user activities across all tenants)
+export const auditLogs = sqliteTable('audit_logs', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').references(() => tenants.id), // null for global admin actions
+  userId: text('user_id').notNull().references(() => users.id),
+  userName: text('user_name').notNull(),
+  userEmail: text('user_email').notNull(),
+  action: text('action').notNull(), // 'create', 'update', 'delete', 'login', 'logout', 'view', etc.
+  resource: text('resource').notNull(), // 'transaction', 'account', 'budget', 'user', 'tenant', etc.
+  resourceId: text('resource_id'), // ID of affected resource
+  method: text('method').notNull(), // 'POST', 'GET', 'PUT', 'DELETE'
+  endpoint: text('endpoint').notNull(), // API endpoint called
+  statusCode: integer('status_code').notNull(), // HTTP status code
+  details: text('details'), // JSON string with request/response details
+  ipAddress: text('ip_address'),
+  userAgent: text('user_agent'),
+  duration: integer('duration'), // Request duration in ms
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  tenantIdx: index('idx_audit_logs_tenant').on(table.tenantId),
+  userIdx: index('idx_audit_logs_user').on(table.userId),
+  actionIdx: index('idx_audit_logs_action').on(table.action),
+  resourceIdx: index('idx_audit_logs_resource').on(table.resource),
+  dateIdx: index('idx_audit_logs_date').on(table.createdAt),
+  tenantDateIdx: index('idx_audit_logs_tenant_date').on(table.tenantId, table.createdAt),
+}));
+
 // Global Admin Settings Table
 export const globalAdminSettings = sqliteTable('global_admin_settings', {
   id: text('id').primaryKey(),

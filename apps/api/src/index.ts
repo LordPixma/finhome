@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { eq, and } from 'drizzle-orm';
 import { corsMiddleware } from './middleware/cors';
+import { auditMiddleware } from './middleware/audit';
 import auth, { password as passwordRoutes } from './routes/auth';
 import transactions from './routes/transactions';
 import budgets from './routes/budgets';
@@ -25,6 +26,7 @@ import { adminTenantRouter } from './routes/admin-tenants';
 import adminSecurity from './routes/admin-security';
 import adminUsers from './routes/admin-users';
 import adminMetrics from './routes/admin-metrics';
+import adminAudit from './routes/admin-audit';
 import { getDb, billReminders, users, userSettings, accounts as accountsTable, importLogs as importLogsTable } from './db';
 import { createEmailService } from './services/email';
 import { parsePDF } from './utils/fileParser';
@@ -36,6 +38,9 @@ const app = new Hono<Env>();
 
 // Apply CORS middleware
 app.use('*', corsMiddleware);
+
+// Apply audit logging middleware to all routes
+app.use('*', auditMiddleware);
 
 // Health check
 app.get('/', c => {
@@ -82,6 +87,7 @@ app.route('/api/admin/tenants', adminTenantRouter);
 app.route('/api/admin/security', adminSecurity);
 app.route('/api/admin', adminUsers);
 app.route('/api/admin/metrics', adminMetrics);
+app.route('/api/admin', adminAudit);
 
 // 404 handler
 app.notFound(c => {

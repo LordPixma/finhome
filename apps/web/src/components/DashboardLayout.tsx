@@ -38,7 +38,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
-    { name: 'Accounts', href: '/dashboard/accounts', icon: BanknotesIcon },
+    { name: 'Accounts & Banking', href: '/dashboard/accounts', icon: BanknotesIcon },
     { name: 'Transactions', href: '/dashboard/transactions', icon: CreditCardIcon },
     { name: 'Recurring', href: '/dashboard/recurring', icon: ArrowPathIcon },
     { name: 'Budgets', href: '/dashboard/budgets', icon: ChartBarIcon },
@@ -47,7 +47,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Bill Reminders', href: '/dashboard/bill-reminders', icon: BellIcon },
     { name: 'Analytics', href: '/dashboard/analytics', icon: ChartPieIcon },
     { name: 'AI Features', href: '/dashboard/ai', icon: SparklesIcon },
-    { name: 'Banking', href: '/dashboard/banking', icon: LinkIcon },
     { name: 'Import', href: '/dashboard/import', icon: ArrowDownTrayIcon },
     { name: 'Logs', href: '/dashboard/logs', icon: DocumentTextIcon },
     { name: 'Settings', href: '/dashboard/settings', icon: Cog6ToothIcon },
