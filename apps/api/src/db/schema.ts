@@ -172,9 +172,10 @@ export const transactions = sqliteTable('transactions', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 }, (table) => ({
-  // Composite indexes for common query patterns (tenant + date/category/type)
+  // Composite indexes for common query patterns (tenant + date/category/type/account)
   tenantDateIdx: index('idx_transactions_tenant_date').on(table.tenantId, table.date),
   tenantCategoryIdx: index('idx_transactions_tenant_category').on(table.tenantId, table.categoryId),
+  tenantAccountIdx: index('idx_transactions_tenant_account').on(table.tenantId, table.accountId),
   providerIdx: index('idx_transactions_provider').on(table.providerTransactionId),
   tenantTypeIdx: index('idx_transactions_tenant_type').on(table.tenantId, table.type),
   // Single column indexes
@@ -368,6 +369,7 @@ export const bankConnections = sqliteTable('bank_connections', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 }, (table) => ({
   tenantIdx: index('idx_bank_connections_tenant').on(table.tenantId),
+  tenantStatusIdx: index('idx_bank_connections_tenant_status').on(table.tenantId, table.status),
   userIdx: index('idx_bank_connections_user').on(table.userId),
   statusIdx: index('idx_bank_connections_status').on(table.status),
   providerConnectionIdx: index('idx_bank_connections_provider').on(table.provider, table.providerConnectionId),

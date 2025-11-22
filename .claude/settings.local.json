@@ -10,7 +10,9 @@
       "Bash(git reset:*)",
       "Bash(git show:*)",
       "Bash(git push:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(npm run db:generate:*)",
+      "Bash(npm install:*)"
     ],
     "deny": [],
     "ask": []
