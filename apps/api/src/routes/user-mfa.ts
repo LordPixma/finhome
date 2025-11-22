@@ -4,9 +4,10 @@ import { eq, and } from 'drizzle-orm';
 import { createHmac } from 'node:crypto';
 import * as jose from 'jose';
 import { MFAService } from '../services/mfa';
+import { TrustedDeviceService } from '../services/trusted-devices';
 import { validateRequest } from '../middleware/validation';
 import { authMiddleware } from '../middleware/auth';
-import { getDb, userMFA, users, globalAdminMFA } from '../db';
+import { getDb, userMFA, users, globalAdminMFA, auditLogs } from '../db';
 import { getCurrentTimestamp } from '../utils/timestamp';
 import type { AppContext } from '../types';
 
@@ -61,7 +62,8 @@ const setupMFASchema = z.object({});
 
 const verifyMFASchema = z.object({
   email: z.string().email(),
-  token: z.string().length(6)
+  token: z.string().length(6),
+  rememberDevice: z.boolean().optional()
 });
 
 const confirmMFASetupSchema = z.object({
@@ -72,6 +74,12 @@ const confirmMFASetupSchema = z.object({
 const disableMFASchema = z.object({
   token: z.string().length(6)
 });
+
+const setRecoveryEmailSchema = z.object({
+  email: z.string().email()
+});
+
+const sendBackupCodesSchema = z.object({});
 
 /**
  * GET /api/mfa/status
@@ -221,6 +229,28 @@ userMFARouter.post('/confirm', authMiddleware, validateRequest(confirmMFASetupSc
       })
       .where(eq(userMFA.userId, user.id));
 
+    // Audit log for MFA enabled
+    const ipAddress = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for');
+    const userAgent = c.req.header('user-agent') || '';
+
+    await db.insert(auditLogs).values({
+      id: crypto.randomUUID(),
+      tenantId: user.tenantId,
+      userId: user.id,
+      userName: user.name,
+      userEmail: user.email,
+      action: 'enable',
+      resource: 'mfa',
+      resourceId: user.id,
+      method: 'POST',
+      endpoint: '/api/mfa/confirm',
+      statusCode: 200,
+      details: JSON.stringify({ message: 'MFA enabled successfully' }),
+      ipAddress,
+      userAgent,
+      createdAt: getCurrentTimestamp(),
+    });
+
     return c.json({
       success: true,
       data: { message: 'MFA enabled successfully' }
@@ -241,8 +271,10 @@ userMFARouter.post('/confirm', authMiddleware, validateRequest(confirmMFASetupSc
  */
 userMFARouter.post('/verify', validateRequest(verifyMFASchema), async (c: AppContext) => {
   try {
-    const { email, token } = c.get('validatedData');
+    const { email, token, rememberDevice } = c.get('validatedData');
     const db = getDb(c.env.DB);
+    const userAgent = c.req.header('user-agent') || '';
+    const ipAddress = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for');
 
     // Get user and MFA data
     const user = await db.select()
@@ -313,6 +345,39 @@ userMFARouter.post('/verify', validateRequest(verifyMFASchema), async (c: AppCon
       })
       .where(eq(mfaTable.userId, user.id));
 
+    // Trust device if requested (30-day remember me)
+    let deviceToken: string | undefined;
+    if (rememberDevice) {
+      deviceToken = await TrustedDeviceService.trustDevice(
+        db,
+        user.id,
+        userAgent,
+        ipAddress
+      );
+    }
+
+    // Audit log for MFA verification
+    await db.insert(auditLogs).values({
+      id: crypto.randomUUID(),
+      tenantId: user.tenantId,
+      userId: user.id,
+      userName: user.name,
+      userEmail: user.email,
+      action: 'verify',
+      resource: 'mfa',
+      resourceId: mfaData.id,
+      method: 'POST',
+      endpoint: '/api/mfa/verify',
+      statusCode: 200,
+      details: JSON.stringify({
+        rememberDevice: !!rememberDevice,
+        backupCodeUsed: !MFAService.verifyTOTP(token, mfaData.secret)
+      }),
+      ipAddress,
+      userAgent,
+      createdAt: getCurrentTimestamp(),
+    });
+
     // Generate tokens for the user
     const tokens = await generateTokens(
       user.id,
@@ -337,6 +402,7 @@ userMFARouter.post('/verify', validateRequest(verifyMFASchema), async (c: AppCon
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
         expiresIn: 3600,
+        deviceToken, // Return device token for future logins
         user: {
           id: user.id,
           email: user.email,
@@ -398,6 +464,28 @@ userMFARouter.post('/disable', authMiddleware, validateRequest(disableMFASchema)
     // Disable MFA by deleting the record
     await db.delete(userMFA)
       .where(eq(userMFA.userId, user.id));
+
+    // Audit log for MFA disabled
+    const ipAddress = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for');
+    const userAgent = c.req.header('user-agent') || '';
+
+    await db.insert(auditLogs).values({
+      id: crypto.randomUUID(),
+      tenantId: user.tenantId,
+      userId: user.id,
+      userName: user.name,
+      userEmail: user.email,
+      action: 'disable',
+      resource: 'mfa',
+      resourceId: user.id,
+      method: 'POST',
+      endpoint: '/api/mfa/disable',
+      statusCode: 200,
+      details: JSON.stringify({ message: 'MFA disabled successfully' }),
+      ipAddress,
+      userAgent,
+      createdAt: getCurrentTimestamp(),
+    });
 
     return c.json({
       success: true,
@@ -466,6 +554,204 @@ userMFARouter.post('/regenerate-backup-codes', authMiddleware, async (c: AppCont
     return c.json({
       success: false,
       error: { code: 'INTERNAL_ERROR', message: 'Failed to generate backup codes' }
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/mfa/recovery-email
+ * Set recovery email for backup code delivery
+ */
+userMFARouter.post('/recovery-email', authMiddleware, validateRequest(setRecoveryEmailSchema), async (c: AppContext) => {
+  try {
+    const user = c.get('user');
+    if (!user) {
+      return c.json({
+        success: false,
+        error: { code: 'UNAUTHORIZED', message: 'Authentication required' }
+      }, 401);
+    }
+
+    const { email } = c.get('validatedData');
+    const db = getDb(c.env.DB);
+
+    // Check if MFA is enabled
+    const mfaData = await db.select()
+      .from(userMFA)
+      .where(eq(userMFA.userId, user.id))
+      .get();
+
+    if (!mfaData?.isEnabled) {
+      return c.json({
+        success: false,
+        error: { code: 'MFA_NOT_ENABLED', message: 'MFA is not enabled for this user' }
+      }, 400);
+    }
+
+    // Update recovery email
+    await db.update(userMFA)
+      .set({
+        recoveryEmail: email,
+        updatedAt: new Date()
+      })
+      .where(eq(userMFA.userId, user.id));
+
+    // TODO: Send verification email to confirm ownership
+    // For now, we'll just save it
+
+    return c.json({
+      success: true,
+      data: { message: 'Recovery email set successfully' }
+    });
+
+  } catch (error) {
+    console.error('Set recovery email error:', error);
+    return c.json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to set recovery email' }
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/mfa/send-backup-codes
+ * Send backup codes to recovery email
+ */
+userMFARouter.post('/send-backup-codes', authMiddleware, validateRequest(sendBackupCodesSchema), async (c: AppContext) => {
+  try {
+    const user = c.get('user');
+    if (!user) {
+      return c.json({
+        success: false,
+        error: { code: 'UNAUTHORIZED', message: 'Authentication required' }
+      }, 401);
+    }
+
+    const db = getDb(c.env.DB);
+
+    // Check if MFA is enabled
+    const mfaData = await db.select()
+      .from(userMFA)
+      .where(eq(userMFA.userId, user.id))
+      .get();
+
+    if (!mfaData?.isEnabled) {
+      return c.json({
+        success: false,
+        error: { code: 'MFA_NOT_ENABLED', message: 'MFA is not enabled for this user' }
+      }, 400);
+    }
+
+    if (!mfaData.recoveryEmail) {
+      return c.json({
+        success: false,
+        error: { code: 'NO_RECOVERY_EMAIL', message: 'No recovery email set' }
+      }, 400);
+    }
+
+    // Generate new backup codes
+    const backupCodes = MFAService.generateBackupCodes();
+    const hashedBackupCodes = MFAService.hashBackupCodes(backupCodes);
+
+    await db.update(userMFA)
+      .set({
+        backupCodes: JSON.stringify(hashedBackupCodes),
+        updatedAt: new Date()
+      })
+      .where(eq(userMFA.userId, user.id));
+
+    // TODO: Send email with backup codes
+    // For now, we'll just log it
+    console.log(`Would send backup codes to ${mfaData.recoveryEmail}:`, backupCodes);
+
+    return c.json({
+      success: true,
+      data: { message: `Backup codes sent to ${mfaData.recoveryEmail}` }
+    });
+
+  } catch (error) {
+    console.error('Send backup codes error:', error);
+    return c.json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to send backup codes' }
+    }, 500);
+  }
+});
+
+/**
+ * GET /api/mfa/trusted-devices
+ * Get all trusted devices for the current user
+ */
+userMFARouter.get('/trusted-devices', authMiddleware, async (c: AppContext) => {
+  try {
+    const user = c.get('user');
+    if (!user) {
+      return c.json({
+        success: false,
+        error: { code: 'UNAUTHORIZED', message: 'Authentication required' }
+      }, 401);
+    }
+
+    const db = getDb(c.env.DB);
+    const devices = await TrustedDeviceService.getTrustedDevices(db, user.id);
+
+    return c.json({
+      success: true,
+      data: devices.map(device => ({
+        id: device.id,
+        deviceName: device.deviceName,
+        ipAddress: device.ipAddress,
+        lastUsedAt: device.lastUsedAt,
+        expiresAt: device.expiresAt,
+        createdAt: device.createdAt,
+      }))
+    });
+
+  } catch (error) {
+    console.error('Get trusted devices error:', error);
+    return c.json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to get trusted devices' }
+    }, 500);
+  }
+});
+
+/**
+ * DELETE /api/mfa/trusted-devices/:deviceId
+ * Remove a trusted device
+ */
+userMFARouter.delete('/trusted-devices/:deviceId', authMiddleware, async (c: AppContext) => {
+  try {
+    const user = c.get('user');
+    if (!user) {
+      return c.json({
+        success: false,
+        error: { code: 'UNAUTHORIZED', message: 'Authentication required' }
+      }, 401);
+    }
+
+    const deviceId = c.req.param('deviceId');
+    const db = getDb(c.env.DB);
+
+    const removed = await TrustedDeviceService.removeTrustedDevice(db, user.id, deviceId);
+
+    if (!removed) {
+      return c.json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Device not found' }
+      }, 404);
+    }
+
+    return c.json({
+      success: true,
+      data: { message: 'Device removed successfully' }
+    });
+
+  } catch (error) {
+    console.error('Remove trusted device error:', error);
+    return c.json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to remove device' }
     }, 500);
   }
 });

@@ -501,10 +501,42 @@ export const userMFA = sqliteTable('user_mfa', {
   secret: text('secret').notNull(),
   isEnabled: integer('is_enabled', { mode: 'boolean' }).notNull().default(false),
   backupCodes: text('backup_codes'), // JSON array of hashed backup codes
+  recoveryEmail: text('recovery_email'), // Optional verified recovery email
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 }, (table) => ({
   userIdx: index('idx_user_mfa_user').on(table.userId),
+}));
+
+// Trusted Devices for MFA (Remember Device feature)
+export const trustedDevices = sqliteTable('trusted_devices', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id),
+  deviceName: text('device_name').notNull(), // Browser/OS identifier
+  deviceFingerprint: text('device_fingerprint').notNull().unique(), // Hashed fingerprint
+  ipAddress: text('ip_address'),
+  userAgent: text('user_agent'),
+  lastUsedAt: integer('last_used_at', { mode: 'timestamp' }).notNull(),
+  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(), // 30 days from creation
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  userIdx: index('idx_trusted_devices_user').on(table.userId),
+  fingerprintIdx: index('idx_trusted_devices_fingerprint').on(table.deviceFingerprint),
+  expiresIdx: index('idx_trusted_devices_expires').on(table.expiresAt),
+}));
+
+// Tenant MFA Settings (Admin policy)
+export const tenantMFASettings = sqliteTable('tenant_mfa_settings', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull().unique().references(() => tenants.id),
+  enforceMFA: integer('enforce_mfa', { mode: 'boolean' }).notNull().default(false), // Require all users to enable MFA
+  gracePeriodDays: integer('grace_period_days').notNull().default(7), // Days to enable MFA after enforcement
+  enforcedAt: integer('enforced_at', { mode: 'timestamp' }), // When enforcement started
+  enforcedBy: text('enforced_by').references(() => users.id), // Admin who enabled enforcement
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  tenantIdx: index('idx_tenant_mfa_settings_tenant').on(table.tenantId),
 }));
 
 // Tenant Analytics

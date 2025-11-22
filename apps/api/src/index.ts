@@ -22,6 +22,7 @@ import globalAdmin from './routes/global-admin';
 import pdfRouter from './routes/pdf';
 import { mfaRouter } from './routes/admin-mfa';
 import { userMFARouter } from './routes/user-mfa';
+import { tenantMFASettingsRouter } from './routes/tenant-mfa-settings';
 import { adminAnalyticsRouter } from './routes/admin-analytics';
 import { adminTenantRouter } from './routes/admin-tenants';
 import adminSecurity from './routes/admin-security';
@@ -68,6 +69,7 @@ app.route('/api/ai', aiRouter);
 app.route('/api/banking', banking);
 app.route('/api/pdf', pdfRouter);
 app.route('/api/mfa', userMFARouter);
+app.route('/api/tenant-mfa-settings', tenantMFASettingsRouter);
 
 // Diagnostic: identify deployed script & version
 app.get('/api/_whoami', c => {

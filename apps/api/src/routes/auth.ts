@@ -4,6 +4,7 @@ import * as bcrypt from 'bcryptjs';
 import { eq, and } from 'drizzle-orm';
 import { getDb, tenants, users, userMFA, globalAdminMFA } from '../db';
 import { LoginSchema, RegisterSchema, RefreshTokenSchema } from '@finhome360/shared';
+import { TrustedDeviceService } from '../services/trusted-devices';
 import { authRateLimiter } from '../middleware/rateLimit';
 import { createHybridEmailService } from '../services/hybridEmail';
 import type { Env } from '../types';
@@ -129,16 +130,27 @@ auth.post('/login', async c => {
       ))
       .get();
 
-    // If MFA is enabled, require MFA verification before issuing tokens
+    // If MFA is enabled, check if device is trusted
     if (mfaData) {
-      return c.json({
-        success: true,
-        data: {
-          mfaRequired: true,
-          email: user.email,
-          message: 'MFA verification required'
-        }
-      });
+      const userAgent = c.req.header('user-agent') || '';
+      const ipAddress = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for');
+      const deviceFingerprint = TrustedDeviceService.generateFingerprint(userAgent, ipAddress);
+
+      const isTrusted = await TrustedDeviceService.isTrustedDevice(db, user.id, deviceFingerprint);
+
+      // If device is not trusted, require MFA verification
+      if (!isTrusted) {
+        return c.json({
+          success: true,
+          data: {
+            mfaRequired: true,
+            email: user.email,
+            message: 'MFA verification required'
+          }
+        });
+      }
+
+      // Device is trusted, skip MFA and continue with normal login
     }
 
     // Generate tokens (only if MFA is not enabled)
