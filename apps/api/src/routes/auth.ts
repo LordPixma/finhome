@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import * as jose from 'jose';
 import * as bcrypt from 'bcryptjs';
 import { eq, and } from 'drizzle-orm';
-import { getDb, tenants, users } from '../db';
+import { getDb, tenants, users, userMFA, globalAdminMFA } from '../db';
 import { LoginSchema, RegisterSchema, RefreshTokenSchema } from '@finhome360/shared';
 import { authRateLimiter } from '../middleware/rateLimit';
 import { createHybridEmailService } from '../services/hybridEmail';
@@ -119,7 +119,29 @@ auth.post('/login', async c => {
       );
     }
 
-    // Generate tokens
+    // Check if MFA is enabled for this user
+    const mfaTable = user.isGlobalAdmin ? globalAdminMFA : userMFA;
+    const mfaData = await db.select()
+      .from(mfaTable)
+      .where(and(
+        eq(mfaTable.userId, user.id),
+        eq(mfaTable.isEnabled, true)
+      ))
+      .get();
+
+    // If MFA is enabled, require MFA verification before issuing tokens
+    if (mfaData) {
+      return c.json({
+        success: true,
+        data: {
+          mfaRequired: true,
+          email: user.email,
+          message: 'MFA verification required'
+        }
+      });
+    }
+
+    // Generate tokens (only if MFA is not enabled)
     const tokens = await generateTokens(
       user.id,
       user.email,

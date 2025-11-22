@@ -17,7 +17,6 @@ import {
   BellIcon,
   ChartPieIcon,
   SparklesIcon,
-  LinkIcon,
   ArrowDownTrayIcon,
   DocumentTextIcon,
   Cog6ToothIcon,

@@ -494,6 +494,19 @@ export const globalAdminMFA = sqliteTable('global_admin_mfa', {
   userIdx: index('idx_global_admin_mfa_user').on(table.userId),
 }));
 
+// MFA for Regular Users
+export const userMFA = sqliteTable('user_mfa', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id),
+  secret: text('secret').notNull(),
+  isEnabled: integer('is_enabled', { mode: 'boolean' }).notNull().default(false),
+  backupCodes: text('backup_codes'), // JSON array of hashed backup codes
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  userIdx: index('idx_user_mfa_user').on(table.userId),
+}));
+
 // Tenant Analytics
 export const tenantAnalytics = sqliteTable('tenant_analytics', {
   id: text('id').primaryKey(),

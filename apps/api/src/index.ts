@@ -21,6 +21,7 @@ import banking from './routes/banking';
 import globalAdmin from './routes/global-admin';
 import pdfRouter from './routes/pdf';
 import { mfaRouter } from './routes/admin-mfa';
+import { userMFARouter } from './routes/user-mfa';
 import { adminAnalyticsRouter } from './routes/admin-analytics';
 import { adminTenantRouter } from './routes/admin-tenants';
 import adminSecurity from './routes/admin-security';
@@ -66,6 +67,7 @@ app.route('/api/tenant', tenant);
 app.route('/api/ai', aiRouter);
 app.route('/api/banking', banking);
 app.route('/api/pdf', pdfRouter);
+app.route('/api/mfa', userMFARouter);
 
 // Diagnostic: identify deployed script & version
 app.get('/api/_whoami', c => {
