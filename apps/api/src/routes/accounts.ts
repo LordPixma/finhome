@@ -269,6 +269,58 @@ accountsRouter.delete('/:id', async c => {
   }
 });
 
-// Bank sync endpoint removed for Bankless edition
+// Sync account transactions from bank
+accountsRouter.post('/:id/sync', async c => {
+  try {
+    const id = c.req.param('id');
+    const tenantId = c.get('tenantId')!;
+    const db = getDb(c.env.DB);
+
+    // Find the bank account linked to this Finhome account
+    const bankAccount = await db
+      .select({
+        connectionId: bankAccounts.connectionId,
+        providerAccountId: bankAccounts.providerAccountId,
+      })
+      .from(bankAccounts)
+      .leftJoin(accounts, eq(accounts.id, bankAccounts.accountId))
+      .where(and(eq(bankAccounts.accountId, id), eq(accounts.tenantId, tenantId)))
+      .get();
+
+    if (!bankAccount || !bankAccount.connectionId) {
+      return c.json(
+        {
+          success: false,
+          error: { code: 'NOT_LINKED', message: 'This account is not linked to a bank' }
+        },
+        400
+      );
+    }
+
+    // Import TransactionSyncService
+    const { TransactionSyncService } = await import('../services/transactionSync');
+    const syncService = new TransactionSyncService(db, c.env);
+
+    // Sync the connection (which will sync all accounts under it)
+    const result = await syncService.syncConnection(bankAccount.connectionId);
+
+    return c.json({
+      success: true,
+      data: {
+        message: 'Account synced successfully',
+        transactionsImported: result.totalTransactions || 0,
+      },
+    });
+  } catch (error) {
+    console.error('Error syncing account:', error);
+    return c.json(
+      {
+        success: false,
+        error: { code: 'INTERNAL_ERROR', message: 'Failed to sync account' },
+      },
+      500
+    );
+  }
+});
 
 export default accountsRouter;
