@@ -6,7 +6,6 @@
 
 import { Hono } from 'hono';
 import { authMiddleware } from '../middleware/auth';
-import { subdomainMiddleware } from '../middleware/subdomain';
 import { validateRequest } from '../middleware/validation';
 import { getDb, transactions, categories } from '../db';
 import { CloudflareAIService } from '../services/workersai.service';
@@ -16,9 +15,9 @@ import { z } from 'zod';
 
 const aiRouter = new Hono<Env>();
 
-// Apply auth and tenant middleware to all routes
+// Apply auth middleware to all routes
+// Note: Subdomain middleware disabled - tenant context comes from JWT in auth middleware
 aiRouter.use('*', authMiddleware);
-aiRouter.use('*', subdomainMiddleware);
 
 // Index route to enumerate available AI endpoints (prevents base path 404 confusion)
 aiRouter.get('/', c => {
@@ -35,7 +34,7 @@ aiRouter.get('/', c => {
         'GET /api/ai/budget-recommendations',
         'GET /api/ai/report'
       ],
-      note: 'All routes require Authorization bearer token and tenant subdomain.'
+      note: 'All routes require Authorization bearer token. Tenant context extracted from JWT.'
     }
   });
 });
