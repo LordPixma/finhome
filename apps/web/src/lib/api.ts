@@ -463,9 +463,9 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ token, secret })
     }),
-    verify: (email: string, token: string) => apiClient('/api/mfa/verify', {
+    verify: (email: string, token: string, rememberDevice?: boolean) => apiClient('/api/mfa/verify', {
       method: 'POST',
-      body: JSON.stringify({ email, token }),
+      body: JSON.stringify({ email, token, rememberDevice }),
       headers: {} // No auth header for MFA verification during login
     }),
     disable: (token: string) => apiClient('/api/mfa/disable', {
@@ -473,6 +473,15 @@ export const api = {
       body: JSON.stringify({ token })
     }),
     regenerateBackupCodes: () => apiClient('/api/mfa/regenerate-backup-codes', { method: 'POST' }),
+    setRecoveryEmail: (email: string) => apiClient('/api/mfa/recovery-email', {
+      method: 'POST',
+      body: JSON.stringify({ email })
+    }),
+    sendBackupCodes: () => apiClient('/api/mfa/send-backup-codes', { method: 'POST' }),
+    getTrustedDevices: () => apiClient('/api/mfa/trusted-devices'),
+    removeTrustedDevice: (deviceId: string) => apiClient(`/api/mfa/trusted-devices/${deviceId}`, {
+      method: 'DELETE'
+    }),
   },
 };
 

@@ -16,6 +16,7 @@ export default function LoginPage() {
   const [mfaRequired, setMfaRequired] = useState(false);
   const [mfaCode, setMfaCode] = useState('');
   const [storedEmail, setStoredEmail] = useState('');
+  const [rememberDevice, setRememberDevice] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,7 +49,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const response = await api.mfa.verify(storedEmail, mfaCode) as any;
+      const response = await api.mfa.verify(storedEmail, mfaCode, rememberDevice) as any;
 
       if (response.success && response.data.accessToken) {
         tokenManager.setTokens(response.data.accessToken, response.data.refreshToken);
@@ -193,6 +194,19 @@ export default function LoginPage() {
                   <p className="text-sm text-gray-500 mt-3 text-center">
                     You can also use a backup code if you've lost access to your authenticator app
                   </p>
+                </div>
+
+                <div className="flex items-center">
+                  <input
+                    id="rememberDevice"
+                    type="checkbox"
+                    checked={rememberDevice}
+                    onChange={(e) => setRememberDevice(e.target.checked)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 bg-gray-900 border-gray-700 rounded"
+                  />
+                  <label htmlFor="rememberDevice" className="ml-2 block text-sm text-gray-300">
+                    Remember this device for 30 days
+                  </label>
                 </div>
 
                 <button

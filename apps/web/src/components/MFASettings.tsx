@@ -23,6 +23,15 @@ interface MFASetupData {
   backupCodes: string[];
 }
 
+interface TrustedDevice {
+  id: string;
+  deviceName: string;
+  ipAddress: string;
+  lastUsedAt: Date;
+  expiresAt: Date;
+  createdAt: Date;
+}
+
 export function MFASettings() {
   const [status, setStatus] = useState<MFAStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -38,9 +47,20 @@ export function MFASettings() {
   const [success, setSuccess] = useState('');
   const [copiedCodes, setCopiedCodes] = useState(false);
 
+  // Recovery Email state
+  const [recoveryEmail, setRecoveryEmail] = useState('');
+  const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
+
+  // Trusted Devices state
+  const [trustedDevices, setTrustedDevices] = useState<TrustedDevice[]>([]);
+  const [loadingDevices, setLoadingDevices] = useState(false);
+
   useEffect(() => {
     loadMFAStatus();
-  }, []);
+    if (status?.isEnabled) {
+      loadTrustedDevices();
+    }
+  }, [status?.isEnabled]);
 
   const loadMFAStatus = async () => {
     try {
@@ -151,6 +171,69 @@ export function MFASettings() {
     URL.revokeObjectURL(url);
   };
 
+  const loadTrustedDevices = async () => {
+    try {
+      setLoadingDevices(true);
+      const response = await api.mfa.getTrustedDevices() as any;
+      if (response.success) {
+        setTrustedDevices(response.data);
+      }
+    } catch (err: any) {
+      console.error('Failed to load trusted devices:', err);
+    } finally {
+      setLoadingDevices(false);
+    }
+  };
+
+  const handleRemoveDevice = async (deviceId: string) => {
+    try {
+      setError('');
+      const response = await api.mfa.removeTrustedDevice(deviceId) as any;
+      if (response.success) {
+        setSuccess('Device removed successfully');
+        await loadTrustedDevices();
+        setTimeout(() => setSuccess(''), 3000);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to remove device');
+    }
+  };
+
+  const handleSetRecoveryEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!recoveryEmail) return;
+
+    try {
+      setIsUpdatingEmail(true);
+      setError('');
+      const response = await api.mfa.setRecoveryEmail(recoveryEmail) as any;
+      if (response.success) {
+        setSuccess('Recovery email updated successfully');
+        setTimeout(() => setSuccess(''), 3000);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to set recovery email');
+    } finally {
+      setIsUpdatingEmail(false);
+    }
+  };
+
+  const handleSendBackupCodes = async () => {
+    try {
+      setIsProcessing(true);
+      setError('');
+      const response = await api.mfa.sendBackupCodes() as any;
+      if (response.success) {
+        setSuccess(response.data.message || 'Backup codes sent to recovery email');
+        setTimeout(() => setSuccess(''), 3000);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to send backup codes');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -247,6 +330,90 @@ export function MFASettings() {
           </p>
         </div>
       </div>
+
+      {/* Recovery Email Section - Only show if MFA is enabled */}
+      {status?.isEnabled && (
+        <div className="bg-white border border-gray-200 rounded-lg p-6 mt-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Recovery Email</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Set a recovery email to receive backup codes if you lose access to your authenticator app.
+          </p>
+
+          <form onSubmit={handleSetRecoveryEmail} className="flex gap-3">
+            <input
+              type="email"
+              value={recoveryEmail}
+              onChange={(e) => setRecoveryEmail(e.target.value)}
+              placeholder="recovery@example.com"
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              required
+            />
+            <Button type="submit" disabled={isUpdatingEmail || !recoveryEmail}>
+              {isUpdatingEmail ? 'Saving...' : 'Save Email'}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handleSendBackupCodes}
+              disabled={isProcessing || !recoveryEmail}
+            >
+              Send Codes
+            </Button>
+          </form>
+        </div>
+      )}
+
+      {/* Trusted Devices Section - Only show if MFA is enabled */}
+      {status?.isEnabled && (
+        <div className="bg-white border border-gray-200 rounded-lg p-6 mt-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Trusted Devices</h3>
+              <p className="text-sm text-gray-600 mt-1">
+                Devices that are trusted for 30 days and don't require MFA verification
+              </p>
+            </div>
+          </div>
+
+          {loadingDevices ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+            </div>
+          ) : trustedDevices.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <p>No trusted devices yet</p>
+              <p className="text-sm mt-2">Check "Remember this device" when logging in to add a device</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {trustedDevices.map((device) => (
+                <div key={device.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-gray-900">{device.deviceName}</span>
+                      <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">Trusted</span>
+                    </div>
+                    <div className="text-sm text-gray-500 mt-1">
+                      <span>IP: {device.ipAddress}</span>
+                      <span className="mx-2">•</span>
+                      <span>Last used: {new Date(device.lastUsedAt).toLocaleDateString()}</span>
+                      <span className="mx-2">•</span>
+                      <span>Expires: {new Date(device.expiresAt).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => handleRemoveDevice(device.id)}
+                    variant="secondary"
+                    className="bg-red-50 text-red-600 hover:bg-red-100 border-red-200 text-sm"
+                  >
+                    Remove
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Setup Modal */}
       {showSetupModal && setupData && (
