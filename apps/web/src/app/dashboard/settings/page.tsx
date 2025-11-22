@@ -7,6 +7,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { Button, Input, Select } from '@/components/ui';
 import { api } from '@/lib/api';
 import TenantDeletionModal from '@/components/TenantDeletionModal';
+import { MFASettings } from '@/components/MFASettings';
 
 interface UserSettings {
   id: string;
@@ -609,10 +610,20 @@ export default function SettingsPage() {
 
           {/* Security Tab */}
           {activeTab === 'security' && (
-            <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                <span className="text-2xl">🔒</span> Security Settings
-              </h2>
+            <div className="space-y-6">
+              {/* MFA Settings Section */}
+              <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+                <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                  <span className="text-2xl">🔒</span> Two-Factor Authentication
+                </h2>
+                <MFASettings />
+              </div>
+
+              {/* Password Change Section */}
+              <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+                <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                  <span className="text-2xl">🔑</span> Password
+                </h2>
 
               <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
                 <div>
@@ -658,9 +669,10 @@ export default function SettingsPage() {
                   </Button>
                 </div>
               </form>
+              </div>
 
               {/* Danger Zone */}
-              <div className="mt-12 border-t border-gray-200 pt-8">
+              <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
                 <div className="bg-red-50 border border-red-200 rounded-xl p-6">
                   <h3 className="text-lg font-bold text-red-900 mb-4 flex items-center gap-2">
                     <span className="text-2xl">⚠️</span> Danger Zone

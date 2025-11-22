@@ -454,5 +454,25 @@ export const api = {
     updateAlertRule: (id: string, data: any) => apiClient(`/api/admin/metrics/alert-rules/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     toggleAlertRule: (id: string) => apiClient(`/api/admin/metrics/alert-rules/${id}/toggle`, { method: 'POST' }),
   },
+
+  // User MFA
+  mfa: {
+    getStatus: () => apiClient('/api/mfa/status'),
+    setup: () => apiClient('/api/mfa/setup', { method: 'POST' }),
+    confirm: (token: string, secret: string) => apiClient('/api/mfa/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ token, secret })
+    }),
+    verify: (email: string, token: string) => apiClient('/api/mfa/verify', {
+      method: 'POST',
+      body: JSON.stringify({ email, token }),
+      headers: {} // No auth header for MFA verification during login
+    }),
+    disable: (token: string) => apiClient('/api/mfa/disable', {
+      method: 'POST',
+      body: JSON.stringify({ token })
+    }),
+    regenerateBackupCodes: () => apiClient('/api/mfa/regenerate-backup-codes', { method: 'POST' }),
+  },
 };
 
