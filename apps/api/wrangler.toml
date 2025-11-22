@@ -42,9 +42,9 @@ queue = "finhome-bill-reminders"
 max_batch_size = 10
 max_batch_timeout = 30
 
-# Transaction sync queues removed for Bankless edition
-
-# Cron triggers removed (no scheduled banking sync tasks in Bankless edition)
+# Cron Triggers - Automatic sync every 6 hours
+[triggers]
+crons = ["0 */6 * * *"]
 
 # AI Binding
 [ai]
