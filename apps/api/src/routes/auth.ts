@@ -291,6 +291,10 @@ auth.post('/register', async c => {
       })
       .run();
 
+    // Create default categories for the new tenant
+    const { createDefaultCategories } = await import('../services/defaultCategories');
+    await createDefaultCategories(db, tenantId);
+
     // Generate tokens
     const tokens = await generateTokens(userId, email, name, tenantId, 'admin', false, c.env.JWT_SECRET);
 

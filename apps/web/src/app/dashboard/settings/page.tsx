@@ -17,6 +17,7 @@ interface UserSettings {
   language: string;
   timezone: string;
   dateFormat: string;
+  dashboardTourCompleted?: boolean;
 }
 
 interface UserProfile {
@@ -594,6 +595,29 @@ export default function SettingsPage() {
                         { value: 'America/Los_Angeles', label: 'Los Angeles (PST)' },
                       ]}
                     />
+                  </div>
+
+                  <div className="border-t border-gray-200 pt-6 mt-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Dashboard Tour</h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Restart the dashboard tour to learn about all the features available in Finhome360.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={async () => {
+                        try {
+                          await api.updateSettings({ dashboardTourCompleted: false });
+                          setSuccessMessage('Dashboard tour reset! Navigate to the dashboard to start the tour.');
+                          setTimeout(() => setSuccessMessage(''), 3000);
+                          window.location.href = '/dashboard';
+                        } catch (error) {
+                          setErrorMessage('Failed to reset tour');
+                        }
+                      }}
+                    >
+                      Restart Dashboard Tour
+                    </Button>
                   </div>
 
                   <div className="flex justify-end">

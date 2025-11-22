@@ -7,6 +7,7 @@ import { api } from '@/lib/api';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { CategorizationStatsWidget } from '@/components/ai';
 import StatCard from '@/components/StatCard';
+import { DashboardTour } from '@/components/tour/DashboardTour';
 import {
   CurrencyDollarIcon,
   ArrowTrendingUpIcon,
@@ -49,7 +50,8 @@ export default function DashboardPage() {
   const [monthlyExpenses, setMonthlyExpenses] = useState(0);
   const [timeRange, setTimeRange] = useState<'30days' | 'alltime'>('30days');
   const [syncingAccounts, setSyncingAccounts] = useState<Set<string>>(new Set());
-  const [userSettings, setUserSettings] = useState<{currency: string; currencySymbol: string} | null>(null);
+  const [userSettings, setUserSettings] = useState<{currency: string; currencySymbol: string; dashboardTourCompleted?: boolean} | null>(null);
+  const [runTour, setRunTour] = useState(false);
 
   const loadDashboardData = useCallback(async () => {
     try {
@@ -61,13 +63,19 @@ export default function DashboardPage() {
         if (settingsRes.success && settingsRes.data) {
           setUserSettings({
             currency: settingsRes.data.currency || 'GBP',
-            currencySymbol: settingsRes.data.currencySymbol || '£'
+            currencySymbol: settingsRes.data.currencySymbol || '£',
+            dashboardTourCompleted: settingsRes.data.dashboardTourCompleted || false
           });
+
+          // Start tour if not completed
+          if (!settingsRes.data.dashboardTourCompleted) {
+            setTimeout(() => setRunTour(true), 1000);
+          }
         }
       } catch (error) {
         console.error('Failed to load user settings:', error);
         // Use defaults if settings fail to load
-        setUserSettings({ currency: 'GBP', currencySymbol: '£' });
+        setUserSettings({ currency: 'GBP', currencySymbol: '£', dashboardTourCompleted: false });
       }
 
       // Load accounts
@@ -146,6 +154,15 @@ export default function DashboardPage() {
     }
   };
 
+  const handleTourFinish = async () => {
+    setRunTour(false);
+    try {
+      await api.updateSettings({ dashboardTourCompleted: true });
+    } catch (error) {
+      console.error('Failed to update tour status:', error);
+    }
+  };
+
   if (isLoading) {
     return (
       <ProtectedRoute>
@@ -196,7 +213,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Professional Stats Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 stagger">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 stagger" data-tour="monthly-summary">
           {/* Total Balance - Primary Gradient */}
           <StatCard
             title="Total Balance"
@@ -240,7 +257,7 @@ export default function DashboardPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           {/* Accounts Section - Modern Banking Design */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2" data-tour="accounts-section">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 p-7 hover:shadow-lg transition-all duration-300">
               <div className="flex items-center justify-between mb-7">
                 <div>
@@ -250,6 +267,7 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-3">
                   {accounts.length > 0 && (
                     <button
+                      data-tour="sync-all-btn"
                       onClick={() => accounts.forEach(account => syncAccount(account.id))}
                       disabled={syncingAccounts.size > 0}
                       className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
@@ -285,6 +303,7 @@ export default function DashboardPage() {
                 <a
                   href="/dashboard/accounts"
                   className="btn-primary"
+                  data-tour="add-account-btn"
                 >
                   Add your first account
                 </a>
@@ -357,6 +376,7 @@ export default function DashboardPage() {
                 <a
                   href="/dashboard/transactions"
                   className="group flex items-center p-3.5 rounded-xl border border-gray-200 hover:border-emerald-300 hover:bg-gradient-to-r hover:from-emerald-50 hover:to-green-50 hover:shadow-sm transition-all duration-200 w-full"
+                  data-tour="add-transaction-btn"
                 >
                   <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-100 to-green-100 group-hover:from-emerald-200 group-hover:to-green-200 flex items-center justify-center transition-all shadow-sm">
                     <PlusIcon className="w-5 h-5 text-emerald-700" />
@@ -409,14 +429,14 @@ export default function DashboardPage() {
             </div>
 
             {/* AI Categorization Stats - Now below Quick Actions */}
-            <div>
+            <div data-tour="spending-insights">
               <CategorizationStatsWidget />
             </div>
           </div>
         </div>
 
         {/* Recent Transactions - Full Width Modern Design */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 p-7 hover:shadow-lg transition-all duration-300 mb-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 p-7 hover:shadow-lg transition-all duration-300 mb-6" data-tour="recent-transactions">
           <div className="flex items-center justify-between mb-7">
             <div>
               <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Recent Transactions</h2>
@@ -493,8 +513,7 @@ export default function DashboardPage() {
 
         </div>
       </DashboardLayout>
-      
-
+      <DashboardTour run={runTour} onFinish={handleTourFinish} />
     </ProtectedRoute>
   );
 }
