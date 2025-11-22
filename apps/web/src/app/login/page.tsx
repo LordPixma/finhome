@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import Footer from '@/components/Footer';
 import TextLogo from '@/components/TextLogo';
+import { api, tokenManager } from '@/lib/api';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -12,6 +13,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [mfaRequired, setMfaRequired] = useState(false);
+  const [mfaCode, setMfaCode] = useState('');
+  const [storedEmail, setStoredEmail] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,12 +23,58 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
+      const response = await api.login(email, password) as any;
+
+      // Check if MFA is required
+      if (response.success && response.data.mfaRequired) {
+        setMfaRequired(true);
+        setStoredEmail(email);
+        setIsLoading(false);
+        return;
+      }
+
+      // Normal login flow (no MFA)
       await login(email, password);
     } catch (err: any) {
       setError(err.message || 'Failed to login');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleMFAVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const response = await api.mfa.verify(storedEmail, mfaCode) as any;
+
+      if (response.success && response.data.accessToken) {
+        tokenManager.setTokens(response.data.accessToken, response.data.refreshToken);
+
+        // Decode token to check if user is a global admin
+        const payload = JSON.parse(atob(response.data.accessToken.split('.')[1]));
+        const isGlobalAdmin = payload.isGlobalAdmin || payload.is_global_admin;
+
+        // Redirect based on user type
+        if (isGlobalAdmin) {
+          window.location.href = '/admin';
+        } else {
+          window.location.href = '/dashboard';
+        }
+      }
+    } catch (err: any) {
+      setError(err.message || 'Invalid verification code');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleBackToLogin = () => {
+    setMfaRequired(false);
+    setMfaCode('');
+    setError('');
   };
 
   return (
@@ -102,8 +152,14 @@ export default function LoginPage() {
 
           <div className="bg-black rounded-2xl shadow-2xl p-8 border border-gray-800">
             <div className="mb-8">
-              <h2 className="text-3xl font-bold text-white mb-2">Welcome back</h2>
-              <p className="text-gray-400">Please enter your credentials to continue</p>
+              <h2 className="text-3xl font-bold text-white mb-2">
+                {mfaRequired ? 'Verification Required' : 'Welcome back'}
+              </h2>
+              <p className="text-gray-400">
+                {mfaRequired
+                  ? 'Enter the 6-digit code from your authenticator app'
+                  : 'Please enter your credentials to continue'}
+              </p>
             </div>
 
             {error && (
@@ -115,7 +171,58 @@ export default function LoginPage() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            {mfaRequired ? (
+              <form onSubmit={handleMFAVerify} className="space-y-6">
+                <div>
+                  <label htmlFor="mfaCode" className="block text-sm font-medium text-gray-300 mb-4 text-center">
+                    Two-Factor Authentication Code
+                  </label>
+                  <input
+                    id="mfaCode"
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    required
+                    value={mfaCode}
+                    onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ''))}
+                    className="w-full px-4 py-4 bg-gray-900 border-2 border-gray-700 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-500 text-center text-2xl font-mono tracking-widest"
+                    placeholder="000000"
+                    disabled={isLoading}
+                    autoFocus
+                  />
+                  <p className="text-sm text-gray-500 mt-3 text-center">
+                    You can also use a backup code if you've lost access to your authenticator app
+                  </p>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoading || mfaCode.length !== 6}
+                  className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 focus:ring-4 focus:ring-blue-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                >
+                  {isLoading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Verifying...
+                    </>
+                  ) : (
+                    'Verify & Sign in'
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleBackToLogin}
+                  className="w-full text-gray-400 hover:text-white py-2 px-4 rounded-lg font-medium transition-colors"
+                >
+                  ← Back to login
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
                   Email address
@@ -182,13 +289,16 @@ export default function LoginPage() {
                 )}
               </button>
             </form>
+            )}
 
-            <p className="mt-8 text-center text-sm text-gray-400">
-              Don't have an account?{' '}
-              <Link href="/register" className="font-semibold text-blue-400 hover:text-blue-300">
-                Sign up for free
-              </Link>
-            </p>
+            {!mfaRequired && (
+              <p className="mt-8 text-center text-sm text-gray-400">
+                Don't have an account?{' '}
+                <Link href="/register" className="font-semibold text-blue-400 hover:text-blue-300">
+                  Sign up for free
+                </Link>
+              </p>
+            )}
           </div>
         </div>
       </div>
