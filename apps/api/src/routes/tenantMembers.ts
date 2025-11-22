@@ -80,8 +80,8 @@ router.post('/', validateRequest(InviteTenantMemberSchema), async (c) => {
       )
       .get();
 
-    // Limit to 3 total members (adjust based on subscription)
-    if (memberCount && memberCount.count >= 3) {
+    // Limit to 10 total members (adjust based on subscription)
+    if (memberCount && memberCount.count >= 10) {
       return c.json(
         {
           success: false,
@@ -94,23 +94,24 @@ router.post('/', validateRequest(InviteTenantMemberSchema), async (c) => {
       );
     }
 
-    // Check if email already exists in this tenant
-    const existingUser = await db
+    // Check if user is already a member of this tenant
+    const existingMember = await db
       .select()
-      .from(users)
-      .where(and(eq(users.email, body.email), eq(users.tenantId, tenantId)))
+      .from(tenantMembers)
+      .leftJoin(users, eq(users.id, tenantMembers.userId))
+      .where(and(eq(users.email, body.email), eq(tenantMembers.tenantId, tenantId)))
       .get();
 
-    if (existingUser) {
+    if (existingMember) {
       return c.json(
         {
           success: false,
-          error: { code: 'EMAIL_EXISTS', message: 'User with this email already exists' },
+          error: { code: 'MEMBER_ALREADY_EXISTS', message: 'A member with this email already exists in this family.' },
         },
         400
       );
     }
-
+    
     // Create new user account
     const now = new Date();
     const userId = crypto.randomUUID();
@@ -214,7 +215,6 @@ router.post('/', validateRequest(InviteTenantMemberSchema), async (c) => {
         ...member,
         userName: body.name,
         userEmail: body.email,
-        tempPassword, // Include temporarily for dev/testing
       },
     }, 201);
   } catch (error: any) {
