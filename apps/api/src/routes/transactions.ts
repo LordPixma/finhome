@@ -18,12 +18,24 @@ const transactionsRouter = new Hono<Env>();
 // Apply middleware
 transactionsRouter.use('*', authMiddleware, tenantMiddleware);
 
-// Get all transactions
+// Get all transactions with pagination
 transactionsRouter.get('/', async c => {
   const tenantId = c.get('tenantId')!;
   const db = getDb(c.env.DB);
 
-  const allTransactions = await db
+  // Parse pagination parameters from query string
+  const limitParam = c.req.query('limit');
+  const offsetParam = c.req.query('offset');
+
+  const limit = limitParam ? parseInt(limitParam, 10) : 100; // Default 100 items
+  const offset = offsetParam ? parseInt(offsetParam, 10) : 0;
+
+  // Enforce maximum limit to prevent abuse
+  const maxLimit = 500;
+  const safeLimit = Math.min(Math.max(1, limit), maxLimit);
+  const safeOffset = Math.max(0, offset);
+
+  const paginatedTransactions = await db
     .select({
       id: transactions.id,
       tenantId: transactions.tenantId,
@@ -52,11 +64,18 @@ transactionsRouter.get('/', async c => {
     .leftJoin(categories, eq(transactions.categoryId, categories.id))
     .where(eq(transactions.tenantId, tenantId))
     .orderBy(desc(transactions.date))
+    .limit(safeLimit)
+    .offset(safeOffset)
     .all();
 
   return c.json({
     success: true,
-    data: allTransactions,
+    data: paginatedTransactions,
+    pagination: {
+      limit: safeLimit,
+      offset: safeOffset,
+      count: paginatedTransactions.length,
+    },
   });
 });
 

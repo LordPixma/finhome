@@ -2,12 +2,14 @@ import { Hono } from 'hono';
 import { AdvancedUserManagementService, UserRole } from '../services/user-management';
 import { z } from 'zod';
 import { authMiddleware } from '../middleware/auth';
+import { adminRoleMiddleware } from '../middleware/admin-role';
 import type { AppContext } from '../types';
 
 const userManagement = new Hono<{ Bindings: any; Variables: any }>();
 
-// Auth middleware (allows authenticated admin operations)
+// Auth middleware (allows authenticated admin operations only)
 userManagement.use('/*', authMiddleware);
+userManagement.use('/*', adminRoleMiddleware);
 
 // Validation schemas
 const getUsersSchema = z.object({

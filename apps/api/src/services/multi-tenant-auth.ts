@@ -1,6 +1,7 @@
 import { eq, and } from 'drizzle-orm';
 import { getDb, globalUsers, tenantUsers, userSessions, tenants } from '../db';
 import * as jwt from 'jose';
+import bcrypt from 'bcryptjs';
 import type { Env } from '../types';
 
 export interface GlobalUser {
@@ -369,12 +370,7 @@ export class MultiTenantAuthService {
   }
 
   private async hashPassword(password: string): Promise<string> {
-    // This is a simple hash - in production use bcrypt or similar
-    const encoder = new TextEncoder();
-    const data = encoder.encode(password);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    return Array.from(new Uint8Array(hashBuffer))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('');
+    // Use bcrypt with salt rounds of 10 for secure password hashing
+    return await bcrypt.hash(password, 10);
   }
 }

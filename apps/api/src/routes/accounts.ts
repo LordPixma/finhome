@@ -27,43 +27,36 @@ accountsRouter.get('/', async c => {
     const tenantId = c.get('tenantId')!;
     const db = getDb(c.env.DB);
 
-    // Get all accounts for this tenant
-    const allAccounts = await db
-      .select()
+    // Get all accounts with their bank connection status in a single query using JOINs
+    // This eliminates the N+1 query problem
+    const accountsWithConnections = await db
+      .select({
+        id: accounts.id,
+        name: accounts.name,
+        type: accounts.type,
+        balance: accounts.balance,
+        currency: accounts.currency,
+        tenantId: accounts.tenantId,
+        createdAt: accounts.createdAt,
+        updatedAt: accounts.updatedAt,
+        connectionStatus: bankConnections.status,
+      })
       .from(accounts)
+      .leftJoin(bankAccounts, eq(bankAccounts.accountId, accounts.id))
+      .leftJoin(bankConnections, eq(bankConnections.id, bankAccounts.connectionId))
       .where(eq(accounts.tenantId, tenantId))
       .orderBy(desc(accounts.createdAt))
       .all();
 
-    // Filter out accounts that belong to disconnected bank connections
-  const filteredAccounts: typeof allAccounts = [];
-    for (const account of allAccounts) {
-      // Check if this account is linked to a bank account
-      const bankAccount = await db
-        .select({ connectionId: bankAccounts.connectionId })
-        .from(bankAccounts)
-        .where(eq(bankAccounts.accountId, account.id))
-        .get();
+    // Filter to include:
+    // 1. Manual accounts (no bank connection) - connectionStatus will be null
+    // 2. Accounts with active bank connections
+    const filteredAccounts = accountsWithConnections.filter(
+      account => !account.connectionStatus || account.connectionStatus === 'active'
+    );
 
-      if (!bankAccount) {
-        // Manual account (no bank connection) - include it
-        filteredAccounts.push(account);
-      } else {
-        // Check if the connection is active
-        const connection = await db
-          .select({ status: bankConnections.status })
-          .from(bankConnections)
-          .where(eq(bankConnections.id, bankAccount.connectionId))
-          .get();
-
-        // Only include if connection is active
-        if (connection && connection.status === 'active') {
-          filteredAccounts.push(account);
-        }
-      }
-    }
-
-    const normalizedAccounts = filteredAccounts.map(account => ({
+    // Remove the connectionStatus field and normalize account types
+    const normalizedAccounts = filteredAccounts.map(({ connectionStatus, ...account }) => ({
       ...account,
       type: fromDbAccountType(account.type as DbAccountType),
     }));

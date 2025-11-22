@@ -4,13 +4,19 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEffect } from 'react';
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       window.location.href = '/login';
     }
-  }, [isAuthenticated, isLoading]);
+
+    // Redirect global admins to admin dashboard
+    // Global admins should not access the regular tenant dashboard
+    if (!isLoading && isAuthenticated && user?.isGlobalAdmin) {
+      window.location.href = '/admin';
+    }
+  }, [isAuthenticated, isLoading, user]);
 
   if (isLoading) {
     return (
@@ -21,6 +27,11 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!isAuthenticated) {
+    return null;
+  }
+
+  // Prevent global admins from seeing regular dashboard
+  if (user?.isGlobalAdmin) {
     return null;
   }
 
