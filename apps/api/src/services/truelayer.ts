@@ -206,9 +206,10 @@ export class TrueLayerService {
   }
 
   /**
-   * Fetch transactions for an account
+   * Fetch transactions for an account with pagination support
    * @param from ISO date string (e.g., '2024-01-01')
    * @param to ISO date string (e.g., '2024-12-31')
+   * @returns All transactions across all pages
    */
   async getTransactions(
     accessToken: string,
@@ -216,22 +217,52 @@ export class TrueLayerService {
     from: string,
     to: string
   ): Promise<TrueLayerTransaction[]> {
-    const url = `${this.baseUrl}/data/v1/accounts/${accountId}/transactions`;
-    const params = new URLSearchParams({ from, to });
+    const allTransactions: TrueLayerTransaction[] = [];
+    let cursor: string | null = null;
+    let pageCount = 0;
+    const maxPages = 50; // Safety limit to prevent infinite loops (50 pages * ~100 transactions = ~5000 transactions)
 
-    const response = await fetch(`${url}?${params.toString()}`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
+    do {
+      const url = `${this.baseUrl}/data/v1/accounts/${accountId}/transactions`;
+      const params = new URLSearchParams({ from, to });
 
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Transactions fetch failed: ${error}`);
-    }
+      // Add cursor if we're fetching subsequent pages
+      if (cursor) {
+        params.append('cursor', cursor);
+      }
 
-    const data = (await response.json()) as any;
-    return data.results || [];
+      const response = await fetch(`${url}?${params.toString()}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`Transactions fetch failed: ${error}`);
+      }
+
+      const data = (await response.json()) as any;
+      const results = data.results || [];
+      allTransactions.push(...results);
+
+      // Check for next page cursor
+      cursor = data.cursor || null;
+      pageCount++;
+
+      // Log pagination progress
+      console.log(`[TrueLayer] Fetched page ${pageCount}: ${results.length} transactions, total: ${allTransactions.length}, has more: ${!!cursor}`);
+
+      // Safety check to prevent infinite loops
+      if (pageCount >= maxPages) {
+        console.warn(`[TrueLayer] Reached maximum page limit (${maxPages}), stopping pagination`);
+        break;
+      }
+
+    } while (cursor); // Continue while there's a cursor for next page
+
+    console.log(`[TrueLayer] Completed fetch: ${allTransactions.length} total transactions across ${pageCount} pages`);
+    return allTransactions;
   }
 
   /**
