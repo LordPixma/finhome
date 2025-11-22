@@ -168,32 +168,32 @@ export default function DashboardPage() {
   return (
     <ProtectedRoute>
       <DashboardLayout>
-        {/* Professional Header with Gradient Background */}
-        <div className="bg-gradient-to-r from-primary-50 to-primary-100/50 -mx-6 -mt-6 px-6 pt-6 pb-8 mb-8 rounded-b-2xl">
+        {/* Modern Header with Subtle Gradient */}
+        <div className="bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 -mx-6 -mt-6 px-6 pt-8 pb-10 mb-6 border-b border-gray-200/50">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
-              <p className="text-gray-600">Welcome back! Here's your financial overview.</p>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">Financial Overview</h1>
+              <p className="text-gray-600 text-base">Track your accounts, transactions, and financial health</p>
             </div>
-            
-            {/* Time Range Toggle */}
-            <div className="flex gap-1 bg-white/80 backdrop-blur-sm p-1 rounded-lg shadow-sm border border-gray-200">
+
+            {/* Time Range Toggle - Modern Design */}
+            <div className="flex gap-1 bg-white p-1 rounded-xl shadow-sm border border-gray-200/80">
               <button
                 onClick={() => setTimeRange('30days')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
                   timeRange === '30days'
-                    ? 'bg-primary-500 text-white shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/60'
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/25'
+                    : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
                 }`}
               >
                 Last 30 Days
               </button>
               <button
                 onClick={() => setTimeRange('alltime')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
                   timeRange === 'alltime'
-                    ? 'bg-primary-500 text-white shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/60'
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/25'
+                    : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
                 }`}
               >
                 All Time
@@ -245,14 +245,14 @@ export default function DashboardPage() {
           />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-          {/* Accounts Section - Enhanced Design */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          {/* Accounts Section - Modern Banking Design */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl shadow-card border border-gray-100 p-6 hover:shadow-card-hover transition-shadow duration-300">
-              <div className="flex items-center justify-between mb-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 p-7 hover:shadow-lg transition-all duration-300">
+              <div className="flex items-center justify-between mb-7">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Accounts</h2>
-                  <p className="text-sm text-gray-600 mt-1">Your financial accounts overview</p>
+                  <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Accounts</h2>
+                  <p className="text-sm text-gray-500 mt-1.5">Manage your connected financial accounts</p>
                 </div>
                 <div className="flex items-center gap-3">
                   {accounts.length > 0 && (
@@ -347,69 +347,69 @@ export default function DashboardPage() {
           </div>
 
           {/* Right Column */}
-          <div className="space-y-8">
-            {/* Quick Actions - Moved to right side */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="mb-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-1 flex items-center gap-2">
-                  <div className="p-1.5 bg-primary-100 rounded-lg">
-                    <PlusIcon className="w-4 h-4 text-primary-600" />
+          <div className="space-y-6">
+            {/* Quick Actions - Modern Compact Design */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 p-6 hover:shadow-lg transition-all duration-300">
+              <div className="mb-5">
+                <h2 className="text-xl font-bold text-gray-900 tracking-tight mb-1.5 flex items-center gap-2">
+                  <div className="p-2 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+                    <PlusIcon className="w-4 h-4 text-blue-600" />
                   </div>
                   Quick Actions
                 </h2>
-                <p className="text-sm text-gray-600">Common tasks to manage your finances</p>
+                <p className="text-sm text-gray-500">Manage your finances</p>
               </div>
-              
-              <div className="space-y-3">
+
+              <div className="space-y-2.5">
                 <a
                   href="/dashboard/transactions"
-                  className="group flex items-center p-4 rounded-lg border border-gray-200 hover:border-success-300 hover:bg-success-50 transition-all duration-200 w-full"
+                  className="group flex items-center p-3.5 rounded-xl border border-gray-200 hover:border-emerald-300 hover:bg-gradient-to-r hover:from-emerald-50 hover:to-green-50 hover:shadow-sm transition-all duration-200 w-full"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-success-100 group-hover:bg-success-200 flex items-center justify-center transition-colors">
-                    <PlusIcon className="w-5 h-5 text-success-600" />
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-100 to-green-100 group-hover:from-emerald-200 group-hover:to-green-200 flex items-center justify-center transition-all shadow-sm">
+                    <PlusIcon className="w-5 h-5 text-emerald-700" />
                   </div>
-                  <div className="ml-4">
-                    <h3 className="text-base font-semibold text-gray-900">Add Transaction</h3>
-                    <p className="text-sm text-gray-600">Record income or expense</p>
+                  <div className="ml-3.5">
+                    <h3 className="text-sm font-bold text-gray-900">Add Transaction</h3>
+                    <p className="text-xs text-gray-500">Record income or expense</p>
                   </div>
                 </a>
-                
+
                 <a
                   href="/dashboard/budgets"
-                  className="group flex items-center p-4 rounded-lg border border-gray-200 hover:border-warning-300 hover:bg-warning-50 transition-all duration-200 w-full"
+                  className="group flex items-center p-3.5 rounded-xl border border-gray-200 hover:border-amber-300 hover:bg-gradient-to-r hover:from-amber-50 hover:to-yellow-50 hover:shadow-sm transition-all duration-200 w-full"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-warning-100 group-hover:bg-warning-200 flex items-center justify-center transition-colors">
-                    <ChartBarIcon className="w-5 h-5 text-warning-600" />
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-100 to-yellow-100 group-hover:from-amber-200 group-hover:to-yellow-200 flex items-center justify-center transition-all shadow-sm">
+                    <ChartBarIcon className="w-5 h-5 text-amber-700" />
                   </div>
-                  <div className="ml-4">
-                    <h3 className="text-base font-semibold text-gray-900">Set Budget</h3>
-                    <p className="text-sm text-gray-600">Plan your spending</p>
+                  <div className="ml-3.5">
+                    <h3 className="text-sm font-bold text-gray-900">Set Budget</h3>
+                    <p className="text-xs text-gray-500">Plan your spending</p>
                   </div>
                 </a>
-                
+
                 <a
                   href="/dashboard/bill-reminders"
-                  className="group flex items-center p-4 rounded-lg border border-gray-200 hover:border-error-300 hover:bg-error-50 transition-all duration-200 w-full"
+                  className="group flex items-center p-3.5 rounded-xl border border-gray-200 hover:border-rose-300 hover:bg-gradient-to-r hover:from-rose-50 hover:to-pink-50 hover:shadow-sm transition-all duration-200 w-full"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-error-100 group-hover:bg-error-200 flex items-center justify-center transition-colors">
-                    <BellIcon className="w-5 h-5 text-error-600" />
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-rose-100 to-pink-100 group-hover:from-rose-200 group-hover:to-pink-200 flex items-center justify-center transition-all shadow-sm">
+                    <BellIcon className="w-5 h-5 text-rose-700" />
                   </div>
-                  <div className="ml-4">
-                    <h3 className="text-base font-semibold text-gray-900">Add Reminder</h3>
-                    <p className="text-sm text-gray-600">Never miss bills</p>
+                  <div className="ml-3.5">
+                    <h3 className="text-sm font-bold text-gray-900">Add Reminder</h3>
+                    <p className="text-xs text-gray-500">Never miss bills</p>
                   </div>
                 </a>
-                
+
                 <a
                   href="/dashboard/import"
-                  className="group flex items-center p-4 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-primary-50 transition-all duration-200 w-full"
+                  className="group flex items-center p-3.5 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:shadow-sm transition-all duration-200 w-full"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-primary-100 group-hover:bg-primary-200 flex items-center justify-center transition-colors">
-                    <ArrowUpTrayIcon className="w-5 h-5 text-primary-600" />
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-100 to-indigo-100 group-hover:from-blue-200 group-hover:to-indigo-200 flex items-center justify-center transition-all shadow-sm">
+                    <ArrowUpTrayIcon className="w-5 h-5 text-blue-700" />
                   </div>
-                  <div className="ml-4">
-                    <h3 className="text-base font-semibold text-gray-900">Import File</h3>
-                    <p className="text-sm text-gray-600">Upload statements</p>
+                  <div className="ml-3.5">
+                    <h3 className="text-sm font-bold text-gray-900">Import File</h3>
+                    <p className="text-xs text-gray-500">Upload statements</p>
                   </div>
                 </a>
               </div>
@@ -422,12 +422,12 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Recent Transactions - Full Width */}
-        <div className="bg-white rounded-2xl shadow-card border border-gray-100 p-6 hover:shadow-card-hover transition-shadow duration-300 mb-8">
-          <div className="flex items-center justify-between mb-6">
+        {/* Recent Transactions - Full Width Modern Design */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 p-7 hover:shadow-lg transition-all duration-300 mb-6">
+          <div className="flex items-center justify-between mb-7">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">Recent Transactions</h2>
-              <p className="text-sm text-gray-600 mt-1">Your latest financial activity</p>
+              <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Recent Transactions</h2>
+              <p className="text-sm text-gray-500 mt-1.5">Your latest financial activity</p>
             </div>
             <a href="/dashboard/transactions" className="text-primary-600 hover:text-primary-700 font-medium text-sm flex items-center gap-1 transition-colors">
               View all 
