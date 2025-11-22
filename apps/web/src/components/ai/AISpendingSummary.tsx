@@ -67,9 +67,11 @@ export function AISpendingSummary() {
                 <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-1">
                   🧠
                 </div>
-                <div>
+                <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 mb-2">AI Analysis:</p>
-                  <p className="text-sm text-gray-700 leading-relaxed">{summary.summary}</p>
+                  <div className="max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                    <p className="text-sm text-gray-700 leading-relaxed">{summary.summary}</p>
+                  </div>
                 </div>
               </div>
             </div>
