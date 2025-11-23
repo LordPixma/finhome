@@ -79,6 +79,7 @@ router.put('/', validateRequest(UpdateUserSettingsSchema), async (c) => {
 
     if (!settings) {
       // Create new settings
+      console.log('[Settings] Creating new settings for user:', userId, 'tenant:', tenantId);
       settings = {
         id: crypto.randomUUID(),
         tenantUserId: userId,
@@ -97,17 +98,19 @@ router.put('/', validateRequest(UpdateUserSettingsSchema), async (c) => {
       await db.insert(userSettings).values(settings).run();
     } else {
       // Update existing settings
+      console.log('[Settings] Updating settings for user:', userId, 'tenant:', tenantId, 'body:', body);
       const updated = {
         ...body,
         updatedAt: now,
       };
 
-      await db
+      const result = await db
         .update(userSettings)
         .set(updated)
         .where(and(eq(userSettings.tenantUserId, userId), eq(userSettings.tenantId, tenantId!)))
         .run();
 
+      console.log('[Settings] Update result:', result);
       settings = { ...settings, ...updated };
     }
 
