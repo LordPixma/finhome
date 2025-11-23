@@ -1,6 +1,5 @@
 import { getDb, categories } from '../db';
 import { getCurrentTimestamp } from '../utils/timestamp';
-import type { D1Database } from '@cloudflare/workers-types';
 
 export interface DefaultCategory {
   name: string;

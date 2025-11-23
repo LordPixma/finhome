@@ -433,15 +433,11 @@ export class TransactionSyncService {
               amount: lastTransaction.amount,
               type: lastTransaction.type as 'income' | 'expense',
               frequency,
-              dayOfMonth: frequency === 'monthly' ? new Date(lastTransaction.date).getDate() : null,
-              dayOfWeek: frequency === 'weekly' || frequency === 'biweekly'
-                ? new Date(lastTransaction.date).getDay()
-                : null,
               startDate: new Date(group[0].date),
+              nextDate: nextDate,
               endDate: null,
-              nextOccurrence: nextDate,
-              isActive: true,
-              autoDetected: true,
+              status: 'active',
+              autoCreate: true,
               notes: `Auto-detected from ${group.length} similar transactions`,
               createdAt: new Date(),
               updatedAt: new Date(),
