@@ -27,13 +27,14 @@ const tourSteps: Step[] = [
   },
   {
     target: '[data-tour="add-account-btn"]',
-    content: 'Click here to add a new manual account or connect to your bank using TrueLayer integration.',
-    placement: 'bottom',
+    content: 'Click "View all" to manage your accounts. You can add manual accounts or connect to your bank using TrueLayer integration.',
+    placement: 'left',
   },
   {
     target: '[data-tour="sync-all-btn"]',
-    content: 'Use this button to sync all your connected bank accounts and import new transactions automatically.',
+    content: 'Use the "Sync All" button to sync all your connected bank accounts and import new transactions automatically.',
     placement: 'left',
+    disableBeacon: true,
   },
   {
     target: '[data-tour="add-transaction-btn"]',
@@ -61,12 +62,18 @@ export function DashboardTour({ run, onFinish }: DashboardTourProps) {
   const [stepIndex, setStepIndex] = useState(0);
 
   const handleJoyrideCallback = (data: CallBackProps) => {
-    const { status, index } = data;
+    const { status, index, type, action } = data;
     const finishedStatuses: string[] = [STATUS.FINISHED, STATUS.SKIPPED];
+
+    console.log('[Tour] Callback:', { status, index, type, action });
 
     if (finishedStatuses.includes(status)) {
       setStepIndex(0);
       onFinish();
+    } else if (status === 'error:target_not_found') {
+      // Skip to next step if target not found
+      console.log('[Tour] Target not found, skipping to next step');
+      setStepIndex(index + 1);
     } else if (index !== stepIndex) {
       setStepIndex(index);
     }
@@ -81,6 +88,8 @@ export function DashboardTour({ run, onFinish }: DashboardTourProps) {
       showSkipButton
       stepIndex={stepIndex}
       callback={handleJoyrideCallback}
+      disableScrolling={false}
+      spotlightClicks={false}
       styles={{
         options: {
           primaryColor: '#3b82f6',

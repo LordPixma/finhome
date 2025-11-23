@@ -285,7 +285,11 @@ export default function DashboardPage() {
                       Sync All
                     </button>
                   )}
-                  <a href="/dashboard/accounts" className="text-primary-600 hover:text-primary-700 font-medium text-sm flex items-center gap-1 transition-colors">
+                  <a
+                    href="/dashboard/accounts"
+                    className="text-primary-600 hover:text-primary-700 font-medium text-sm flex items-center gap-1 transition-colors"
+                    data-tour="add-account-btn"
+                  >
                     View all
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

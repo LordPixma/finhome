@@ -12,7 +12,8 @@
       "Bash(git push:*)",
       "Bash(git commit:*)",
       "Bash(npm run db:generate:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(gh run:*)"
     ],
     "deny": [],
     "ask": []
