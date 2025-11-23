@@ -38,6 +38,7 @@ export default function AccountsPage() {
   });
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isConnectingBank, setIsConnectingBank] = useState(false);
 
   useEffect(() => {
     loadAccounts();
@@ -139,6 +140,24 @@ export default function AccountsPage() {
     }
   };
 
+  const handleConnectBank = async () => {
+    try {
+      setIsConnectingBank(true);
+      const response = await api.createBankLink() as any;
+      if (response.success && response.data?.authorizationUrl) {
+        // Redirect user to TrueLayer authorization page
+        window.location.href = response.data.authorizationUrl;
+      } else {
+        alert('Failed to initiate bank connection');
+      }
+    } catch (error) {
+      console.error('Failed to connect bank:', error);
+      alert('Failed to connect bank. Please try again.');
+    } finally {
+      setIsConnectingBank(false);
+    }
+  };
+
   const getAccountIcon = (type: string) => {
     const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
       current: BuildingLibraryIcon,
@@ -184,13 +203,23 @@ export default function AccountsPage() {
             <h1 className="text-3xl font-bold text-gray-900">Accounts</h1>
             <p className="text-gray-600 mt-1">Manage your financial accounts</p>
           </div>
-          <button
-            onClick={() => handleOpenModal()}
-            className="btn-primary flex items-center gap-2"
-          >
-            <PlusIcon className="w-5 h-5" />
-            Add Account
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleConnectBank}
+              disabled={isConnectingBank}
+              className="btn-secondary flex items-center gap-2"
+            >
+              <BuildingLibraryIcon className="w-5 h-5" />
+              {isConnectingBank ? 'Connecting...' : 'Connect Bank'}
+            </button>
+            <button
+              onClick={() => handleOpenModal()}
+              className="btn-primary flex items-center gap-2"
+            >
+              <PlusIcon className="w-5 h-5" />
+              Add Manual Account
+            </button>
+          </div>
         </div>
 
         {/* Total Balance Card */}
@@ -207,14 +236,24 @@ export default function AccountsPage() {
               <BuildingLibraryIcon className="w-8 h-8 text-primary-600" />
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">No accounts yet</h3>
-            <p className="text-gray-600 mb-6">Start by adding your first financial account</p>
-            <button
-              onClick={() => handleOpenModal()}
-              className="btn-primary flex items-center gap-2 mx-auto"
-            >
-              <PlusIcon className="w-5 h-5" />
-              Add Your First Account
-            </button>
+            <p className="text-gray-600 mb-6">Connect your bank account or add a manual account to get started</p>
+            <div className="flex items-center justify-center gap-3">
+              <button
+                onClick={handleConnectBank}
+                disabled={isConnectingBank}
+                className="btn-secondary flex items-center gap-2"
+              >
+                <BuildingLibraryIcon className="w-5 h-5" />
+                {isConnectingBank ? 'Connecting...' : 'Connect Bank'}
+              </button>
+              <button
+                onClick={() => handleOpenModal()}
+                className="btn-primary flex items-center gap-2"
+              >
+                <PlusIcon className="w-5 h-5" />
+                Add Manual Account
+              </button>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
