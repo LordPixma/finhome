@@ -59,10 +59,14 @@ async function generateTokens(
 // Login endpoint
 auth.post('/login', async c => {
   try {
+    console.log('[Login] Starting login attempt');
     const body = await c.req.json();
+    console.log('[Login] Request body parsed, email:', body.email);
+
     const validation = LoginSchema.safeParse(body);
 
     if (!validation.success) {
+      console.error('[Login] Validation failed:', validation.error);
       return c.json(
         {
           success: false,
@@ -77,9 +81,11 @@ auth.post('/login', async c => {
     }
 
     const { email, password } = validation.data;
+    console.log('[Login] Getting database connection');
     const db = getDb(c.env.DB);
 
     // Find user by email
+    console.log('[Login] Searching for user by email');
     const user = await db
       .select()
       .from(users)
@@ -87,6 +93,7 @@ auth.post('/login', async c => {
       .get();
 
     if (!user) {
+      console.log('[Login] User not found');
       return c.json(
         {
           success: false,
@@ -96,8 +103,11 @@ auth.post('/login', async c => {
       );
     }
 
+    console.log('[Login] User found, ID:', user.id, 'isGlobalAdmin:', user.isGlobalAdmin, 'tenantId:', user.tenantId);
+
     // For regular users, require tenantId. For global admins, allow null tenantId
     if (!user.isGlobalAdmin && !user.tenantId) {
+      console.log('[Login] User missing tenantId');
       return c.json(
         {
           success: false,
@@ -108,9 +118,11 @@ auth.post('/login', async c => {
     }
 
     // Verify password
+    console.log('[Login] Verifying password');
     const passwordMatch = await bcrypt.compare(password, user.passwordHash);
 
     if (!passwordMatch) {
+      console.log('[Login] Password mismatch');
       return c.json(
         {
           success: false,
@@ -120,6 +132,7 @@ auth.post('/login', async c => {
       );
     }
 
+    console.log('[Login] Password verified, checking MFA');
     // Check if MFA is enabled for this user
     const mfaData = user.isGlobalAdmin
       ? await db.select()
@@ -137,8 +150,11 @@ auth.post('/login', async c => {
           ))
           .get();
 
+    console.log('[Login] MFA data:', mfaData ? 'enabled' : 'not enabled');
+
     // If MFA is enabled, check if device is trusted
     if (mfaData) {
+      console.log('[Login] Checking trusted device');
       const userAgent = c.req.header('user-agent') || '';
       const ipAddress = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for');
       const deviceFingerprint = TrustedDeviceService.generateFingerprint(userAgent, ipAddress);
@@ -147,6 +163,7 @@ auth.post('/login', async c => {
 
       // If device is not trusted, require MFA verification
       if (!isTrusted) {
+        console.log('[Login] Device not trusted, requiring MFA');
         return c.json({
           success: true,
           data: {
@@ -157,10 +174,12 @@ auth.post('/login', async c => {
         });
       }
 
+      console.log('[Login] Device is trusted, continuing');
       // Device is trusted, skip MFA and continue with normal login
     }
 
     // Generate tokens (only if MFA is not enabled)
+    console.log('[Login] Generating tokens');
     const tokens = await generateTokens(
       user.id,
       user.email,
@@ -171,6 +190,7 @@ auth.post('/login', async c => {
       c.env.JWT_SECRET
     );
 
+    console.log('[Login] Tokens generated, storing refresh token');
     // Store refresh token in KV (optional, for token revocation)
     if (c.env.SESSIONS) {
       await c.env.SESSIONS.put(`refresh:${user.id}`, tokens.refreshToken, {
@@ -178,6 +198,7 @@ auth.post('/login', async c => {
       });
     }
 
+    console.log('[Login] Login successful');
     return c.json({
       success: true,
       data: {
@@ -195,7 +216,10 @@ auth.post('/login', async c => {
       },
     });
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('[Login] ERROR - Type:', error?.constructor?.name);
+    console.error('[Login] ERROR - Message:', error?.message);
+    console.error('[Login] ERROR - Stack:', error?.stack);
+    console.error('[Login] ERROR - Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
     return c.json(
       {
         success: false,
