@@ -140,6 +140,19 @@ export const api = {
   deleteAccount: (id: string) => apiClient(`/api/accounts/${id}`, { method: 'DELETE' }),
   syncAccount: (id: string) => apiClient(`/api/accounts/${id}/sync`, { method: 'POST' }),
 
+  // Banking
+  getBankConnections: () => apiClient('/api/banking/connections'),
+  createBankLink: (returnTo?: string) =>
+    apiClient('/api/banking/link', {
+      method: 'POST',
+      body: JSON.stringify(returnTo ? { returnTo } : {}),
+    }),
+  syncBankConnection: (connectionId: string) =>
+    apiClient(`/api/banking/connections/${connectionId}/sync`, { method: 'POST' }),
+  syncAllBankConnections: () => apiClient('/api/banking/sync', { method: 'POST' }),
+  disconnectBankConnection: (connectionId: string) =>
+    apiClient(`/api/banking/connections/${connectionId}`, { method: 'DELETE' }),
+
   // Categories
   getCategories: () => apiClient('/api/categories'),
   getCategory: (id: string) => apiClient(`/api/categories/${id}`),

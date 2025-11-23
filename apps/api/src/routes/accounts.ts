@@ -272,52 +272,61 @@ accountsRouter.delete('/:id', async c => {
 // Sync account transactions from bank
 accountsRouter.post('/:id/sync', async c => {
   try {
-    const id = c.req.param('id');
+    const accountId = c.req.param('id');
     const tenantId = c.get('tenantId')!;
+    const user = c.get('user');
     const db = getDb(c.env.DB);
 
-    // Find the bank account linked to this Finhome account
-    const bankAccount = await db
-      .select({
-        connectionId: bankAccounts.connectionId,
-        providerAccountId: bankAccounts.providerAccountId,
-      })
-      .from(bankAccounts)
-      .leftJoin(accounts, eq(accounts.id, bankAccounts.accountId))
-      .where(and(eq(bankAccounts.accountId, id), eq(accounts.tenantId, tenantId)))
+    const account = await db
+      .select()
+      .from(accounts)
+      .where(and(eq(accounts.id, accountId), eq(accounts.tenantId, tenantId)))
       .get();
 
-    if (!bankAccount || !bankAccount.connectionId) {
+    if (!account) {
+      return c.json(
+        { success: false, error: { code: 'NOT_FOUND', message: 'Account not found' } },
+        404
+      );
+    }
+
+    const linkedConnection = await db
+      .select({ connectionId: bankConnections.id })
+      .from(bankAccounts)
+      .innerJoin(bankConnections, eq(bankAccounts.connectionId, bankConnections.id))
+      .where(
+        and(
+          eq(bankAccounts.accountId, accountId),
+          eq(bankConnections.tenantId, tenantId)
+        )
+      )
+      .get();
+
+    if (!linkedConnection) {
       return c.json(
         {
           success: false,
-          error: { code: 'NOT_LINKED', message: 'This account is not linked to a bank' }
+          error: {
+            code: 'ACCOUNT_NOT_LINKED',
+            message: 'This account is not linked to a bank connection.',
+          },
         },
         400
       );
     }
 
-    // Import TransactionSyncService
-    const { TransactionSyncService } = await import('../services/transactionSync');
-    const syncService = new TransactionSyncService(db, c.env);
-
-    // Sync the connection (which will sync all accounts under it)
-    const result = await syncService.syncConnection(bankAccount.connectionId);
-
-    return c.json({
-      success: true,
-      data: {
-        message: 'Account synced successfully',
-        transactionsImported: result.totalTransactions || 0,
-      },
+    await c.env.TRANSACTION_SYNC.send({
+      type: 'transaction-sync',
+      tenantId,
+      connectionId: linkedConnection.connectionId,
+      triggeredBy: user?.id ?? null,
     });
+
+    return c.json({ success: true, data: { message: 'Sync started' } });
   } catch (error) {
-    console.error('Error syncing account:', error);
+    console.error('Failed to queue account sync:', error);
     return c.json(
-      {
-        success: false,
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to sync account' },
-      },
+      { success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to queue sync' } },
       500
     );
   }

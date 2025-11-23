@@ -120,15 +120,32 @@ export interface CategorizationStats {
 }
 
 // Open Banking / TrueLayer Types
+export interface LinkedBankAccountSummary {
+  id: string;
+  accountId: string;
+  providerAccountId: string;
+  name: string;
+  type: 'current' | 'savings' | 'credit' | 'cash' | 'investment' | 'other';
+  balance: number;
+  currency: string;
+  accountNumber?: string | null;
+  sortCode?: string | null;
+  iban?: string | null;
+  syncFromDate?: string | null;
+  lastUpdatedAt?: string | null;
+}
+
 export interface BankConnectionSummary {
   id: string;
   provider: string;
-  institutionName: string | null;
+  providerConnectionId: string;
+  institutionId?: string | null;
+  institutionName?: string | null;
   status: 'active' | 'disconnected' | 'expired' | 'error';
-  lastSyncAt: Date | null;
-  lastError: string | null;
-  createdAt: Date;
-  accountCount: number;
+  lastSyncAt?: string | null;
+  lastError?: string | null;
+  createdAt?: string | null;
+  accounts: LinkedBankAccountSummary[];
 }
 
 export interface BankLinkRequest {
@@ -147,5 +164,6 @@ export interface SyncResult {
   transactionsImported: number;
   transactionsSkipped: number;
   transactionsFailed: number;
+  totalTransactions?: number;
   error?: string;
 }

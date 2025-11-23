@@ -42,6 +42,15 @@ queue = "finhome-bill-reminders"
 max_batch_size = 10
 max_batch_timeout = 30
 
+[[queues.producers]]
+binding = "TRANSACTION_SYNC"
+queue = "finhome-transaction-sync"
+
+[[queues.consumers]]
+queue = "finhome-transaction-sync"
+max_batch_size = 5
+max_batch_timeout = 30
+
 # Cron Triggers - Automatic sync every 6 hours
 [triggers]
 crons = ["0 */6 * * *"]

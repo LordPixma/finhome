@@ -1,190 +1,410 @@
 import { Hono } from 'hono';
-import { eq, and, desc } from 'drizzle-orm';
-import { authMiddleware } from '../middleware/auth';
-import { getDb, bankConnections, bankAccounts, accounts } from '../db';
-import { TrueLayerService } from '../services/truelayer';
-import { TransactionSyncService } from '../services/transactionSync';
+import { and, desc, eq } from 'drizzle-orm';
+import { authMiddleware, tenantMiddleware } from '../middleware/auth';
+import {
+  getDb,
+  accounts,
+  bankAccounts,
+  bankConnections,
+  transactionSyncHistory,
+} from '../db';
 import type { Env } from '../types';
+import { TrueLayerService } from '../services/truelayer';
+import { getCurrentTimestamp } from '../utils/timestamp';
+
+interface OAuthStatePayload {
+  tenantId: string;
+  userId: string;
+  returnTo?: string | null;
+  createdAt: number;
+}
+
+function maskAccountNumber(accountNumber?: string | null): string | null {
+  if (!accountNumber) {
+    return null;
+  }
+
+  const trimmed = accountNumber.replace(/\s+/g, '');
+  if (trimmed.length <= 4) {
+    return trimmed;
+  }
+
+  const suffix = trimmed.slice(-4);
+  return `****${suffix}`;
+}
+
+function mapTrueLayerAccountType(type?: string | null, subtype?: string | null): 'current' | 'savings' | 'credit' | 'cash' | 'investment' | 'other' {
+  const normalized = type?.toUpperCase() ?? '';
+  const normalizedSubtype = subtype?.toUpperCase() ?? '';
+
+  switch (normalized) {
+    case 'TRANSACTION':
+    case 'CHECKING':
+    case 'CURRENT':
+      return 'current';
+    case 'SAVINGS':
+      return 'savings';
+    case 'CREDIT_CARD':
+    case 'CREDIT':
+      return 'credit';
+    case 'INVESTMENT':
+      return 'investment';
+    case 'PREPAID':
+      return 'cash';
+    default:
+      if (normalizedSubtype === 'CREDIT_CARD') {
+        return 'credit';
+      }
+      return 'current';
+  }
+}
+
+function buildRedirect(baseUrl: string, path?: string | null) {
+  const safePath = path && path.startsWith('/') ? path : '/dashboard/banking';
+  return new URL(safePath, baseUrl);
+}
 
 const banking = new Hono<Env>();
+const protectedRoutes = new Hono<Env>();
 
-// IMPORTANT: Do NOT require auth for the OAuth callback route.
-// Apply auth selectively to endpoints that require a user/tenant context.
+protectedRoutes.use('*', authMiddleware, tenantMiddleware);
 
-/**
- * POST /api/banking/link
- * Initiates TrueLayer OAuth flow
- * Returns authorization URL for user to connect their bank
- */
-banking.post('/link', authMiddleware, async (c) => {
+protectedRoutes.get('/connections', async c => {
   try {
-    const user = c.get('user');
-    const tenantId = c.get('tenantId');
+    const tenantId = c.get('tenantId')!;
+    const db = getDb(c.env.DB);
 
-    if (!user || !tenantId) {
-      return c.json(
-        {
-          success: false,
-          error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
-        },
-        401
-      );
+    const connectionRecords = await db
+      .select()
+      .from(bankConnections)
+      .where(eq(bankConnections.tenantId, tenantId))
+      .orderBy(desc(bankConnections.createdAt))
+      .all();
+
+    const results = [] as any[];
+
+    for (const connection of connectionRecords) {
+      const linkedAccounts = await db
+        .select({ bankAccount: bankAccounts, account: accounts })
+        .from(bankAccounts)
+        .innerJoin(accounts, eq(bankAccounts.accountId, accounts.id))
+        .where(eq(bankAccounts.connectionId, connection.id))
+        .all();
+
+      const latestSync = await db
+        .select()
+        .from(transactionSyncHistory)
+        .where(eq(transactionSyncHistory.connectionId, connection.id))
+        .orderBy(desc(transactionSyncHistory.syncStartedAt))
+        .limit(1)
+        .get();
+
+      const formattedAccounts = linkedAccounts.map(({ bankAccount, account }) => {
+        const rawType = account.type as unknown as string;
+        const normalizedType = rawType === 'checking' ? 'current' : rawType;
+
+        return {
+          id: bankAccount.id,
+          providerAccountId: bankAccount.providerAccountId,
+          accountId: bankAccount.accountId,
+          name: account.name,
+          type: normalizedType as 'current' | 'savings' | 'credit' | 'cash' | 'investment' | 'other',
+          balance: account.balance,
+          currency: account.currency,
+          accountNumber: bankAccount.accountNumber,
+          sortCode: bankAccount.sortCode,
+          iban: bankAccount.iban,
+          syncFromDate: bankAccount.syncFromDate?.toISOString?.() ?? null,
+          lastUpdatedAt: bankAccount.updatedAt?.toISOString?.() ?? null,
+        };
+      });
+
+      results.push({
+        id: connection.id,
+        provider: connection.provider,
+        providerConnectionId: connection.providerConnectionId,
+        institutionId: connection.institutionId,
+        institutionName: connection.institutionName,
+        status: connection.status,
+        lastSyncAt: (latestSync?.syncCompletedAt || connection.lastSyncAt)?.toISOString?.() ?? null,
+        lastError: connection.lastError,
+        createdAt: connection.createdAt?.toISOString?.() ?? null,
+        accounts: formattedAccounts,
+      });
     }
 
-    const body = await c.req.json();
-    const { redirectUrl } = body;
-
-    const truelayer = new TrueLayerService(
-      c.env.TRUELAYER_CLIENT_ID,
-      c.env.TRUELAYER_CLIENT_SECRET,
-      c.env.TRUELAYER_REDIRECT_URI,
-      // Optional: allow configuring providers via env (e.g., "uk-ob-all").
-      // If not set, we omit the providers param to avoid upstream errors.
-      (c.env as any).TRUELAYER_PROVIDERS
-    );
-
-    // Generate state token (tenant + user + timestamp + random)
-    const state = btoa(
-      JSON.stringify({
-        tenantId,
-        userId: user.id,
-        timestamp: Date.now(),
-        nonce: crypto.randomUUID(),
-        redirectUrl: redirectUrl || '/dashboard/banking',
-      })
-    );
-
-    // Store state in KV with 15 minute expiration
-    await c.env.CACHE.put(`oauth:state:${state}`, JSON.stringify({ tenantId, userId: user.id }), {
-      expirationTtl: 900, // 15 minutes
-    });
-
-    const authorizationUrl = truelayer.getAuthorizationUrl(state);
-
-    return c.json({
-      success: true,
-      data: { authorizationUrl, state },
-    });
+    return c.json({ success: true, data: results });
   } catch (error) {
-    console.error('Error initiating bank link:', error);
+    console.error('Failed to list bank connections:', error);
     return c.json(
-      {
-        success: false,
-        error: {
-          code: 'LINK_INIT_ERROR',
-          message: error instanceof Error ? error.message : 'Failed to initiate bank link',
-        },
-      },
+      { success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to load bank connections' } },
       500
     );
   }
 });
 
-/**
- * GET /api/banking/callback
- * TrueLayer OAuth callback handler
- * Exchanges authorization code for access token and stores connection
- */
-banking.get('/callback', async (c) => {
-  console.log('[CALLBACK] Received callback request');
-  console.log('[CALLBACK] Query params:', { 
-    code: c.req.query('code') ? 'present' : 'missing',
-    state: c.req.query('state') ? 'present' : 'missing',
-    error: c.req.query('error') 
-  });
-  
+protectedRoutes.post('/link', async c => {
   try {
-    const code = c.req.query('code');
-    const state = c.req.query('state');
-    const error = c.req.query('error');
+    const tenantId = c.get('tenantId')!;
+    const user = c.get('user');
 
-    if (error) {
-      console.error('OAuth error from TrueLayer:', error);
-      const errorDescription = c.req.query('error_description') || 'Authorization failed';
-      
-      // Redirect to frontend with error - explicit Response with 303
-      const redirectUrl = `${c.env.FRONTEND_URL}/dashboard/banking?status=error&message=${encodeURIComponent(errorDescription)}`;
-      return new Response(null, {
-        status: 303,
-        headers: {
-          'Location': redirectUrl,
-          'Cache-Control': 'no-cache, no-store, must-revalidate'
-        }
+    if (!user) {
+      return c.json({ success: false, error: { code: 'UNAUTHORIZED', message: 'User not found in context' } }, 401);
+    }
+
+    if (!c.env.SESSIONS) {
+      return c.json({ success: false, error: { code: 'CONFIG_ERROR', message: 'Session storage not configured' } }, 500);
+    }
+
+    const body = await c.req.json().catch(() => ({}));
+    const returnTo = typeof body?.returnTo === 'string' ? body.returnTo : undefined;
+
+    const state = crypto.randomUUID();
+    const nonce = crypto.randomUUID();
+
+    const statePayload: OAuthStatePayload = {
+      tenantId,
+      userId: user.id,
+      returnTo: returnTo ?? null,
+      createdAt: Date.now(),
+    };
+
+    await c.env.SESSIONS.put(`truelayer:state:${state}`, JSON.stringify(statePayload), {
+      expirationTtl: 600,
+    });
+
+    const trueLayer = new TrueLayerService(c.env);
+    const authorizationUrl = trueLayer.createAuthorizationUrl({ state, nonce });
+
+    return c.json({
+      success: true,
+      data: {
+        authorizationUrl,
+        state,
+      },
+    });
+  } catch (error) {
+    console.error('Failed to create TrueLayer authorization link:', error);
+    return c.json(
+      { success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to start bank connection' } },
+      500
+    );
+  }
+});
+
+protectedRoutes.post('/connections/:id/sync', async c => {
+  try {
+    const tenantId = c.get('tenantId')!;
+    const user = c.get('user');
+    const connectionId = c.req.param('id');
+    const db = getDb(c.env.DB);
+
+    const connection = await db
+      .select()
+      .from(bankConnections)
+      .where(and(eq(bankConnections.id, connectionId), eq(bankConnections.tenantId, tenantId)))
+      .get();
+
+    if (!connection) {
+      return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Connection not found' } }, 404);
+    }
+
+    await c.env.TRANSACTION_SYNC.send({
+      type: 'transaction-sync',
+      tenantId,
+      connectionId,
+      triggeredBy: user?.id ?? null,
+    });
+
+    return c.json({ success: true, data: { message: 'Sync started' } });
+  } catch (error) {
+    console.error('Failed to queue connection sync:', error);
+    return c.json(
+      { success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to queue sync' } },
+      500
+    );
+  }
+});
+
+protectedRoutes.post('/sync', async c => {
+  try {
+    const tenantId = c.get('tenantId')!;
+    const user = c.get('user');
+    const db = getDb(c.env.DB);
+
+    const connectionIds = await db
+      .select({ id: bankConnections.id })
+      .from(bankConnections)
+      .where(eq(bankConnections.tenantId, tenantId))
+      .all();
+
+    if (connectionIds.length === 0) {
+      return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'No bank connections found' } }, 404);
+    }
+
+    for (const { id } of connectionIds) {
+      await c.env.TRANSACTION_SYNC.send({
+        type: 'transaction-sync',
+        tenantId,
+        connectionId: id,
+        triggeredBy: user?.id ?? null,
       });
+    }
+
+    return c.json({ success: true, data: { message: 'Sync started for all connections' } });
+  } catch (error) {
+    console.error('Failed to queue sync for all connections:', error);
+    return c.json(
+      { success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to queue sync' } },
+      500
+    );
+  }
+});
+
+protectedRoutes.delete('/connections/:id', async c => {
+  try {
+    const tenantId = c.get('tenantId')!;
+    const connectionId = c.req.param('id');
+    const db = getDb(c.env.DB);
+
+    const connection = await db
+      .select()
+      .from(bankConnections)
+      .where(and(eq(bankConnections.id, connectionId), eq(bankConnections.tenantId, tenantId)))
+      .get();
+
+    if (!connection) {
+      return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Connection not found' } }, 404);
+    }
+
+    const trueLayer = new TrueLayerService(c.env);
+
+    if (connection.refreshToken) {
+      try {
+        await trueLayer.revokeToken(connection.refreshToken);
+      } catch (error) {
+        console.warn('Failed to revoke TrueLayer refresh token:', error);
+      }
+    }
+
+    const now = getCurrentTimestamp();
+
+    await db
+      .update(bankConnections)
+      .set({
+        status: 'disconnected',
+        accessToken: null,
+        refreshToken: null,
+        tokenExpiresAt: null,
+        lastError: null,
+        updatedAt: now,
+      })
+      .where(eq(bankConnections.id, connectionId))
+      .run();
+
+    return c.json({ success: true, data: { message: 'Connection disconnected' } });
+  } catch (error) {
+    console.error('Failed to disconnect bank connection:', error);
+    return c.json(
+      { success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to disconnect connection' } },
+      500
+    );
+  }
+});
+
+banking.route('/', protectedRoutes);
+
+banking.get('/callback', async c => {
+  const baseUrl = c.env.FRONTEND_URL || 'https://app.finhome360.com';
+  const defaultRedirect = buildRedirect(baseUrl);
+
+  try {
+    const url = new URL(c.req.url);
+    const code = url.searchParams.get('code');
+    const state = url.searchParams.get('state');
+    const oauthError = url.searchParams.get('error');
+    const oauthErrorDescription = url.searchParams.get('error_description');
+
+    if (oauthError) {
+      const redirectUrl = buildRedirect(baseUrl);
+      redirectUrl.searchParams.set('status', 'error');
+      redirectUrl.searchParams.set('message', oauthErrorDescription || oauthError);
+      return c.redirect(redirectUrl.toString(), 302);
     }
 
     if (!code || !state) {
-      const url = `${c.env.FRONTEND_URL}/dashboard/banking?status=error&message=Invalid+callback+parameters`;
-      return new Response(null, {
-        status: 303,
-        headers: {
-          'Location': url,
-          'Cache-Control': 'no-cache, no-store, must-revalidate'
-        }
-      });
+      const redirectUrl = buildRedirect(baseUrl);
+      redirectUrl.searchParams.set('status', 'error');
+      redirectUrl.searchParams.set('message', 'Missing authorization code or state.');
+      return c.redirect(redirectUrl.toString(), 302);
     }
 
-    // Verify state token
-    const storedState = await c.env.CACHE.get(`oauth:state:${state}`);
-    console.log('[CALLBACK] State verification:', storedState ? 'valid' : 'invalid/expired');
-    if (!storedState) {
-      const url = `${c.env.FRONTEND_URL}/dashboard/banking?status=error&message=Invalid+or+expired+state`;
-      console.log('[CALLBACK] Redirecting to:', url);
-      return new Response(null, {
-        status: 303,
-        headers: {
-          'Location': url,
-          'Cache-Control': 'no-cache, no-store, must-revalidate'
-        }
-      });
+    if (!c.env.SESSIONS) {
+      const redirectUrl = buildRedirect(baseUrl);
+      redirectUrl.searchParams.set('status', 'error');
+      redirectUrl.searchParams.set('message', 'Session storage not configured.');
+      return c.redirect(redirectUrl.toString(), 302);
     }
 
-    const { tenantId, userId } = JSON.parse(storedState);
+    const stateKey = `truelayer:state:${state}`;
+    const statePayloadRaw = await c.env.SESSIONS.get(stateKey);
 
-    // Delete used state token
-    await c.env.CACHE.delete(`oauth:state:${state}`);
+    if (!statePayloadRaw) {
+      const redirectUrl = buildRedirect(baseUrl);
+      redirectUrl.searchParams.set('status', 'error');
+      redirectUrl.searchParams.set('message', 'Bank connection session expired. Please try again.');
+      return c.redirect(redirectUrl.toString(), 302);
+    }
 
-    const truelayer = new TrueLayerService(
-      c.env.TRUELAYER_CLIENT_ID,
-      c.env.TRUELAYER_CLIENT_SECRET,
-      c.env.TRUELAYER_REDIRECT_URI
-    );
+    await c.env.SESSIONS.delete(stateKey);
 
-    // Exchange code for tokens
-    const tokenResponse = await truelayer.exchangeCodeForToken(code);
-    console.log('[CALLBACK] Token exchange successful');
+    let statePayload: OAuthStatePayload;
 
-    // Fetch provider metadata (account info)
-    const metadata = await truelayer.getAccountsMetadata(tokenResponse.access_token);
-    console.log('[CALLBACK] Metadata:', JSON.stringify(metadata));
+    try {
+      statePayload = JSON.parse(statePayloadRaw) as OAuthStatePayload;
+    } catch (error) {
+      console.error('Failed to parse TrueLayer state payload:', error);
+      const redirectUrl = buildRedirect(baseUrl);
+      redirectUrl.searchParams.set('status', 'error');
+      redirectUrl.searchParams.set('message', 'Invalid bank connection state. Please try again.');
+      return c.redirect(redirectUrl.toString(), 302);
+    }
 
     const db = getDb(c.env.DB);
+    const trueLayer = new TrueLayerService(c.env);
 
-    // Store connection
+    const tokens = await trueLayer.exchangeCodeForTokens(code);
+    const info = await trueLayer.getInfo(tokens.access_token).catch(() => null);
+    const tlAccounts = await trueLayer.getAccounts(tokens.access_token);
+
+    if (tlAccounts.length === 0) {
+      const redirectUrl = buildRedirect(baseUrl, statePayload.returnTo);
+      redirectUrl.searchParams.set('status', 'error');
+      redirectUrl.searchParams.set('message', 'No accounts were returned by your bank.');
+      return c.redirect(redirectUrl.toString(), 302);
+    }
+
+    const now = getCurrentTimestamp();
     const connectionId = crypto.randomUUID();
-    const now = new Date();
-
-    // Use provider info from metadata
-    let institutionName = metadata.provider?.display_name || 'Unknown Bank';
-    let institutionId = metadata.provider?.provider_id || null;
-    
-    console.log('[CALLBACK] Creating connection:', { institutionName, institutionId });
+    const providerConnectionId = info?.consent_id || info?.user_id || crypto.randomUUID();
+    const firstAccount = tlAccounts[0];
+    const institutionName = firstAccount?.provider?.display_name ?? null;
+    const institutionId = firstAccount?.provider?.provider_id ?? null;
+    const tokenExpiry = new Date(Date.now() + tokens.expires_in * 1000);
 
     await db
       .insert(bankConnections)
       .values({
         id: connectionId,
-        tenantId,
-        userId,
+        tenantId: statePayload.tenantId,
+        userId: statePayload.userId,
         provider: 'truelayer',
-        providerConnectionId: metadata.credentials_id || connectionId,
+        providerConnectionId,
         institutionId,
         institutionName,
-        accessToken: tokenResponse.access_token,
-        refreshToken: tokenResponse.refresh_token || null,
-        tokenExpiresAt: tokenResponse.expires_in
-          ? new Date(Date.now() + tokenResponse.expires_in * 1000)
-          : null,
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token ?? null,
+        tokenExpiresAt: tokenExpiry,
         status: 'active',
         lastSyncAt: null,
         lastError: null,
@@ -193,434 +413,93 @@ banking.get('/callback', async (c) => {
       })
       .run();
 
-    // Fetch and store linked accounts
-    const truelayerAccounts = await truelayer.getAccounts(tokenResponse.access_token);
-    console.log('[CALLBACK] Fetched accounts:', truelayerAccounts.length);
-    
-    // Get institution name from first account's provider info if metadata didn't have it
-    if (institutionName === 'Unknown Bank' && truelayerAccounts.length > 0 && truelayerAccounts[0].provider) {
-      institutionName = truelayerAccounts[0].provider.display_name || 'Unknown Bank';
-      institutionId = truelayerAccounts[0].provider.provider_id || null;
-      console.log('[CALLBACK] Got institution from account:', { institutionName, institutionId });
-      
-      // Update the connection with the correct institution info
+    const initialSyncDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+
+    for (const tlAccount of tlAccounts) {
+      const mappedType = mapTrueLayerAccountType(tlAccount.account_type, tlAccount.account_subtype);
+      const accountName = tlAccount.display_name || institutionName || 'Linked Bank Account';
+      const currency = tlAccount.currency || 'GBP';
+      const accountId = crypto.randomUUID();
+      const accountCreatedAt = getCurrentTimestamp();
+
       await db
-        .update(bankConnections)
-        .set({ institutionName, institutionId })
-        .where(eq(bankConnections.id, connectionId))
+        .insert(accounts)
+        .values({
+          id: accountId,
+          tenantId: statePayload.tenantId,
+          name: accountName,
+          type: mappedType,
+          balance: 0,
+          currency,
+          createdAt: accountCreatedAt,
+          updatedAt: accountCreatedAt,
+        })
         .run();
-    }
-    
-    for (const truelayerAccount of truelayerAccounts) {
+
       const bankAccountId = crypto.randomUUID();
-      
-      // Check if this provider account already exists (from a previous connection)
-      const existingBankAccount = await db
-        .select()
-        .from(bankAccounts)
-        .where(eq(bankAccounts.providerAccountId, truelayerAccount.account_id))
-        .get();
-      
-      let finhomeAccountId: string;
-      
-      if (existingBankAccount) {
-        // Reuse the existing Finhome account
-        finhomeAccountId = existingBankAccount.accountId;
-        console.log('[CALLBACK] Reusing existing Finhome account:', finhomeAccountId, 'for provider account:', truelayerAccount.account_id);
-        
-        // Update the existing bank account with new connection
-        await db
-          .update(bankAccounts)
-          .set({
-            connectionId,
-            accountNumber: truelayerAccount.account_number?.number || null,
-            sortCode: truelayerAccount.account_number?.sort_code || null,
-            iban: truelayerAccount.account_number?.iban || null,
-            accountType: truelayerAccount.account_type || 'transaction',
-            currency: truelayerAccount.currency || 'GBP',
-            syncFromDate: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
-            updatedAt: now,
-          })
-          .where(eq(bankAccounts.id, existingBankAccount.id))
-          .run();
-        
-        console.log('[CALLBACK] Updated existing bank account link:', existingBankAccount.id);
-      } else {
-        // Create a new Finhome account for this bank account
-        finhomeAccountId = crypto.randomUUID();
-        const accountName = truelayerAccount.display_name || 
-                            truelayerAccount.account_number?.number || 
-                            `${institutionName} Account`;
-        
-        // Determine account type mapping - convert to lowercase
-        let accountType: 'current' | 'savings' | 'credit' | 'cash' | 'investment' | 'other' = 'checking' as any;
-        const tlType = truelayerAccount.account_type?.toUpperCase();
-        if (tlType === 'SAVINGS') {
-          accountType = 'savings';
-        } else if (tlType === 'TRANSACTION') {
-          accountType = 'checking' as any; // Production DB uses 'checking' not 'current'
-        }
-        
-        console.log('[CALLBACK] Creating new Finhome account:', { name: accountName, type: accountType, currency: truelayerAccount.currency });
-        
-        try {
-          // Create Finhome account
+      const maskedNumber = maskAccountNumber(tlAccount.account_number?.number ?? null);
+
+      await db
+        .insert(bankAccounts)
+        .values({
+          id: bankAccountId,
+          connectionId,
+          accountId,
+          providerAccountId: tlAccount.account_id,
+          accountNumber: maskedNumber,
+          sortCode: tlAccount.account_number?.sort_code ?? null,
+          iban: tlAccount.account_number?.iban ?? null,
+          accountType: tlAccount.account_type ?? null,
+          currency,
+          syncFromDate: initialSyncDate,
+          createdAt: accountCreatedAt,
+          updatedAt: accountCreatedAt,
+        })
+        .run();
+
+      try {
+        const balance = await trueLayer.getAccountBalance(tokens.access_token, tlAccount.account_id);
+        if (balance) {
           await db
-            .insert(accounts)
-            .values({
-              id: finhomeAccountId,
-              tenantId,
-              name: accountName,
-              type: accountType,
-              balance: 0, // Will be updated during sync
-              currency: truelayerAccount.currency || 'GBP',
-              createdAt: now,
-              updatedAt: now,
+            .update(accounts)
+            .set({
+              balance: balance.current ?? balance.available ?? 0,
+              currency: balance.currency ?? currency,
+              updatedAt: getCurrentTimestamp(),
             })
+            .where(eq(accounts.id, accountId))
             .run();
-            
-          console.log('[CALLBACK] Finhome account created:', finhomeAccountId);
-        } catch (accountError) {
-          console.error('[CALLBACK] Failed to create Finhome account:', accountError);
-          console.error('[CALLBACK] Account data was:', { id: finhomeAccountId, tenantId, name: accountName, type: accountType });
-          throw accountError;
         }
-        
-        // Create new bank account link
-        await db
-          .insert(bankAccounts)
-          .values({
-            id: bankAccountId,
-            connectionId,
-            accountId: finhomeAccountId,
-            providerAccountId: truelayerAccount.account_id,
-            accountNumber: truelayerAccount.account_number?.number || null,
-            sortCode: truelayerAccount.account_number?.sort_code || null,
-            iban: truelayerAccount.account_number?.iban || null,
-            accountType: truelayerAccount.account_type || 'transaction',
-            currency: truelayerAccount.currency || 'GBP',
-            syncFromDate: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
-            createdAt: now,
-            updatedAt: now,
-          })
-          .run();
-        
-        console.log('[CALLBACK] Created new bank account link:', bankAccountId, '→', finhomeAccountId);
+      } catch (error) {
+        console.warn('Failed to fetch initial balance for account:', error);
       }
     }
 
-    console.log(`Bank connection ${connectionId} created for tenant ${tenantId}`);
-
-    // Trigger initial sync in background (don't wait for it)
     try {
-      const syncService = new TransactionSyncService(db, c.env);
-      syncService.syncConnection(connectionId).catch(err => {
-        console.error(`[CALLBACK] Background sync failed for ${connectionId}:`, err);
+      await c.env.TRANSACTION_SYNC.send({
+        type: 'transaction-sync',
+        tenantId: statePayload.tenantId,
+        connectionId,
+        triggeredBy: statePayload.userId,
       });
-      console.log('[CALLBACK] Initial sync triggered in background');
-    } catch (syncError) {
-      console.error('[CALLBACK] Failed to trigger sync:', syncError);
-      // Don't fail the callback - user can manually sync later
+    } catch (error) {
+      console.warn('Failed to queue automatic sync after connection:', error);
     }
 
-    // Decode state to get redirect URL
-    let redirectPath = '/dashboard/banking';
-    try {
-      const stateData = JSON.parse(atob(state));
-      if (stateData.redirectUrl) {
-        redirectPath = stateData.redirectUrl;
-      }
-    } catch (e) {
-      // Use default
-    }
+    const redirectUrl = buildRedirect(baseUrl, statePayload.returnTo);
+    redirectUrl.searchParams.set('status', 'connected');
+    redirectUrl.searchParams.set('connection', connectionId);
 
-    // Success - redirect to frontend
-    const url = `${c.env.FRONTEND_URL}${redirectPath}?status=connected`;
-    return new Response(null, {
-      status: 303,
-      headers: {
-        'Location': url,
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
-      }
-    });
+    return c.redirect(redirectUrl.toString(), 302);
   } catch (error) {
-    console.error('OAuth callback error:', error);
-    const message = error instanceof Error ? error.message : 'Failed+to+connect+bank';
-    const url = `${c.env.FRONTEND_URL}/dashboard/banking?status=error&message=${encodeURIComponent(message)}`;
-    return new Response(null, {
-      status: 303,
-      headers: {
-        'Location': url,
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
-      }
-    });
-  }
-});
-
-/**
- * GET /api/banking/connections
- * List all bank connections for the current tenant
- */
-banking.get('/connections', authMiddleware, async (c) => {
-  try {
-    const tenantId = c.get('tenantId');
-
-    if (!tenantId) {
-      return c.json(
-        {
-          success: false,
-          error: { code: 'UNAUTHORIZED', message: 'Tenant context required' },
-        },
-        401
-      );
-    }
-
-    const db = getDb(c.env.DB);
-
-    // Only return active connections (not disconnected)
-    const connections = await db
-      .select({
-        id: bankConnections.id,
-        provider: bankConnections.provider,
-        institutionName: bankConnections.institutionName,
-        status: bankConnections.status,
-        lastSyncAt: bankConnections.lastSyncAt,
-        lastError: bankConnections.lastError,
-        createdAt: bankConnections.createdAt,
-      })
-      .from(bankConnections)
-      .where(
-        and(
-          eq(bankConnections.tenantId, tenantId),
-          eq(bankConnections.status, 'active')
-        )
-      )
-      .orderBy(desc(bankConnections.createdAt))
-      .all();
-
-    // For each connection, count linked accounts
-    const connectionsWithAccounts = await Promise.all(
-      connections.map(async (conn) => {
-        const accounts = await db
-          .select({ count: bankAccounts.id })
-          .from(bankAccounts)
-          .where(eq(bankAccounts.connectionId, conn.id))
-          .all();
-
-        return {
-          ...conn,
-          accountCount: accounts.length,
-        };
-      })
+    console.error('TrueLayer callback processing failed:', error);
+    const redirectUrl = defaultRedirect;
+    redirectUrl.searchParams.set('status', 'error');
+    redirectUrl.searchParams.set(
+      'message',
+      error instanceof Error ? error.message : 'Failed to link bank account.'
     );
-
-    return c.json({
-      success: true,
-      data: connectionsWithAccounts,
-    });
-  } catch (error) {
-    console.error('Error fetching connections:', error);
-    return c.json(
-      {
-        success: false,
-        error: {
-          code: 'FETCH_ERROR',
-          message: error instanceof Error ? error.message : 'Failed to fetch connections',
-        },
-      },
-      500
-    );
-  }
-});
-
-/**
- * POST /api/banking/connections/:id/sync
- * Trigger manual sync for a connection
- */
-banking.post('/connections/:id/sync', authMiddleware, async (c) => {
-  try {
-    const connectionId = c.req.param('id');
-    const tenantId = c.get('tenantId');
-
-    if (!tenantId) {
-      return c.json(
-        {
-          success: false,
-          error: { code: 'UNAUTHORIZED', message: 'Tenant context required' },
-        },
-        401
-      );
-    }
-
-    const db = getDb(c.env.DB);
-
-    // Fetch connection
-    const connection = await db
-      .select()
-      .from(bankConnections)
-      .where(and(eq(bankConnections.id, connectionId), eq(bankConnections.tenantId, tenantId)))
-      .get();
-
-    if (!connection) {
-      return c.json(
-        {
-          success: false,
-          error: { code: 'NOT_FOUND', message: 'Connection not found' },
-        },
-        404
-      );
-    }
-
-    // Initialize sync service
-    const syncService = new TransactionSyncService(db, c.env);
-
-    // Perform sync
-    const result = await syncService.syncConnection(connectionId);
-
-    return c.json({
-      success: true,
-      data: result,
-    });
-  } catch (error) {
-    console.error('Error syncing connection:', error);
-    return c.json(
-      {
-        success: false,
-        error: {
-          code: 'SYNC_ERROR',
-          message: error instanceof Error ? error.message : 'Failed to sync connection',
-        },
-      },
-      500
-    );
-  }
-});
-
-/**
- * POST /api/banking/connections/sync-all
- * Trigger sync for all active connections
- */
-banking.post('/connections/sync-all', authMiddleware, async (c) => {
-  try {
-    const tenantId = c.get('tenantId');
-
-    if (!tenantId) {
-      return c.json(
-        {
-          success: false,
-          error: { code: 'UNAUTHORIZED', message: 'Tenant context required' },
-        },
-        401
-      );
-    }
-
-    const db = getDb(c.env.DB);
-
-    // Fetch all active connections for tenant
-    const connections = await db
-      .select({ id: bankConnections.id })
-      .from(bankConnections)
-      .where(and(eq(bankConnections.tenantId, tenantId), eq(bankConnections.status, 'active')))
-      .all();
-
-    const syncService = new TransactionSyncService(db, c.env);
-
-    const results = await Promise.allSettled(
-      connections.map((conn) => syncService.syncConnection(conn.id))
-    );
-
-    const succeeded = results.filter((r) => r.status === 'fulfilled').length;
-    const failed = results.filter((r) => r.status === 'rejected').length;
-
-    return c.json({
-      success: true,
-      data: {
-        total: connections.length,
-        succeeded,
-        failed,
-      },
-    });
-  } catch (error) {
-    console.error('Error syncing all connections:', error);
-    return c.json(
-      {
-        success: false,
-        error: {
-          code: 'SYNC_ALL_ERROR',
-          message: error instanceof Error ? error.message : 'Failed to sync all connections',
-        },
-      },
-      500
-    );
-  }
-});
-
-/**
- * DELETE /api/banking/connections/:id
- * Disconnect a bank connection
- */
-banking.delete('/connections/:id', authMiddleware, async (c) => {
-  try {
-    const connectionId = c.req.param('id');
-    const tenantId = c.get('tenantId');
-
-    if (!tenantId) {
-      return c.json(
-        {
-          success: false,
-          error: { code: 'UNAUTHORIZED', message: 'Tenant context required' },
-        },
-        401
-      );
-    }
-
-    const db = getDb(c.env.DB);
-
-    // Verify connection belongs to tenant
-    const connection = await db
-      .select()
-      .from(bankConnections)
-      .where(and(eq(bankConnections.id, connectionId), eq(bankConnections.tenantId, tenantId)))
-      .get();
-
-    if (!connection) {
-      return c.json(
-        {
-          success: false,
-          error: { code: 'NOT_FOUND', message: 'Connection not found' },
-        },
-        404
-      );
-    }
-
-    // Update status to disconnected (soft delete)
-    await db
-      .update(bankConnections)
-      .set({
-        status: 'disconnected',
-        accessToken: null,
-        refreshToken: null,
-        updatedAt: new Date(),
-      })
-      .where(eq(bankConnections.id, connectionId))
-      .run();
-
-    return c.json({
-      success: true,
-      data: { message: 'Connection disconnected successfully' },
-    });
-  } catch (error) {
-    console.error('Error disconnecting connection:', error);
-    return c.json(
-      {
-        success: false,
-        error: {
-          code: 'DISCONNECT_ERROR',
-          message: error instanceof Error ? error.message : 'Failed to disconnect connection',
-        },
-      },
-      500
-    );
+    return c.redirect(redirectUrl.toString(), 302);
   }
 });
 
