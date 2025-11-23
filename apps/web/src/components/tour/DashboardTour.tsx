@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Joyride, { CallBackProps, STATUS, Step } from 'react-joyride';
 
 interface DashboardTourProps {
