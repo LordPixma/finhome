@@ -70,7 +70,7 @@ export function DashboardTour({ run, onFinish }: DashboardTourProps) {
     if (finishedStatuses.includes(status)) {
       setStepIndex(0);
       onFinish();
-    } else if (status === 'error:target_not_found') {
+    } else if (type === 'error:target_not_found') {
       // Skip to next step if target not found
       console.log('[Tour] Target not found, skipping to next step');
       setStepIndex(index + 1);
