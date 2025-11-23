@@ -121,14 +121,21 @@ auth.post('/login', async c => {
     }
 
     // Check if MFA is enabled for this user
-    const mfaTable = user.isGlobalAdmin ? globalAdminMFA : userMFA;
-    const mfaData = await db.select()
-      .from(mfaTable)
-      .where(and(
-        eq(mfaTable.userId, user.id),
-        eq(mfaTable.isEnabled, true)
-      ))
-      .get();
+    const mfaData = user.isGlobalAdmin
+      ? await db.select()
+          .from(globalAdminMFA)
+          .where(and(
+            eq(globalAdminMFA.userId, user.id),
+            eq(globalAdminMFA.isEnabled, true)
+          ))
+          .get()
+      : await db.select()
+          .from(userMFA)
+          .where(and(
+            eq(userMFA.userId, user.id),
+            eq(userMFA.isEnabled, true)
+          ))
+          .get();
 
     // If MFA is enabled, check if device is trusted
     if (mfaData) {
