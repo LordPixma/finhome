@@ -61,26 +61,6 @@ export function getCurrentSubdomain(): string | null {
 }
 
 /**
- * Test if subdomain routing is available by making a quick request
- */
-async function testSubdomainAvailability(subdomain: string): Promise<boolean> {
-  try {
-    // Test if we can reach the subdomain
-    const testUrl = `https://${subdomain}.finhome360.com`;
-    await fetch(testUrl, { 
-      method: 'HEAD', 
-      mode: 'no-cors',
-      signal: AbortSignal.timeout(3000) // 3 second timeout
-    });
-    return true;
-  } catch (error) {
-    // If subdomain routing fails, fall back to URL parameters
-    console.log('Subdomain routing not available, using URL parameter fallback');
-    return false;
-  }
-}
-
-/**
  * Check if current domain is the app domain (app.finhome360.com)
  */
 export function isAppDomain(): boolean {
