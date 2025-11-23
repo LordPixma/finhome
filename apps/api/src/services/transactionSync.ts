@@ -1,4 +1,4 @@
-import { eq, and, isNull, sql } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import {
   bankConnections,
@@ -22,6 +22,7 @@ interface SyncResult {
   transactionsImported: number;
   transactionsSkipped: number;
   transactionsFailed: number;
+  totalTransactions?: number;
   error?: string;
 }
 
@@ -367,7 +368,7 @@ export class TransactionSyncService {
     }
 
     // Find groups with 3+ transactions (potential recurring)
-    for (const [description, group] of transactionGroups.entries()) {
+    for (const [, group] of transactionGroups.entries()) {
       if (group.length < 3) continue;
 
       // Sort by date
@@ -408,6 +409,9 @@ export class TransactionSyncService {
           const frequency = isWeekly ? 'weekly' : isBiweekly ? 'biweekly' : 'monthly';
           const lastTransaction = group[group.length - 1];
 
+          // Skip if transaction type is 'transfer' (recurring transactions only support 'income' or 'expense')
+          if (lastTransaction.type === 'transfer') continue;
+
           // Calculate next occurrence
           const nextDate = new Date(lastTransaction.date);
           if (frequency === 'weekly') {
@@ -427,7 +431,7 @@ export class TransactionSyncService {
               categoryId: lastTransaction.categoryId,
               description: lastTransaction.description,
               amount: lastTransaction.amount,
-              type: lastTransaction.type,
+              type: lastTransaction.type as 'income' | 'expense',
               frequency,
               dayOfMonth: frequency === 'monthly' ? new Date(lastTransaction.date).getDate() : null,
               dayOfWeek: frequency === 'weekly' || frequency === 'biweekly'
@@ -466,8 +470,7 @@ export class TransactionSyncService {
    * Auto-categorize uncategorized transactions using AI
    */
   private async autoCategorizeTransactions(tenantId: string, accountId: string): Promise<void> {
-    // Find all uncategorized transactions for this account (imported in last 5 minutes)
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    // Find all uncategorized transactions for this account
     const uncategorizedCategory = await this.db
       .select()
       .from(categories)
