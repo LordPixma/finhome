@@ -134,7 +134,7 @@ auth.post('/login', async c => {
 
     console.log('[Login] Password verified, checking MFA');
     // Check if MFA is enabled for this user (gracefully handle if tables don't exist)
-    let mfaData: any = null;
+    let mfaData: { id: string; userId: string; secret: string; isEnabled: boolean; backupCodes: string | null; createdAt: Date; updatedAt: Date } | null | undefined = null;
     try {
       mfaData = user.isGlobalAdmin
         ? await db.select()
@@ -153,11 +153,19 @@ auth.post('/login', async c => {
             .get();
     } catch (mfaError: any) {
       // If MFA tables don't exist yet, skip MFA check
-      if (mfaError?.message?.includes('no such table')) {
+      // Check nested error causes for D1 errors
+      const errorMessage = mfaError?.message || '';
+      const causeMessage = mfaError?.cause?.message || '';
+      const nestedCauseMessage = mfaError?.cause?.cause?.message || '';
+
+      if (errorMessage.includes('no such table') ||
+          causeMessage.includes('no such table') ||
+          nestedCauseMessage.includes('no such table')) {
         console.log('[Login] MFA tables not found, skipping MFA check');
         mfaData = null;
       } else {
         // Re-throw if it's a different error
+        console.error('[Login] MFA check failed with unexpected error:', mfaError);
         throw mfaError;
       }
     }

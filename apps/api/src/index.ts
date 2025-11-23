@@ -331,15 +331,18 @@ export async function queue(batch: any, env: Env['Bindings']): Promise<void> {
 }
 
 // Scheduled handler (cron) for periodic transaction sync
-export async function scheduled(_event: any, env: Env['Bindings'], _ctx: any): Promise<void> {
+export async function scheduled(_event: ScheduledEvent, env: Env['Bindings'], _ctx: ExecutionContext): Promise<void> {
   // Sync all active banking connections every 6 hours
   const db = getDb(env.DB);
-  
+
   try {
+    const { bankConnections: bankConnectionsTable } = await import('./db/schema');
+    const { eq: eqOp } = await import('drizzle-orm');
+
     const activeConnections = await db
-      .select({ id: require('./db/schema').bankConnections.id, tenantId: require('./db/schema').bankConnections.tenantId })
-      .from(require('./db/schema').bankConnections)
-      .where(require('drizzle-orm').eq(require('./db/schema').bankConnections.status, 'active'))
+      .select({ id: bankConnectionsTable.id, tenantId: bankConnectionsTable.tenantId })
+      .from(bankConnectionsTable)
+      .where(eqOp(bankConnectionsTable.status, 'active'))
       .all();
 
     const { TransactionSyncService } = await import('./services/transactionSync');
