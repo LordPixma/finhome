@@ -89,40 +89,31 @@ export function isAppDomain(): boolean {
 }
 
 /**
- * Redirect to dashboard with tenant context (subdomain preferred, URL parameter fallback)
+ * Redirect to dashboard with tenant context (using URL parameter fallback)
+ * NOTE: Subdomain routing disabled - using app.finhome360.com with ?tenant= parameter
  */
 export async function redirectToTenantSubdomain(): Promise<void> {
   if (typeof window === 'undefined') return;
-  
+
   try {
     // Get user's tenant information
     const response = await api.getTenantInfo() as any;
     if (response.success && response.data) {
       const { subdomain } = response.data;
-      
+
       // Save tenant to localStorage for app subdomain
       localStorage.setItem('lastTenant', subdomain);
-      
-      // Try subdomain approach first (if wildcard DNS is configured)
-      const isSubdomainAvailable = await testSubdomainAvailability(subdomain);
-      
-      let targetUrl: URL;
-      
-      if (isSubdomainAvailable) {
-        // Use actual subdomain routing
-        targetUrl = new URL(`https://${subdomain}.finhome360.com`);
+
+      // Use URL parameter approach on app domain (subdomain routing disabled)
+      // This avoids DNS wildcard configuration requirements
+      const targetUrl = new URL(window.location.href);
+      targetUrl.searchParams.set('tenant', subdomain);
+
+      // Redirect to dashboard if coming from login/register
+      if (targetUrl.pathname === '/login' || targetUrl.pathname === '/register' || targetUrl.pathname === '/') {
         targetUrl.pathname = '/dashboard';
-      } else {
-        // Fallback to URL parameter approach or stay on app domain
-        targetUrl = new URL(window.location.href);
-        targetUrl.searchParams.set('tenant', subdomain);
-        
-        // Redirect to dashboard if coming from login/register
-        if (targetUrl.pathname === '/login' || targetUrl.pathname === '/register' || targetUrl.pathname === '/') {
-          targetUrl.pathname = '/dashboard';
-        }
       }
-      
+
       // Only redirect if we're actually changing location
       if (targetUrl.toString() !== window.location.href) {
         window.location.href = targetUrl.toString();
