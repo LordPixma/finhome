@@ -134,7 +134,7 @@ auth.post('/login', async c => {
 
     console.log('[Login] Password verified, checking MFA');
     // Check if MFA is enabled for this user (gracefully handle if tables don't exist)
-    let mfaData = null;
+    let mfaData: any = null;
     try {
       mfaData = user.isGlobalAdmin
         ? await db.select()
