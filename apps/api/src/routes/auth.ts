@@ -133,22 +133,34 @@ auth.post('/login', async c => {
     }
 
     console.log('[Login] Password verified, checking MFA');
-    // Check if MFA is enabled for this user
-    const mfaData = user.isGlobalAdmin
-      ? await db.select()
-          .from(globalAdminMFA)
-          .where(and(
-            eq(globalAdminMFA.userId, user.id),
-            eq(globalAdminMFA.isEnabled, true)
-          ))
-          .get()
-      : await db.select()
-          .from(userMFA)
-          .where(and(
-            eq(userMFA.userId, user.id),
-            eq(userMFA.isEnabled, true)
-          ))
-          .get();
+    // Check if MFA is enabled for this user (gracefully handle if tables don't exist)
+    let mfaData = null;
+    try {
+      mfaData = user.isGlobalAdmin
+        ? await db.select()
+            .from(globalAdminMFA)
+            .where(and(
+              eq(globalAdminMFA.userId, user.id),
+              eq(globalAdminMFA.isEnabled, true)
+            ))
+            .get()
+        : await db.select()
+            .from(userMFA)
+            .where(and(
+              eq(userMFA.userId, user.id),
+              eq(userMFA.isEnabled, true)
+            ))
+            .get();
+    } catch (mfaError: any) {
+      // If MFA tables don't exist yet, skip MFA check
+      if (mfaError?.message?.includes('no such table')) {
+        console.log('[Login] MFA tables not found, skipping MFA check');
+        mfaData = null;
+      } else {
+        // Re-throw if it's a different error
+        throw mfaError;
+      }
+    }
 
     console.log('[Login] MFA data:', mfaData ? 'enabled' : 'not enabled');
 
