@@ -142,6 +142,7 @@ filesRouter.post('/upload', async c => {
 
     try {
       if (lowerCaseName.endsWith('.pdf')) {
+        // Check if queue-based processing is available
         if (c.env.FILES && c.env.BILL_REMINDERS) {
           const arrayBuffer = await file.arrayBuffer();
           const fileKey = `imports/${tenantId}/${accountId}/${logId}-${Date.now()}-${fileName}`;
@@ -185,6 +186,7 @@ filesRouter.post('/upload', async c => {
           );
         }
 
+        // Fallback to direct PDF parsing if queue is not available
         const arrayBuffer = await file.arrayBuffer();
         fileContentForStorage = arrayBuffer;
         parsedTransactions = await parsePDF(arrayBuffer);
