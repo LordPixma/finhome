@@ -7,7 +7,7 @@ import { Modal, Input, Select, Button } from '@/components/ui';
 import { api } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
 import { useUserSettings } from '@/hooks/useUserSettings';
-import { AutoCategorizeButton, BatchCategorizeButton } from '@/components/ai';
+import { AutoCategorizeButton, BatchCategorizeButton, AITransactionCategorizer } from '@/components/ai';
 import { 
   TrashIcon, 
   ArchiveBoxIcon,
