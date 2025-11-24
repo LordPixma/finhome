@@ -311,13 +311,13 @@ banking.get('/callback', async (c) => {
 
     console.log(`Bank connection ${connectionId} created for tenant ${tenantId}`);
 
-    // Trigger initial sync in background (don't wait for it)
+    // Trigger initial FULL sync in background (2 years of history on first connection)
     try {
       const syncService = new TransactionSyncService(db, c.env);
-      syncService.syncConnection(connectionId).catch(err => {
-        console.error(`[CALLBACK] Background sync failed for ${connectionId}:`, err);
+      syncService.syncConnection(connectionId, 'full').catch(err => {
+        console.error(`[CALLBACK] Background full sync failed for ${connectionId}:`, err);
       });
-      console.log('[CALLBACK] Initial sync triggered in background');
+      console.log('[CALLBACK] Initial full historical sync (2 years) triggered in background');
     } catch (syncError) {
       console.error('[CALLBACK] Failed to trigger sync:', syncError);
       // Don't fail the callback - user can manually sync later
@@ -436,6 +436,7 @@ banking.get('/connections', authMiddleware, async (c) => {
 /**
  * POST /api/banking/connections/:id/sync
  * Trigger manual sync for a connection
+ * Body: { syncMode?: 'incremental' | 'full' } - defaults to 'incremental'
  */
 banking.post('/connections/:id/sync', authMiddleware, async (c) => {
   try {
@@ -471,11 +472,15 @@ banking.post('/connections/:id/sync', authMiddleware, async (c) => {
       );
     }
 
+    // Get sync mode from request body (default: incremental)
+    const body = await c.req.json().catch(() => ({}));
+    const syncMode = body.syncMode === 'full' ? 'full' : 'incremental';
+
     // Initialize sync service
     const syncService = new TransactionSyncService(db, c.env);
 
-    // Perform sync
-    const result = await syncService.syncConnection(connectionId);
+    // Perform sync with specified mode
+    const result = await syncService.syncConnection(connectionId, syncMode);
 
     return c.json({
       success: true,

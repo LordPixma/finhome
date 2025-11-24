@@ -34,8 +34,10 @@ export class TransactionSyncService {
 
   /**
    * Sync transactions for a single bank connection
+   * @param connectionId - The bank connection ID
+   * @param syncMode - 'incremental' (default) or 'full' for full historical import (2 years)
    */
-  async syncConnection(connectionId: string): Promise<SyncResult> {
+  async syncConnection(connectionId: string, syncMode: 'incremental' | 'full' = 'incremental'): Promise<SyncResult> {
     const syncId = crypto.randomUUID();
     const startedAt = Date.now();
 
@@ -138,9 +140,17 @@ export class TransactionSyncService {
             continue;
           }
 
-          // Determine sync date range (last 90 days or from syncFromDate)
-          const fromDate = bankAccount.syncFromDate ||
-            new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+          // Determine sync date range based on sync mode
+          let fromDate: Date;
+          if (syncMode === 'full') {
+            // Full historical import: 2 years (730 days)
+            fromDate = new Date(Date.now() - 730 * 24 * 60 * 60 * 1000);
+            console.log(`[Full Import] Fetching 2 years of history for account ${bankAccount.providerAccountId}`);
+          } else {
+            // Incremental sync: last 90 days or from syncFromDate
+            fromDate = bankAccount.syncFromDate ||
+              new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+          }
           const toDate = new Date();
 
           // Fetch transactions from TrueLayer
