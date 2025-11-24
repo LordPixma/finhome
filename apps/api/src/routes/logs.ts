@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import { authMiddleware } from '../middleware/auth';
 import { getDb, auditLogs, importLogs } from '../db';
 import type { AppContext } from '../types';
