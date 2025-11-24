@@ -67,51 +67,48 @@ export default function AIFeaturesPage() {
           </div>
         </div>
 
-        {/* AI Features Grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
-          {/* Financial Assistant - Larger */}
-          <div className="xl:col-span-2">
-            <Card className="h-full">
-              <CardHeader className="border-b border-gray-100">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-br from-emerald-50 to-green-50 rounded-lg">
-                    <LightBulbIcon className="w-5 h-5 text-emerald-600" />
-                  </div>
-                  <CardTitle>AI Financial Assistant</CardTitle>
+        {/* AI Financial Assistant - Full Width */}
+        <div className="mb-6">
+          <Card className="h-full">
+            <CardHeader className="border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-emerald-50 to-green-50 rounded-lg">
+                  <LightBulbIcon className="w-5 h-5 text-emerald-600" />
                 </div>
-                <p className="text-sm text-gray-500 mt-2">Ask questions about your finances and get intelligent answers</p>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="max-h-[600px] overflow-y-auto">
-                  <div className="p-6">
-                    <AIFinancialAssistant />
-                  </div>
+                <CardTitle>AI Financial Assistant</CardTitle>
+              </div>
+              <p className="text-sm text-gray-500 mt-2">Ask questions about your finances and get intelligent answers</p>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="max-h-[600px] overflow-y-auto">
+                <div className="p-6">
+                  <AIFinancialAssistant />
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-          {/* AI Spending Insights */}
-          <div className="xl:col-span-1">
-            <Card className="h-full">
-              <CardHeader className="border-b border-gray-100">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg">
-                    <ChartBarIcon className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <CardTitle>Spending Analysis</CardTitle>
+        {/* AI Spending Insights - Full Width */}
+        <div className="mb-6">
+          <Card className="h-full">
+            <CardHeader className="border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg">
+                  <ChartBarIcon className="w-5 h-5 text-blue-600" />
                 </div>
-                <p className="text-sm text-gray-500 mt-2">AI-powered spending insights and categorization stats</p>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="max-h-[600px] overflow-y-auto">
-                  <div className="p-6">
-                    <AISpendingSummary />
-                  </div>
+                <CardTitle>Spending Analysis</CardTitle>
+              </div>
+              <p className="text-sm text-gray-500 mt-2">AI-powered spending insights and categorization stats</p>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="max-h-[600px] overflow-y-auto">
+                <div className="p-6">
+                  <AISpendingSummary />
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Quick AI Features Cards */}

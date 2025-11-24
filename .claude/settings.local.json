@@ -14,7 +14,8 @@
       "Bash(npm run db:generate:*)",
       "Bash(npm install:*)",
       "Bash(gh run:*)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(npm uninstall:*)"
     ],
     "deny": [],
     "ask": []
