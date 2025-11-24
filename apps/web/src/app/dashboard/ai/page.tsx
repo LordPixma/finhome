@@ -12,8 +12,8 @@ import {
   ChartBarIcon,
   SparklesIcon,
   LightBulbIcon,
-  TrendingUpIcon,
-  TrendingDownIcon,
+  ArrowTrendingUpIcon,
+  ArrowTrendingDownIcon,
   BanknotesIcon
 } from "@heroicons/react/24/outline";
 
@@ -120,7 +120,7 @@ export default function AIFeaturesPage() {
             <CardContent className="p-6">
               <div className="flex items-start gap-4">
                 <div className="p-3 bg-green-100 rounded-xl">
-                  <TrendingUpIcon className="w-6 h-6 text-green-700" />
+                  <ArrowTrendingUpIcon className="w-6 h-6 text-green-700" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-gray-900 mb-2">Smart Categorization</h3>
@@ -136,7 +136,7 @@ export default function AIFeaturesPage() {
             <CardContent className="p-6">
               <div className="flex items-start gap-4">
                 <div className="p-3 bg-blue-100 rounded-xl">
-                  <TrendingDownIcon className="w-6 h-6 text-blue-700" />
+                  <ArrowTrendingDownIcon className="w-6 h-6 text-blue-700" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-gray-900 mb-2">Spending Patterns</h3>
