@@ -468,89 +468,80 @@ aiRouter.get('/budget-recommendations', async c => {
       const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
       const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-      let y = height - 70;
-      const lineHeight = 18;
       const periodStr = `${startOfMonth.toLocaleString('en-GB', { month: 'long', year: 'numeric' })}`;
       const dateStr = new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-
-      const drawText = (text: string, x: number, size = 11, options: any = {}) => {
-        page.drawText(text, {
-          x, y, size,
-          font: options.bold ? bold : font,
-          color: options.color || rgb(0.2, 0.2, 0.2),
-          maxWidth: options.maxWidth || (width - margin * 2)
-        });
-        y -= (options.spacing || lineHeight);
-      };
-
-      const drawSection = (title: string) => {
-        y -= 10;
-        page.drawLine({ start: { x: margin, y: y + 2 }, end: { x: width - margin, y: y + 2 }, thickness: 1.5, color: rgb(0.2, 0.45, 0.8) });
-        y -= 20;
-        drawText(title, margin, 14, { bold: true, color: rgb(0.1, 0.3, 0.7), spacing: 25 });
-      };
-
-      const drawBox = (x: number, y: number, w: number, h: number, bgColor: any, borderColor: any) => {
-        page.drawRectangle({ x, y, width: w, height: h, color: bgColor, borderColor, borderWidth: 1.5 });
-      };
 
       // Professional Header with gradient simulation
       page.drawRectangle({ x: 0, y: height - 50, width, height: 50, color: rgb(0.15, 0.35, 0.75) });
       page.drawText('FINANCIAL INSIGHTS REPORT', { x: margin, y: height - 30, size: 18, font: bold, color: rgb(1, 1, 1) });
       page.drawText('Powered by Finhome360 AI', { x: margin, y: height - 44, size: 9, font, color: rgb(0.9, 0.9, 1) });
 
-      // Report metadata
-      y -= 5;
-      drawText(`Reporting Period: ${periodStr}`, margin, 10, { bold: true });
-      drawText(`Report Generated: ${dateStr}`, margin, 9, { color: rgb(0.4, 0.4, 0.4) });
+      // Report metadata (starting at y = 760)
+      let y = 760;
+      page.drawText(`Reporting Period: ${periodStr}`, { x: margin, y, size: 10, font: bold, color: rgb(0.2, 0.2, 0.2) });
+      y -= 15;
+      page.drawText(`Report Generated: ${dateStr}`, { x: margin, y, size: 9, font, color: rgb(0.4, 0.4, 0.4) });
 
       // Executive Summary section
-      drawSection('EXECUTIVE SUMMARY');
-      const summaryLines = summary.split('\n').filter(Boolean).slice(0, 8);
+      y -= 30;
+      page.drawLine({ start: { x: margin, y: y + 2 }, end: { x: width - margin, y: y + 2 }, thickness: 1.5, color: rgb(0.2, 0.45, 0.8) });
+      y -= 18;
+      page.drawText('EXECUTIVE SUMMARY', { x: margin, y, size: 14, font: bold, color: rgb(0.1, 0.3, 0.7) });
+      y -= 20;
+
+      const summaryLines = summary.split('\n').filter(Boolean).slice(0, 5); // Limit to 5 lines for space
       summaryLines.forEach(line => {
-        const trimmed = line.trim();
-        if (trimmed) drawText(trimmed, margin, 10, { spacing: 16 });
+        const trimmed = line.trim().substring(0, 90); // Limit line length
+        if (trimmed) {
+          page.drawText(trimmed, { x: margin, y, size: 10, font, color: rgb(0.2, 0.2, 0.2), maxWidth: width - margin * 2 });
+          y -= 14;
+        }
       });
 
-      // Financial Overview section with boxes
-      drawSection('FINANCIAL OVERVIEW');
+      // Financial Overview section with colored boxes
+      y -= 20;
+      page.drawLine({ start: { x: margin, y: y + 2 }, end: { x: width - margin, y: y + 2 }, thickness: 1.5, color: rgb(0.2, 0.45, 0.8) });
+      y -= 18;
+      page.drawText('FINANCIAL OVERVIEW', { x: margin, y, size: 14, font: bold, color: rgb(0.1, 0.3, 0.7) });
+      y -= 30;
 
-      // Three-column metrics - boxes are drawn BELOW current position
+      // Three-column colored metric boxes (fixed height below current position)
       const colWidth = (width - margin * 2 - 20) / 3;
-      const boxHeight = 70;
-      const boxY = y - boxHeight; // Box bottom edge is below current position
+      const boxHeight = 75;
+      const boxBottomY = y - boxHeight;
 
-      // Income box
-      drawBox(margin, boxY, colWidth, boxHeight, rgb(0.95, 0.98, 0.95), rgb(0.3, 0.7, 0.4));
-      page.drawText('TOTAL INCOME', { x: margin + 10, y: boxY + 50, size: 9, font: bold, color: rgb(0.2, 0.5, 0.3) });
-      page.drawText(`£${totalIncome.toFixed(2)}`, { x: margin + 10, y: boxY + 28, size: 16, font: bold, color: rgb(0.1, 0.4, 0.2) });
+      // Income box (green)
+      page.drawRectangle({ x: margin, y: boxBottomY, width: colWidth, height: boxHeight, color: rgb(0.95, 0.98, 0.95), borderColor: rgb(0.3, 0.7, 0.4), borderWidth: 1.5 });
+      page.drawText('TOTAL INCOME', { x: margin + 10, y: boxBottomY + 55, size: 9, font: bold, color: rgb(0.2, 0.5, 0.3) });
+      page.drawText(`£${totalIncome.toFixed(2)}`, { x: margin + 10, y: boxBottomY + 32, size: 16, font: bold, color: rgb(0.1, 0.4, 0.2) });
 
-      // Expenses box
-      drawBox(margin + colWidth + 10, boxY, colWidth, boxHeight, rgb(0.98, 0.95, 0.95), rgb(0.8, 0.3, 0.3));
-      page.drawText('TOTAL EXPENSES', { x: margin + colWidth + 20, y: boxY + 50, size: 9, font: bold, color: rgb(0.7, 0.2, 0.2) });
-      page.drawText(`£${totalSpending.toFixed(2)}`, { x: margin + colWidth + 20, y: boxY + 28, size: 16, font: bold, color: rgb(0.6, 0.1, 0.1) });
+      // Expenses box (red)
+      page.drawRectangle({ x: margin + colWidth + 10, y: boxBottomY, width: colWidth, height: boxHeight, color: rgb(0.98, 0.95, 0.95), borderColor: rgb(0.8, 0.3, 0.3), borderWidth: 1.5 });
+      page.drawText('TOTAL EXPENSES', { x: margin + colWidth + 20, y: boxBottomY + 55, size: 9, font: bold, color: rgb(0.7, 0.2, 0.2) });
+      page.drawText(`£${totalSpending.toFixed(2)}`, { x: margin + colWidth + 20, y: boxBottomY + 32, size: 16, font: bold, color: rgb(0.6, 0.1, 0.1) });
 
-      // Net savings box
+      // Net savings box (blue/red based on positive/negative)
       const netColor = net >= 0 ? rgb(0.2, 0.5, 0.8) : rgb(0.8, 0.3, 0.2);
       const netBg = net >= 0 ? rgb(0.95, 0.97, 0.99) : rgb(0.99, 0.95, 0.95);
-      drawBox(margin + colWidth * 2 + 20, boxY, colWidth, boxHeight, netBg, netColor);
-      page.drawText('NET SAVINGS', { x: margin + colWidth * 2 + 30, y: boxY + 50, size: 9, font: bold, color: netColor });
-      page.drawText(`£${net.toFixed(2)}`, { x: margin + colWidth * 2 + 30, y: boxY + 28, size: 16, font: bold, color: netColor });
-      page.drawText(`Savings Rate: ${totalIncome > 0 ? ((net/totalIncome)*100).toFixed(1) : '0'}%`, { x: margin + colWidth * 2 + 30, y: boxY + 10, size: 8, font, color: rgb(0.4, 0.4, 0.4) });
+      page.drawRectangle({ x: margin + colWidth * 2 + 20, y: boxBottomY, width: colWidth, height: boxHeight, color: netBg, borderColor: netColor, borderWidth: 1.5 });
+      page.drawText('NET SAVINGS', { x: margin + colWidth * 2 + 30, y: boxBottomY + 55, size: 9, font: bold, color: netColor });
+      page.drawText(`£${net.toFixed(2)}`, { x: margin + colWidth * 2 + 30, y: boxBottomY + 32, size: 16, font: bold, color: netColor });
+      page.drawText(`Savings Rate: ${totalIncome > 0 ? ((net/totalIncome)*100).toFixed(1) : '0'}%`, { x: margin + colWidth * 2 + 30, y: boxBottomY + 14, size: 8, font, color: rgb(0.4, 0.4, 0.4) });
 
-      // Move y position down after the boxes
-      y = boxY - 20;
+      // Move y position below the boxes
+      y = boxBottomY - 20;
 
       // Top Expense Categories section
-      drawSection('TOP EXPENSE CATEGORIES');
+      y -= 10;
+      page.drawLine({ start: { x: margin, y: y + 2 }, end: { x: width - margin, y: y + 2 }, thickness: 1.5, color: rgb(0.2, 0.45, 0.8) });
+      y -= 18;
+      page.drawText('TOP EXPENSE CATEGORIES', { x: margin, y, size: 14, font: bold, color: rgb(0.1, 0.3, 0.7) });
+      y -= 25;
 
       if (topCategories.length > 0) {
-        page.drawRectangle({ x: margin, y: y - 10, width: width - margin * 2, height: 1, color: rgb(0.8, 0.8, 0.8) });
-        y -= 25;
-
         topCategories.forEach(([cat, amt], idx) => {
           const pct = totalSpending > 0 ? (amt / totalSpending) * 100 : 0;
-          const barWidth = (width - margin * 2 - 150) * (pct / 100);
+          const barWidth = Math.max(1, (width - margin * 2 - 150) * (pct / 100)); // Minimum 1px bar
 
           // Category name
           page.drawText(`${idx + 1}. ${cat}`, { x: margin, y, size: 10, font: bold, color: rgb(0.2, 0.2, 0.2) });
@@ -578,7 +569,8 @@ aiRouter.get('/budget-recommendations', async c => {
           y -= 22;
         });
       } else {
-        drawText('No expense data available for this period.', margin, 10, { color: rgb(0.5, 0.5, 0.5) });
+        page.drawText('No expense data available for this period.', { x: margin, y, size: 10, font, color: rgb(0.5, 0.5, 0.5) });
+        y -= 20;
       }
 
       // Footer with professional styling
