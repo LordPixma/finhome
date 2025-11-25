@@ -6,6 +6,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { Modal, Input, Select, Button } from '@/components/ui';
 import { api } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
+import { AIBudgetSuggestions } from '@/components/AIBudgetSuggestions';
 
 interface Budget {
   id: string;
@@ -297,6 +298,24 @@ export default function BudgetsPage() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* AI Budget Suggestions */}
+        <div className="mb-8">
+          <AIBudgetSuggestions
+            categories={categories}
+            transactions={transactions}
+            existingBudgets={budgets.map(b => ({ categoryId: b.categoryId, amount: b.amount }))}
+            onApplySuggestion={(categoryId, amount) => {
+              setFormData({
+                categoryId,
+                amount: amount.toString(),
+                period: 'monthly',
+                startDate: new Date().toISOString().split('T')[0],
+              });
+              setIsModalOpen(true);
+            }}
+          />
         </div>
 
         {/* Budgets Grid */}
