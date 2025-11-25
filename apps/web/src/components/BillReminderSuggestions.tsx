@@ -73,7 +73,7 @@ export function BillReminderSuggestions({
         });
 
       // Analyze each group
-      Object.entries(descriptionGroups).forEach(([desc, txns]) => {
+      Object.entries(descriptionGroups).forEach(([_, txns]) => {
         if (txns.length < 2) return; // Need at least 2 occurrences
 
         // Sort by date
