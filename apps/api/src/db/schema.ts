@@ -274,6 +274,9 @@ export const goals = sqliteTable('goals', {
   currentAmount: real('current_amount').notNull().default(0),
   deadline: integer('deadline', { mode: 'timestamp' }),
   accountId: text('account_id').references(() => accounts.id),
+  category: text('category', {
+    enum: ['emergency', 'vacation', 'home', 'education', 'vehicle', 'investment', 'wedding', 'retirement', 'other']
+  }),
   status: text('status', { enum: ['active', 'completed', 'abandoned'] }).notNull().default('active'),
   color: text('color').notNull(),
   icon: text('icon').notNull().default('🎯'),
@@ -283,6 +286,7 @@ export const goals = sqliteTable('goals', {
   tenantStatusIdx: index('idx_goals_tenant_status').on(table.tenantId, table.status),
   deadlineIdx: index('idx_goals_deadline').on(table.deadline),
   accountIdx: index('idx_goals_account').on(table.accountId),
+  categoryIdx: index('idx_goals_category').on(table.category),
 }));
 
 // Goal Contributions Table

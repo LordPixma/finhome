@@ -15,6 +15,7 @@ interface Goal {
   currentAmount: number;
   deadline?: string;
   accountId?: string;
+  category?: 'emergency' | 'vacation' | 'home' | 'education' | 'vehicle' | 'investment' | 'wedding' | 'retirement' | 'other';
   status: 'active' | 'completed' | 'abandoned';
   color: string;
   icon: string;
@@ -40,6 +41,7 @@ export default function GoalsPage() {
     currentAmount: '0',
     deadline: '',
     accountId: '',
+    category: '' as Goal['category'] | '',
     status: 'active' as Goal['status'],
     color: '#3B82F6',
     icon: '🎯',
@@ -141,6 +143,7 @@ export default function GoalsPage() {
       currentAmount: item.currentAmount.toString(),
       deadline: item.deadline ? item.deadline.split('T')[0] : '',
       accountId: item.accountId || '',
+      category: item.category || '',
       status: item.status,
       color: item.color,
       icon: item.icon,
@@ -170,6 +173,7 @@ export default function GoalsPage() {
       currentAmount: '0',
       deadline: '',
       accountId: '',
+      category: '',
       status: 'active',
       color: '#3B82F6',
       icon: '🎯',
@@ -313,17 +317,37 @@ export default function GoalsPage() {
               />
             </div>
 
-            <Select
-              label="Status"
-              value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-              required
-              options={[
-                { value: 'active', label: 'Active' },
-                { value: 'completed', label: 'Completed' },
-                { value: 'abandoned', label: 'Abandoned' },
-              ]}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <Select
+                label="Category (Optional)"
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
+                options={[
+                  { value: '', label: 'None' },
+                  { value: 'emergency', label: '🚨 Emergency Fund' },
+                  { value: 'vacation', label: '✈️ Vacation' },
+                  { value: 'home', label: '🏠 Home' },
+                  { value: 'education', label: '🎓 Education' },
+                  { value: 'vehicle', label: '🚗 Vehicle' },
+                  { value: 'investment', label: '📈 Investment' },
+                  { value: 'wedding', label: '💍 Wedding' },
+                  { value: 'retirement', label: '🏖️ Retirement' },
+                  { value: 'other', label: '📦 Other' },
+                ]}
+              />
+
+              <Select
+                label="Status"
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                required
+                options={[
+                  { value: 'active', label: 'Active' },
+                  { value: 'completed', label: 'Completed' },
+                  { value: 'abandoned', label: 'Abandoned' },
+                ]}
+              />
+            </div>
 
             {/* Color Picker */}
             <div>
