@@ -201,6 +201,7 @@ export class TransactionSyncService {
             parsedTransactions: mappedTransactions,
             logId: null, // No import log for automated sync
             startedAt,
+            checkDuplicates: true, // Enable duplicate detection for bank sync
           });
 
           totalImported += result.transactionsImported;

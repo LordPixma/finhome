@@ -12,6 +12,7 @@ export interface ImportPersistenceParams {
   parsedTransactions: ParsedTransaction[];
   logId: string | null; // Optional for automated sync
   startedAt: number;
+  checkDuplicates?: boolean; // Enable duplicate detection (default: false for backwards compatibility)
 }
 
 export interface ImportPersistenceResult {
@@ -37,6 +38,7 @@ export async function persistTransactionsFromImport({
   parsedTransactions,
   logId,
   startedAt,
+  checkDuplicates = false,
 }: ImportPersistenceParams): Promise<ImportPersistenceResult> {
   const createdTransactions: typeof transactions.$inferSelect[] = [];
   let importedCount = 0;
@@ -51,6 +53,26 @@ export async function persistTransactionsFromImport({
 
   for (const parsed of parsedTransactions) {
     try {
+      // Check for duplicates if enabled (for bank sync)
+      if (checkDuplicates && parsed.providerTransactionId) {
+        const existingTransaction = await db
+          .select()
+          .from(transactions)
+          .where(
+            and(
+              eq(transactions.tenantId, tenantId),
+              eq(transactions.accountId, account.id),
+              eq(transactions.providerTransactionId, parsed.providerTransactionId)
+            )
+          )
+          .get();
+
+        if (existingTransaction) {
+          skippedCount++;
+          continue; // Skip this duplicate transaction
+        }
+      }
+
       let categoryId = defaultCategoryId;
 
       if (parsed.category && parsed.category.trim() !== '') {
@@ -106,7 +128,7 @@ export async function persistTransactionsFromImport({
         date: parsed.date,
         type: parsed.type,
         notes: parsed.notes ?? null,
-        providerTransactionId: null,
+        providerTransactionId: parsed.providerTransactionId ?? null,
         createdAt: txnTimestamp,
         updatedAt: txnTimestamp,
       };
