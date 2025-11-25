@@ -16,14 +16,10 @@ import {
   TagIcon,
   BellIcon,
   ChartPieIcon,
-  SparklesIcon,
-  ArrowDownTrayIcon,
-  DocumentTextIcon,
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
   Bars3Icon,
   XMarkIcon,
-  PresentationChartLineIcon,
 } from '@heroicons/react/24/outline';
 
 interface DashboardLayoutProps {
@@ -46,10 +42,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Categories', href: '/dashboard/categories', icon: TagIcon },
     { name: 'Bill Reminders', href: '/dashboard/bill-reminders', icon: BellIcon },
     { name: 'Analytics', href: '/dashboard/analytics', icon: ChartPieIcon },
-    { name: 'Advanced Analytics', href: '/dashboard/analytics/advanced', icon: PresentationChartLineIcon },
-    { name: 'AI Features', href: '/dashboard/ai', icon: SparklesIcon },
-    { name: 'Import', href: '/dashboard/import', icon: ArrowDownTrayIcon },
-    { name: 'Logs', href: '/dashboard/logs', icon: DocumentTextIcon },
     { name: 'Settings', href: '/dashboard/settings', icon: Cog6ToothIcon },
   ];
 
