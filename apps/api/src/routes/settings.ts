@@ -66,7 +66,7 @@ router.put('/', validateRequest(UpdateUserSettingsSchema), async (c) => {
     const user = c.get('user');
     const tenantId = c.get('tenantId');
     const userId = user!.id;
-    const body = await c.req.json();
+    const body = c.get('validatedData');
 
     // Check if settings exist
     let settings = await db
