@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { eq, and, desc } from 'drizzle-orm';
-import { getDb, accounts, bankAccounts, bankConnections } from '../db';
+import { getDb, accounts, bankAccounts, bankConnections, transactions, recurringTransactions, goals } from '../db';
 import { authMiddleware, tenantMiddleware } from '../middleware/auth';
 import { validateRequest } from '../middleware/validation';
 import { CreateAccountSchema } from '@finhome360/shared';
@@ -248,6 +248,33 @@ accountsRouter.delete('/:id', async c => {
       );
     }
 
+    // Delete related records first (cascading delete)
+    // 1. Delete transactions associated with this account
+    await db
+      .delete(transactions)
+      .where(and(eq(transactions.accountId, id), eq(transactions.tenantId, tenantId)))
+      .run();
+
+    // 2. Delete recurring transactions associated with this account
+    await db
+      .delete(recurringTransactions)
+      .where(and(eq(recurringTransactions.accountId, id), eq(recurringTransactions.tenantId, tenantId)))
+      .run();
+
+    // 3. Delete bank accounts associated with this account
+    await db
+      .delete(bankAccounts)
+      .where(eq(bankAccounts.accountId, id))
+      .run();
+
+    // 4. Update goals that reference this account (set accountId to null)
+    await db
+      .update(goals)
+      .set({ accountId: null })
+      .where(and(eq(goals.accountId, id), eq(goals.tenantId, tenantId)))
+      .run();
+
+    // Finally, delete the account itself
     await db
       .delete(accounts)
       .where(and(eq(accounts.id, id), eq(accounts.tenantId, tenantId)))
