@@ -6,6 +6,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { Modal, Input, Select, Button } from '@/components/ui';
 import { api } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
+import { GoalProgressTracker } from '@/components/GoalProgressTracker';
 
 interface Goal {
   id: string;
@@ -213,86 +214,39 @@ export default function GoalsPage() {
             </div>
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {goals.map((goal) => {
-                const progress = getProgressPercentage(goal);
-                return (
-                  <div
-                    key={goal.id}
-                    className="bg-white rounded-xl shadow-lg border-2 p-6 hover:shadow-xl transition-shadow"
-                    style={{ borderColor: goal.color }}
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <div
-                        className="w-14 h-14 rounded-xl flex items-center justify-center text-3xl shadow-sm"
-                        style={{ backgroundColor: `${goal.color}20` }}
-                      >
-                        {goal.icon}
-                      </div>
-                      <div className="flex gap-1">
-                        <button
-                          onClick={() => handleEdit(goal)}
-                          className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => handleDelete(goal.id)}
-                          className="p-2 text-gray-400 hover:text-red-600 transition-colors"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
+              {goals.map((goal) => (
+                <div key={goal.id} className="relative group">
+                  <GoalProgressTracker goal={goal} size="md" />
 
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">{goal.name}</h3>
-                    {goal.description && (
-                      <p className="text-sm text-gray-600 mb-4">{goal.description}</p>
-                    )}
-
-                    <div className="space-y-2 mb-4">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Progress</span>
-                        <span className="font-bold" style={{ color: goal.color }}>{progress.toFixed(1)}%</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-3">
-                        <div
-                          className="h-3 rounded-full transition-all duration-500"
-                          style={{ width: `${progress}%`, backgroundColor: goal.color }}
-                        />
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="font-semibold text-gray-900">{formatCurrency(goal.currentAmount)}</span>
-                        <span className="text-gray-600">{formatCurrency(goal.targetAmount)}</span>
-                      </div>
-                    </div>
-
-                    {goal.deadline && (
-                      <p className="text-xs text-gray-500 mb-4">
-                        📅 Target: {new Date(goal.deadline).toLocaleDateString()}
-                      </p>
-                    )}
-
-                    {goal.status === 'completed' && (
-                      <div className="bg-green-100 text-green-700 px-3 py-2 rounded-lg text-sm font-medium text-center mb-4">
-                        ✅ Goal Completed!
-                      </div>
-                    )}
-
-                    <Button
-                      onClick={() => setContributionModal(goal)}
-                      variant="secondary"
-                      className="w-full"
-                      disabled={goal.status !== 'active'}
+                  {/* Action Buttons Overlay */}
+                  <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => handleEdit(goal)}
+                      className="p-2 bg-white rounded-lg shadow-md text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
                     >
-                      Add Contribution
-                    </Button>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => handleDelete(goal.id)}
+                      className="p-2 bg-white rounded-lg shadow-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
                   </div>
-                );
-              })}
+
+                  {/* Add Contribution Button */}
+                  <button
+                    onClick={() => setContributionModal(goal)}
+                    className="absolute bottom-4 right-4 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all font-medium text-sm opacity-0 group-hover:opacity-100"
+                  >
+                    + Add Funds
+                  </button>
+                </div>
+              ))}
             </div>
           )}
         </div>

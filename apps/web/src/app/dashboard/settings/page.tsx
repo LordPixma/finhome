@@ -8,6 +8,8 @@ import { Button, Input, Select } from '@/components/ui';
 import { api } from '@/lib/api';
 import TenantDeletionModal from '@/components/TenantDeletionModal';
 import { MFASettings } from '@/components/MFASettings';
+import { CurrencySelector } from '@/components/CurrencySelector';
+import type { Currency } from '@/lib/currencies';
 
 interface UserSettings {
   id: string;
@@ -543,23 +545,15 @@ export default function SettingsPage() {
               ) : settings ? (
                 <form onSubmit={handleUpdateSettings} className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Select
-                      label="Currency"
+                    <CurrencySelector
                       value={settings.currency}
-                      onChange={(e) => {
-                        const currency = e.target.value;
-                        const symbols: Record<string, string> = { GBP: '£', USD: '$', EUR: '€' };
+                      onChange={(currency: Currency) => {
                         setSettings({
                           ...settings,
-                          currency,
-                          currencySymbol: symbols[currency] || '$',
+                          currency: currency.code,
+                          currencySymbol: currency.symbol,
                         });
                       }}
-                      options={[
-                        { value: 'GBP', label: '£ GBP - British Pound' },
-                        { value: 'USD', label: '$ USD - US Dollar' },
-                        { value: 'EUR', label: '€ EUR - Euro' },
-                      ]}
                     />
 
                     <Select

@@ -198,6 +198,44 @@ export const api = {
   // Analytics
   getSpendingAnalytics: () => apiClient('/api/analytics/spending'),
   getCashflowAnalytics: () => apiClient('/api/analytics/cashflow'),
+  getAccountPerformance: (startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    const query = params.toString();
+    return apiClient(`/api/analytics/account-performance${query ? '?' + query : ''}`);
+  },
+  getCategoryTrends: (params?: { categoryId?: string; startDate?: string; endDate?: string; groupBy?: string }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.categoryId) searchParams.append('categoryId', params.categoryId);
+    if (params?.startDate) searchParams.append('startDate', params.startDate);
+    if (params?.endDate) searchParams.append('endDate', params.endDate);
+    if (params?.groupBy) searchParams.append('groupBy', params.groupBy);
+    const query = searchParams.toString();
+    return apiClient(`/api/analytics/category-trends${query ? '?' + query : ''}`);
+  },
+  getTopMerchants: (limit?: number, startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams();
+    if (limit) params.append('limit', limit.toString());
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    const query = params.toString();
+    return apiClient(`/api/analytics/top-merchants${query ? '?' + query : ''}`);
+  },
+  getTransactionVelocity: (startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    const query = params.toString();
+    return apiClient(`/api/analytics/transaction-velocity${query ? '?' + query : ''}`);
+  },
+  getComparativeAnalytics: (period?: string, compareCount?: number) => {
+    const params = new URLSearchParams();
+    if (period) params.append('period', period);
+    if (compareCount) params.append('compareCount', compareCount.toString());
+    const query = params.toString();
+    return apiClient(`/api/analytics/comparative${query ? '?' + query : ''}`);
+  },
 
   // Files
   uploadFile: (file: File, accountId: string) => {
