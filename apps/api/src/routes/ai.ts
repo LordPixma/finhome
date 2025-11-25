@@ -9,7 +9,7 @@ import { authMiddleware } from '../middleware/auth';
 import { validateRequest } from '../middleware/validation';
 import { getDb, transactions, categories } from '../db';
 import { CloudflareAIService } from '../services/workersai.service';
-import { eq, and, desc, gte, sql } from 'drizzle-orm';
+import { eq, and, desc, gte, lte } from 'drizzle-orm';
 import type { Env } from '../types';
 import { z } from 'zod';
 
@@ -432,7 +432,7 @@ aiRouter.get('/budget-recommendations', async c => {
         .where(and(
           eq(transactions.tenantId, tenantId),
           gte(transactions.date, startOfMonth),
-          sql`${transactions.date} <= ${endOfMonth.toISOString()}`
+          lte(transactions.date, endOfMonth)
         ))
         .orderBy(desc(transactions.date));
 
@@ -447,7 +447,7 @@ aiRouter.get('/budget-recommendations', async c => {
         .where(and(
           eq(transactions.tenantId, tenantId),
           gte(transactions.date, startOfPrevMonth),
-          sql`${transactions.date} <= ${endOfPrevMonth.toISOString()}`
+          lte(transactions.date, endOfPrevMonth)
         ));
 
       // Current month stats
