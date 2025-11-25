@@ -119,19 +119,19 @@ export default function AdvancedAnalyticsPage() {
       ]);
 
       if (accountPerfResponse.success) {
-        setAccountPerformance(accountPerfResponse.data);
+        setAccountPerformance(accountPerfResponse.data as AccountPerformance[]);
       }
 
       if (merchantsResponse.success) {
-        setTopMerchants(merchantsResponse.data);
+        setTopMerchants(merchantsResponse.data as TopMerchant[]);
       }
 
       if (velocityResponse.success) {
-        setVelocityData(velocityResponse.data);
+        setVelocityData(velocityResponse.data as VelocityData);
       }
 
       if (comparativeResponse.success) {
-        setComparativeData(comparativeResponse.data);
+        setComparativeData(comparativeResponse.data as ComparativeData[]);
       }
     } catch (error) {
       console.error('Failed to load advanced analytics:', error);
@@ -315,6 +315,7 @@ export default function AdvancedAnalyticsPage() {
               </CardHeader>
               <CardContent className="p-6">
                 <InteractiveChart
+                  title="Day of Week Analysis"
                   data={velocityData.byDayOfWeek.map((day) => ({
                     name: day.dayName,
                     value: day.totalAmount,
@@ -337,6 +338,7 @@ export default function AdvancedAnalyticsPage() {
               </CardHeader>
               <CardContent className="p-6">
                 <InteractiveChart
+                  title="Hour of Day Analysis"
                   data={velocityData.byHourOfDay.map((hour) => ({
                     name: `${hour.hour}:00`,
                     value: hour.totalAmount,

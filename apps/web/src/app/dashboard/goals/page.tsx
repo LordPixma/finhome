@@ -5,7 +5,6 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Modal, Input, Select, Button } from '@/components/ui';
 import { api } from '@/lib/api';
-import { formatCurrency } from '@/lib/utils';
 import { GoalProgressTracker } from '@/components/GoalProgressTracker';
 
 interface Goal {
@@ -175,10 +174,6 @@ export default function GoalsPage() {
       color: '#3B82F6',
       icon: '🎯',
     });
-  };
-
-  const getProgressPercentage = (goal: Goal) => {
-    return Math.min((goal.currentAmount / goal.targetAmount) * 100, 100);
   };
 
   return (
