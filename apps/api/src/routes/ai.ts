@@ -9,7 +9,7 @@ import { authMiddleware } from '../middleware/auth';
 import { validateRequest } from '../middleware/validation';
 import { getDb, transactions, categories } from '../db';
 import { CloudflareAIService } from '../services/workersai.service';
-import { eq, and, desc, gte } from 'drizzle-orm';
+import { eq, and, desc, gte, sql } from 'drizzle-orm';
 import type { Env } from '../types';
 import { z } from 'zod';
 
@@ -416,9 +416,9 @@ aiRouter.get('/budget-recommendations', async c => {
       const period = url.searchParams.get('period'); // YYYY-MM
       const baseDate = period ? new Date(`${period}-01T00:00:00Z`) : new Date();
       const startOfMonth = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
-  // endOfMonth not currently required but retained logic above for potential future range filtering
+      const endOfMonth = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0, 23, 59, 59);
 
-      // Fetch transactions for the month
+      // Fetch transactions for the current month
       const monthly = await db
         .select({
           id: transactions.id,
@@ -429,15 +429,44 @@ aiRouter.get('/budget-recommendations', async c => {
         })
         .from(transactions)
         .leftJoin(categories, eq(transactions.categoryId, categories.id))
-        .where(and(eq(transactions.tenantId, tenantId), gte(transactions.date, startOfMonth)))
+        .where(and(
+          eq(transactions.tenantId, tenantId),
+          gte(transactions.date, startOfMonth),
+          sql`${transactions.date} <= ${endOfMonth.toISOString()}`
+        ))
         .orderBy(desc(transactions.date));
 
-      // Basic stats
+      // Fetch previous month for comparison
+      const startOfPrevMonth = new Date(baseDate.getFullYear(), baseDate.getMonth() - 1, 1);
+      const endOfPrevMonth = new Date(baseDate.getFullYear(), baseDate.getMonth(), 0, 23, 59, 59);
+      const previousMonthly = await db
+        .select({
+          amount: transactions.amount,
+        })
+        .from(transactions)
+        .where(and(
+          eq(transactions.tenantId, tenantId),
+          gte(transactions.date, startOfPrevMonth),
+          sql`${transactions.date} <= ${endOfPrevMonth.toISOString()}`
+        ));
+
+      // Current month stats
       const expenses = monthly.filter(t => t.amount < 0);
       const income = monthly.filter(t => t.amount > 0);
       const totalSpending = expenses.reduce((s, t) => s + Math.abs(t.amount), 0);
       const totalIncome = income.reduce((s, t) => s + t.amount, 0);
       const net = totalIncome - totalSpending;
+      const avgTransactionSize = monthly.length > 0 ? (totalIncome + totalSpending) / monthly.length : 0;
+
+      // Previous month stats for comparison
+      const prevExpenses = previousMonthly.filter(t => t.amount < 0);
+      const prevIncome = previousMonthly.filter(t => t.amount > 0);
+      const prevTotalSpending = prevExpenses.reduce((s, t) => s + Math.abs(t.amount), 0);
+      const prevTotalIncome = prevIncome.reduce((s, t) => s + t.amount, 0);
+
+      // Calculate changes
+      const spendingChange = prevTotalSpending > 0 ? ((totalSpending - prevTotalSpending) / prevTotalSpending) * 100 : 0;
+      const incomeChange = prevTotalIncome > 0 ? ((totalIncome - prevTotalIncome) / prevTotalIncome) * 100 : 0;
 
       // Group by category
       const byCategory: Record<string, number> = {};
@@ -446,6 +475,11 @@ aiRouter.get('/budget-recommendations', async c => {
         byCategory[cat] = (byCategory[cat] || 0) + Math.abs(t.amount);
       });
       const topCategories = Object.entries(byCategory).sort((a,b) => b[1]-a[1]).slice(0,5);
+
+      // Transaction count stats
+      const transactionCount = monthly.length;
+      const incomeTransactions = income.length;
+      const expenseTransactions = expenses.length;
 
       // AI summary
       const formatted = monthly.map(t => ({
@@ -489,13 +523,36 @@ aiRouter.get('/budget-recommendations', async c => {
       page.drawText('EXECUTIVE SUMMARY', { x: margin, y, size: 14, font: bold, color: rgb(0.1, 0.3, 0.7) });
       y -= 20;
 
-      const summaryLines = summary.split('\n').filter(Boolean).slice(0, 5); // Limit to 5 lines for space
-      summaryLines.forEach(line => {
-        const trimmed = line.trim().substring(0, 90); // Limit line length
-        if (trimmed) {
-          page.drawText(trimmed, { x: margin, y, size: 10, font, color: rgb(0.2, 0.2, 0.2), maxWidth: width - margin * 2 });
+      // Split summary into lines and render all of them (no truncation)
+      const wrapText = (text: string, maxWidth: number): string[] => {
+        const words = text.split(' ');
+        const lines: string[] = [];
+        let currentLine = '';
+
+        words.forEach(word => {
+          const testLine = currentLine ? `${currentLine} ${word}` : word;
+          const testWidth = font.widthOfTextAtSize(testLine, 10);
+          if (testWidth > maxWidth && currentLine) {
+            lines.push(currentLine);
+            currentLine = word;
+          } else {
+            currentLine = testLine;
+          }
+        });
+        if (currentLine) lines.push(currentLine);
+        return lines;
+      };
+
+      const summaryParagraphs = summary.split('\n').filter(Boolean);
+      summaryParagraphs.forEach(paragraph => {
+        const lines = wrapText(paragraph.trim(), width - margin * 2);
+        lines.forEach(line => {
+          if (y < 200) { // If we're too close to bottom, skip to keep space for other sections
+            return;
+          }
+          page.drawText(line, { x: margin, y, size: 10, font, color: rgb(0.2, 0.2, 0.2) });
           y -= 14;
-        }
+        });
       });
 
       // Financial Overview section with colored boxes
@@ -571,6 +628,61 @@ aiRouter.get('/budget-recommendations', async c => {
       } else {
         page.drawText('No expense data available for this period.', { x: margin, y, size: 10, font, color: rgb(0.5, 0.5, 0.5) });
         y -= 20;
+      }
+
+      // Month-over-Month Comparison section (if we have space)
+      if (y > 250 && (prevTotalIncome > 0 || prevTotalSpending > 0)) {
+        y -= 15;
+        page.drawLine({ start: { x: margin, y: y + 2 }, end: { x: width - margin, y: y + 2 }, thickness: 1.5, color: rgb(0.2, 0.45, 0.8) });
+        y -= 18;
+        page.drawText('MONTH-OVER-MONTH COMPARISON', { x: margin, y, size: 14, font: bold, color: rgb(0.1, 0.3, 0.7) });
+        y -= 25;
+
+        const changeColor = (change: number) => change >= 0 ? rgb(0.8, 0.2, 0.2) : rgb(0.2, 0.7, 0.3);
+        const changeSymbol = (change: number) => change >= 0 ? '↑' : '↓';
+
+        // Income comparison
+        page.drawText(`Income:`, { x: margin, y, size: 10, font: bold, color: rgb(0.2, 0.2, 0.2) });
+        page.drawText(`£${totalIncome.toFixed(2)} ${changeSymbol(incomeChange)} ${Math.abs(incomeChange).toFixed(1)}%`, {
+          x: margin + 200,
+          y,
+          size: 10,
+          font,
+          color: changeColor(incomeChange)
+        });
+        y -= 18;
+
+        // Spending comparison
+        page.drawText(`Spending:`, { x: margin, y, size: 10, font: bold, color: rgb(0.2, 0.2, 0.2) });
+        page.drawText(`£${totalSpending.toFixed(2)} ${changeSymbol(spendingChange)} ${Math.abs(spendingChange).toFixed(1)}%`, {
+          x: margin + 200,
+          y,
+          size: 10,
+          font,
+          color: changeColor(spendingChange)
+        });
+        y -= 18;
+
+        // Transaction counts
+        page.drawText(`Total Transactions:`, { x: margin, y, size: 10, font: bold, color: rgb(0.2, 0.2, 0.2) });
+        page.drawText(`${transactionCount} (${incomeTransactions} income, ${expenseTransactions} expenses)`, {
+          x: margin + 200,
+          y,
+          size: 10,
+          font,
+          color: rgb(0.3, 0.3, 0.3)
+        });
+        y -= 18;
+
+        // Average transaction size
+        page.drawText(`Avg Transaction:`, { x: margin, y, size: 10, font: bold, color: rgb(0.2, 0.2, 0.2) });
+        page.drawText(`£${avgTransactionSize.toFixed(2)}`, {
+          x: margin + 200,
+          y,
+          size: 10,
+          font,
+          color: rgb(0.3, 0.3, 0.3)
+        });
       }
 
       // Footer with professional styling
