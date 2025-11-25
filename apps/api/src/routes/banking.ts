@@ -253,12 +253,14 @@ banking.get('/callback', async (c) => {
                             `${institutionName} Account`;
         
         // Determine account type mapping - convert to lowercase
-        let accountType: 'current' | 'savings' | 'credit' | 'cash' | 'investment' | 'other' = 'checking' as any;
+        let accountType: 'current' | 'savings' | 'credit' | 'cash' | 'investment' | 'other' = 'current';
         const tlType = truelayerAccount.account_type?.toUpperCase();
         if (tlType === 'SAVINGS') {
           accountType = 'savings';
         } else if (tlType === 'TRANSACTION') {
-          accountType = 'checking' as any; // Production DB uses 'checking' not 'current'
+          accountType = 'current'; // TrueLayer TRANSACTION maps to 'current' account
+        } else if (tlType === 'CREDIT_CARD' || tlType === 'CREDIT') {
+          accountType = 'credit';
         }
         
         console.log('[CALLBACK] Creating new Finhome account:', { name: accountName, type: accountType, currency: truelayerAccount.currency });
