@@ -496,7 +496,7 @@ export const api = {
   // User MFA
   mfa: {
     getStatus: () => apiClient('/api/mfa/status'),
-    setup: () => apiClient('/api/mfa/setup', { method: 'POST' }),
+    setup: () => apiClient('/api/mfa/setup', { method: 'POST', body: JSON.stringify({}) }),
     confirm: (token: string, secret: string) => apiClient('/api/mfa/confirm', {
       method: 'POST',
       body: JSON.stringify({ token, secret })
