@@ -102,9 +102,16 @@ userMFARouter.get('/status', authMiddleware, async (c: AppContext) => {
       .where(eq(userMFA.userId, user.id))
       .get();
 
-    const backupCodesCount = mfaData?.backupCodes
-      ? JSON.parse(mfaData.backupCodes).length
-      : 0;
+    let backupCodesCount = 0;
+    if (mfaData?.backupCodes) {
+      try {
+        const codes = JSON.parse(mfaData.backupCodes);
+        backupCodesCount = Array.isArray(codes) ? codes.length : 0;
+      } catch (parseError) {
+        console.error('Error parsing backup codes:', parseError);
+        backupCodesCount = 0;
+      }
+    }
 
     return c.json({
       success: true,
@@ -116,6 +123,11 @@ userMFARouter.get('/status', authMiddleware, async (c: AppContext) => {
 
   } catch (error) {
     console.error('MFA status error:', error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      userId: c.get('user')?.id
+    });
     return c.json({
       success: false,
       error: { code: 'INTERNAL_ERROR', message: 'Failed to get MFA status' }
