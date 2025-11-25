@@ -246,29 +246,43 @@ export class TransactionSyncService {
       }
 
       // Update connection last sync
-      await this.db
-        .update(bankConnections)
-        .set({
-          lastSyncAt: new Date(),
-          lastError: null,
-          updatedAt: new Date(),
-        })
-        .where(eq(bankConnections.id, connectionId))
-        .run();
+      try {
+        await this.db
+          .update(bankConnections)
+          .set({
+            lastSyncAt: new Date(),
+            lastError: null,
+            updatedAt: new Date(),
+          })
+          .where(eq(bankConnections.id, connectionId))
+          .run();
+      } catch (updateError) {
+        console.error('Error updating bank connection sync status:', updateError);
+        console.error('Update details:', {
+          connectionId,
+          error: updateError instanceof Error ? updateError.message : 'Unknown',
+        });
+        // Don't fail the sync if we can't update the connection status
+      }
 
       // Update sync history with results
-      await this.db
-        .update(transactionSyncHistory)
-        .set({
-          syncCompletedAt: new Date(),
-          transactionsFetched: totalFetched,
-          transactionsImported: totalImported,
-          transactionsSkipped: totalSkipped,
-          transactionsFailed: totalFailed,
-          status: 'completed',
-        })
-        .where(eq(transactionSyncHistory.id, syncId))
-        .run();
+      try {
+        await this.db
+          .update(transactionSyncHistory)
+          .set({
+            syncCompletedAt: new Date(),
+            transactionsFetched: totalFetched,
+            transactionsImported: totalImported,
+            transactionsSkipped: totalSkipped,
+            transactionsFailed: totalFailed,
+            status: 'completed',
+          })
+          .where(eq(transactionSyncHistory.id, syncId))
+          .run();
+      } catch (historyError) {
+        console.error('Error updating sync history:', historyError);
+        // Continue even if history update fails
+      }
 
       return {
         syncId,
@@ -280,29 +294,38 @@ export class TransactionSyncService {
       };
     } catch (error) {
       console.error(`Sync failed for connection ${connectionId}:`, error);
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
 
       const errorMessage = error instanceof Error ? error.message : 'Unknown sync error';
 
       // Update sync history with error
-      await this.db
-        .update(transactionSyncHistory)
-        .set({
-          syncCompletedAt: new Date(),
-          status: 'failed',
-          errorMessage,
-        })
-        .where(eq(transactionSyncHistory.id, syncId))
-        .run();
+      try {
+        await this.db
+          .update(transactionSyncHistory)
+          .set({
+            syncCompletedAt: new Date(),
+            status: 'failed',
+            errorMessage: errorMessage.substring(0, 500), // Limit error message length
+          })
+          .where(eq(transactionSyncHistory.id, syncId))
+          .run();
+      } catch (historyError) {
+        console.error('Failed to update sync history with error:', historyError);
+      }
 
       // Update connection with error
-      await this.db
-        .update(bankConnections)
-        .set({
-          lastError: errorMessage,
-          updatedAt: new Date(),
-        })
-        .where(eq(bankConnections.id, connectionId))
-        .run();
+      try {
+        await this.db
+          .update(bankConnections)
+          .set({
+            lastError: errorMessage.substring(0, 500), // Limit error message length
+            updatedAt: new Date(),
+          })
+          .where(eq(bankConnections.id, connectionId))
+          .run();
+      } catch (connError) {
+        console.error('Failed to update connection error status:', connError);
+      }
 
       return {
         syncId,
