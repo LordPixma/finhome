@@ -515,10 +515,10 @@ aiRouter.get('/budget-recommendations', async c => {
       // Financial Overview section with boxes
       drawSection('FINANCIAL OVERVIEW');
 
-      // Three-column metrics - save current y position and draw boxes independently
+      // Three-column metrics - boxes are drawn BELOW current position
       const colWidth = (width - margin * 2 - 20) / 3;
-      const boxY = y;
       const boxHeight = 70;
+      const boxY = y - boxHeight; // Box bottom edge is below current position
 
       // Income box
       drawBox(margin, boxY, colWidth, boxHeight, rgb(0.95, 0.98, 0.95), rgb(0.3, 0.7, 0.4));
@@ -539,7 +539,7 @@ aiRouter.get('/budget-recommendations', async c => {
       page.drawText(`Savings Rate: ${totalIncome > 0 ? ((net/totalIncome)*100).toFixed(1) : '0'}%`, { x: margin + colWidth * 2 + 30, y: boxY + 10, size: 8, font, color: rgb(0.4, 0.4, 0.4) });
 
       // Move y position down after the boxes
-      y = boxY - boxHeight - 20;
+      y = boxY - 20;
 
       // Top Expense Categories section
       drawSection('TOP EXPENSE CATEGORIES');
