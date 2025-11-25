@@ -235,6 +235,7 @@ export const CreateGoalSchema = GoalSchema.omit({
 
 export const CreateGoalContributionSchema = GoalContributionSchema.omit({
   id: true,
+  goalId: true, // goalId comes from URL parameter
   createdAt: true,
 });
 
