@@ -588,11 +588,16 @@ aiRouter.get('/budget-recommendations', async c => {
       page.drawText(`Page 1 of 1`, { x: width - margin - 50, y: footerY - 5, size: 8, font, color: rgb(0.5, 0.5, 0.5) });
 
       const pdfBytes = await pdfDoc.save();
+      const origin = c.req.header('Origin') || '*';
       return new Response(pdfBytes, {
         status: 200,
         headers: {
           'Content-Type': 'application/pdf',
           'Content-Disposition': `attachment; filename="finhome-ai-report-${startOfMonth.getFullYear()}-${String(startOfMonth.getMonth()+1).padStart(2,'0')}.pdf"`,
+          'Access-Control-Allow-Origin': origin,
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'Access-Control-Allow-Credentials': 'true',
         },
       });
     } catch (error) {
