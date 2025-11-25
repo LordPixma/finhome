@@ -515,30 +515,31 @@ aiRouter.get('/budget-recommendations', async c => {
       // Financial Overview section with boxes
       drawSection('FINANCIAL OVERVIEW');
 
-      // Three-column metrics
+      // Three-column metrics - save current y position and draw boxes independently
       const colWidth = (width - margin * 2 - 20) / 3;
-      const boxY = y - 70;
-      const boxHeight = 65;
+      const boxY = y;
+      const boxHeight = 70;
 
       // Income box
       drawBox(margin, boxY, colWidth, boxHeight, rgb(0.95, 0.98, 0.95), rgb(0.3, 0.7, 0.4));
-      page.drawText('TOTAL INCOME', { x: margin + 10, y: boxY + 45, size: 9, font: bold, color: rgb(0.2, 0.5, 0.3) });
-      page.drawText(`£${totalIncome.toFixed(2)}`, { x: margin + 10, y: boxY + 20, size: 16, font: bold, color: rgb(0.1, 0.4, 0.2) });
+      page.drawText('TOTAL INCOME', { x: margin + 10, y: boxY + 50, size: 9, font: bold, color: rgb(0.2, 0.5, 0.3) });
+      page.drawText(`£${totalIncome.toFixed(2)}`, { x: margin + 10, y: boxY + 28, size: 16, font: bold, color: rgb(0.1, 0.4, 0.2) });
 
       // Expenses box
       drawBox(margin + colWidth + 10, boxY, colWidth, boxHeight, rgb(0.98, 0.95, 0.95), rgb(0.8, 0.3, 0.3));
-      page.drawText('TOTAL EXPENSES', { x: margin + colWidth + 20, y: boxY + 45, size: 9, font: bold, color: rgb(0.7, 0.2, 0.2) });
-      page.drawText(`£${totalSpending.toFixed(2)}`, { x: margin + colWidth + 20, y: boxY + 20, size: 16, font: bold, color: rgb(0.6, 0.1, 0.1) });
+      page.drawText('TOTAL EXPENSES', { x: margin + colWidth + 20, y: boxY + 50, size: 9, font: bold, color: rgb(0.7, 0.2, 0.2) });
+      page.drawText(`£${totalSpending.toFixed(2)}`, { x: margin + colWidth + 20, y: boxY + 28, size: 16, font: bold, color: rgb(0.6, 0.1, 0.1) });
 
       // Net savings box
       const netColor = net >= 0 ? rgb(0.2, 0.5, 0.8) : rgb(0.8, 0.3, 0.2);
       const netBg = net >= 0 ? rgb(0.95, 0.97, 0.99) : rgb(0.99, 0.95, 0.95);
       drawBox(margin + colWidth * 2 + 20, boxY, colWidth, boxHeight, netBg, netColor);
-      page.drawText('NET SAVINGS', { x: margin + colWidth * 2 + 30, y: boxY + 45, size: 9, font: bold, color: netColor });
-      page.drawText(`£${net.toFixed(2)}`, { x: margin + colWidth * 2 + 30, y: boxY + 20, size: 16, font: bold, color: netColor });
-      page.drawText(`Savings Rate: ${totalIncome > 0 ? ((net/totalIncome)*100).toFixed(1) : '0'}%`, { x: margin + colWidth * 2 + 30, y: boxY + 5, size: 8, font, color: rgb(0.4, 0.4, 0.4) });
+      page.drawText('NET SAVINGS', { x: margin + colWidth * 2 + 30, y: boxY + 50, size: 9, font: bold, color: netColor });
+      page.drawText(`£${net.toFixed(2)}`, { x: margin + colWidth * 2 + 30, y: boxY + 28, size: 16, font: bold, color: netColor });
+      page.drawText(`Savings Rate: ${totalIncome > 0 ? ((net/totalIncome)*100).toFixed(1) : '0'}%`, { x: margin + colWidth * 2 + 30, y: boxY + 10, size: 8, font, color: rgb(0.4, 0.4, 0.4) });
 
-      y = boxY - 30;
+      // Move y position down after the boxes
+      y = boxY - boxHeight - 20;
 
       // Top Expense Categories section
       drawSection('TOP EXPENSE CATEGORIES');
