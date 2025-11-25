@@ -133,15 +133,13 @@ analytics.get('/account-performance', async c => {
   const startDate = c.req.query('startDate');
   const endDate = c.req.query('endDate');
 
-  let dateFilter = eq(transactions.tenantId, tenantId);
-
-  if (startDate && endDate) {
-    dateFilter = and(
-      eq(transactions.tenantId, tenantId),
-      gte(transactions.date, new Date(startDate)),
-      lte(transactions.date, new Date(endDate))
-    );
-  }
+  const dateFilter = startDate && endDate
+    ? and(
+        eq(transactions.tenantId, tenantId),
+        gte(transactions.date, new Date(startDate)),
+        lte(transactions.date, new Date(endDate))
+      )!
+    : eq(transactions.tenantId, tenantId);
 
   const accountStats = await db
     .select({
@@ -191,19 +189,18 @@ analytics.get('/category-trends', async c => {
       break;
   }
 
-  let whereClause = eq(transactions.tenantId, tenantId);
+  const filters = [eq(transactions.tenantId, tenantId)];
 
   if (categoryId) {
-    whereClause = and(whereClause, eq(transactions.categoryId, categoryId));
+    filters.push(eq(transactions.categoryId, categoryId));
   }
 
   if (startDate && endDate) {
-    whereClause = and(
-      whereClause,
-      gte(transactions.date, new Date(startDate)),
-      lte(transactions.date, new Date(endDate))
-    );
+    filters.push(gte(transactions.date, new Date(startDate)));
+    filters.push(lte(transactions.date, new Date(endDate)));
   }
+
+  const whereClause = filters.length > 1 ? and(...filters)! : filters[0];
 
   const trends = await db
     .select({
@@ -236,15 +233,13 @@ analytics.get('/top-merchants', async c => {
   const startDate = c.req.query('startDate');
   const endDate = c.req.query('endDate');
 
-  let whereClause = eq(transactions.tenantId, tenantId);
-
-  if (startDate && endDate) {
-    whereClause = and(
-      whereClause,
-      gte(transactions.date, new Date(startDate)),
-      lte(transactions.date, new Date(endDate))
-    );
-  }
+  const whereClause = startDate && endDate
+    ? and(
+        eq(transactions.tenantId, tenantId),
+        gte(transactions.date, new Date(startDate)),
+        lte(transactions.date, new Date(endDate))
+      )!
+    : eq(transactions.tenantId, tenantId);
 
   const topMerchants = await db
     .select({
@@ -276,15 +271,13 @@ analytics.get('/transaction-velocity', async c => {
   const startDate = c.req.query('startDate');
   const endDate = c.req.query('endDate');
 
-  let whereClause = eq(transactions.tenantId, tenantId);
-
-  if (startDate && endDate) {
-    whereClause = and(
-      whereClause,
-      gte(transactions.date, new Date(startDate)),
-      lte(transactions.date, new Date(endDate))
-    );
-  }
+  const whereClause = startDate && endDate
+    ? and(
+        eq(transactions.tenantId, tenantId),
+        gte(transactions.date, new Date(startDate)),
+        lte(transactions.date, new Date(endDate))
+      )!
+    : eq(transactions.tenantId, tenantId);
 
   // Get transactions by day of week
   const byDayOfWeek = await db

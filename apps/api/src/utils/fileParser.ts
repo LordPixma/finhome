@@ -83,6 +83,7 @@ export interface ParsedTransaction {
   type: 'income' | 'expense';
   notes?: string;
   category?: string;
+  providerTransactionId?: string; // For bank sync deduplication
 }
 
 /**
