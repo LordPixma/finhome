@@ -9,7 +9,9 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "noImplicitAny": false,
-    "strict": false
+    "strict": false,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", ".wrangler"]

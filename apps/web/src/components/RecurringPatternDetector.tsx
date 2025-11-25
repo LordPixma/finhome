@@ -60,7 +60,7 @@ export function RecurringPatternDetector({
       });
 
       // Analyze each group for recurring patterns
-      Object.entries(descriptionGroups).forEach(([desc, txns]) => {
+      Object.entries(descriptionGroups).forEach(([_, txns]) => {
         if (txns.length < 3) return; // Need at least 3 occurrences
 
         // Sort by date

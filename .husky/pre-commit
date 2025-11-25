@@ -1,1 +1,9 @@
-npm test
+echo "🔍 Running TypeScript checks..."
+npm run lint
+
+if [ $? -ne 0 ]; then
+  echo "❌ TypeScript check failed! Please fix the errors before committing."
+  exit 1
+fi
+
+echo "✅ TypeScript checks passed!"

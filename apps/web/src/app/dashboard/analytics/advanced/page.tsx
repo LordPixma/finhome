@@ -80,6 +80,7 @@ export default function AdvancedAnalyticsPage() {
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateRange, comparativePeriod]);
 
   const getDateRange = () => {
