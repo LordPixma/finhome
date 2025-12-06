@@ -22,6 +22,7 @@ import {
   Bars3Icon,
   XMarkIcon,
   QueueListIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline';
 import { NotificationBell } from '@/components/notifications';
 
@@ -46,6 +47,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Categories', href: '/dashboard/categories', icon: TagIcon },
     { name: 'Bill Reminders', href: '/dashboard/bill-reminders', icon: BellIcon },
     { name: 'Analytics', href: '/dashboard/analytics', icon: ChartPieIcon },
+    { name: 'AI Advisor', href: '/dashboard/ai', icon: SparklesIcon },
     { name: 'Settings', href: '/dashboard/settings', icon: Cog6ToothIcon },
   ];
 
