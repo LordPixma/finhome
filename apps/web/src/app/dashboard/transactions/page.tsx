@@ -8,8 +8,9 @@ import { api } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { AutoCategorizeButton, BatchCategorizeButton } from '@/components/ai';
-import { 
-  TrashIcon, 
+import { ExportButton } from '@/components/export';
+import {
+  TrashIcon,
   ArchiveBoxIcon,
   PlusIcon,
   PencilIcon,
@@ -421,6 +422,7 @@ export default function TransactionsPage() {
             <p className="text-gray-600 mt-1">Track your income and expenses</p>
           </div>
           <div className="flex items-center gap-3">
+            <ExportButton dataType="transactions" variant="secondary" />
             <BatchCategorizeButton
               autoApply={true}
               onSuccess={handleBatchCategorizeSuccess}

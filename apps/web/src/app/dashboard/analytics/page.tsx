@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import DashboardLayout from '@/components/DashboardLayout';
-import { Button } from '@/components/ui';
 import { api } from '@/lib/api';
+import { ExportButton } from '@/components/export';
 import { formatCurrency } from '@/lib/utils';
 import dynamic from 'next/dynamic';
 import { InsightsWidget } from '@/components/InsightsWidget';
@@ -166,28 +166,6 @@ export default function AnalyticsPage() {
 
   // This variable is no longer needed as we use interactive charts
 
-  const handleExport = () => {
-    const csvContent = [
-      ['Month', 'Income', 'Expense', 'Net'],
-      ...monthlyData.map((m) => [
-        m.month,
-        m.income.toFixed(2),
-        m.expense.toFixed(2),
-        (m.income - m.expense).toFixed(2),
-      ]),
-    ]
-      .map((row) => row.join(','))
-      .join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `analytics-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
-
   if (isLoading) {
     return (
       <ProtectedRoute>
@@ -225,9 +203,7 @@ export default function AnalyticsPage() {
                 </button>
               ))}
             </div>
-            <Button onClick={handleExport} icon="📥">
-              Export CSV
-            </Button>
+            <ExportButton dataType="analytics" variant="secondary" />
           </div>
         </div>
 

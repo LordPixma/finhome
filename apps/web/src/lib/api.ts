@@ -624,6 +624,129 @@ export const api = {
     checkAlerts: () => apiClient('/api/notifications/check-alerts', { method: 'POST' }),
   },
 
+  // Data Export
+  export: {
+    transactions: async (options?: { format?: 'csv' | 'json' | 'pdf'; startDate?: string; endDate?: string; accountId?: string; categoryId?: string }) => {
+      const params = new URLSearchParams();
+      if (options?.format) params.append('format', options.format);
+      if (options?.startDate) params.append('startDate', options.startDate);
+      if (options?.endDate) params.append('endDate', options.endDate);
+      if (options?.accountId) params.append('accountId', options.accountId);
+      if (options?.categoryId) params.append('categoryId', options.categoryId);
+      const query = params.toString();
+      const token = tokenManager.getAccessToken();
+      const res = await fetch(`${API_URL}/api/export/transactions${query ? '?' + query : ''}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error('Failed to export transactions');
+      if (options?.format === 'pdf') return res.json();
+      return res.blob();
+    },
+    budgets: async (options?: { format?: 'csv' | 'json' | 'pdf'; startDate?: string; endDate?: string }) => {
+      const params = new URLSearchParams();
+      if (options?.format) params.append('format', options.format);
+      if (options?.startDate) params.append('startDate', options.startDate);
+      if (options?.endDate) params.append('endDate', options.endDate);
+      const query = params.toString();
+      const token = tokenManager.getAccessToken();
+      const res = await fetch(`${API_URL}/api/export/budgets${query ? '?' + query : ''}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error('Failed to export budgets');
+      if (options?.format === 'pdf') return res.json();
+      return res.blob();
+    },
+    goals: async (options?: { format?: 'csv' | 'json' | 'pdf'; includeContributions?: boolean }) => {
+      const params = new URLSearchParams();
+      if (options?.format) params.append('format', options.format);
+      if (options?.includeContributions) params.append('includeContributions', 'true');
+      const query = params.toString();
+      const token = tokenManager.getAccessToken();
+      const res = await fetch(`${API_URL}/api/export/goals${query ? '?' + query : ''}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error('Failed to export goals');
+      if (options?.format === 'pdf') return res.json();
+      return res.blob();
+    },
+    analytics: async (options?: { format?: 'csv' | 'json' | 'pdf'; startDate?: string; endDate?: string }) => {
+      const params = new URLSearchParams();
+      if (options?.format) params.append('format', options.format);
+      if (options?.startDate) params.append('startDate', options.startDate);
+      if (options?.endDate) params.append('endDate', options.endDate);
+      const query = params.toString();
+      const token = tokenManager.getAccessToken();
+      const res = await fetch(`${API_URL}/api/export/analytics${query ? '?' + query : ''}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error('Failed to export analytics');
+      if (options?.format === 'pdf') return res.json();
+      return res.blob();
+    },
+    all: async (options?: { format?: 'csv' | 'json' | 'pdf'; startDate?: string; endDate?: string }) => {
+      const params = new URLSearchParams();
+      if (options?.format) params.append('format', options.format);
+      if (options?.startDate) params.append('startDate', options.startDate);
+      if (options?.endDate) params.append('endDate', options.endDate);
+      const query = params.toString();
+      const token = tokenManager.getAccessToken();
+      const res = await fetch(`${API_URL}/api/export/all${query ? '?' + query : ''}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error('Failed to export data');
+      if (options?.format === 'pdf') return res.json();
+      return res.blob();
+    },
+  },
+
+  // Scheduled Reports
+  scheduledReports: {
+    getAll: () => apiClient('/api/scheduled-reports'),
+    get: (id: string) => apiClient(`/api/scheduled-reports/${id}`),
+    getHistory: (id: string, limit?: number) => {
+      const params = limit ? `?limit=${limit}` : '';
+      return apiClient(`/api/scheduled-reports/${id}/history${params}`);
+    },
+    create: (data: {
+      name: string;
+      reportType: 'transactions' | 'budgets' | 'goals' | 'analytics' | 'all';
+      format?: 'csv' | 'json';
+      frequency: 'daily' | 'weekly' | 'monthly';
+      dayOfWeek?: number;
+      dayOfMonth?: number;
+      timeOfDay?: string;
+      timezone?: string;
+      includeAllTime?: boolean;
+      lookbackDays?: number;
+      deliveryEmail: string;
+    }) => apiClient('/api/scheduled-reports', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+    update: (id: string, data: {
+      name?: string;
+      reportType?: 'transactions' | 'budgets' | 'goals' | 'analytics' | 'all';
+      format?: 'csv' | 'json';
+      frequency?: 'daily' | 'weekly' | 'monthly';
+      dayOfWeek?: number;
+      dayOfMonth?: number;
+      timeOfDay?: string;
+      timezone?: string;
+      includeAllTime?: boolean;
+      lookbackDays?: number;
+      deliveryEmail?: string;
+      isEnabled?: boolean;
+    }) => apiClient(`/api/scheduled-reports/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    }),
+    toggle: (id: string, isEnabled: boolean) => apiClient(`/api/scheduled-reports/${id}/toggle`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isEnabled })
+    }),
+    delete: (id: string) => apiClient(`/api/scheduled-reports/${id}`, { method: 'DELETE' }),
+  },
+
   // User MFA
   mfa: {
     getStatus: () => apiClient('/api/mfa/status'),

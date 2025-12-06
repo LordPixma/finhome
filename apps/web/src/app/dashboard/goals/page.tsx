@@ -6,6 +6,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { Modal, Input, Select, Button } from '@/components/ui';
 import { api } from '@/lib/api';
 import { GoalProgressTracker } from '@/components/GoalProgressTracker';
+import { ExportButton } from '@/components/export';
 
 interface Goal {
   id: string;
@@ -189,15 +190,18 @@ export default function GoalsPage() {
               <h1 className="text-3xl font-bold text-gray-900">Goals & Savings</h1>
               <p className="text-gray-600 mt-1">Track your financial goals and progress</p>
             </div>
-            <Button
-              onClick={() => {
-                resetForm();
-                setIsModalOpen(true);
-              }}
-              icon="🎯"
-            >
-              Add Goal
-            </Button>
+            <div className="flex items-center gap-3">
+              <ExportButton dataType="goals" variant="secondary" />
+              <Button
+                onClick={() => {
+                  resetForm();
+                  setIsModalOpen(true);
+                }}
+                icon="🎯"
+              >
+                Add Goal
+              </Button>
+            </div>
           </div>
 
           {isLoading ? (

@@ -7,6 +7,7 @@ import { Modal, Input, Select, Button } from '@/components/ui';
 import { api } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
 import { AIBudgetSuggestions } from '@/components/AIBudgetSuggestions';
+import { ExportButton } from '@/components/export';
 
 interface Budget {
   id: string;
@@ -242,9 +243,12 @@ export default function BudgetsPage() {
             <h1 className="text-3xl font-bold text-gray-900">Budgets</h1>
             <p className="text-gray-600 mt-1">Track your spending against budgets</p>
           </div>
-          <Button onClick={() => handleOpenModal()} icon="➕">
-            Add Budget
-          </Button>
+          <div className="flex items-center gap-3">
+            <ExportButton dataType="budgets" variant="secondary" />
+            <Button onClick={() => handleOpenModal()} icon="➕">
+              Add Budget
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}

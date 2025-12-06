@@ -1231,3 +1231,89 @@ export const alertRules = sqliteTable('alert_rules', {
   typeIdx: index('idx_alert_rules_type').on(table.ruleType),
 }));
 
+// ============================================
+// SCHEDULED REPORTS TABLE
+// ============================================
+
+// Scheduled Reports - User-configured recurring report schedules
+export const scheduledReports = sqliteTable('scheduled_reports', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id')
+    .notNull()
+    .references(() => tenants.id),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id),
+  // Report configuration
+  name: text('name').notNull(),
+  reportType: text('report_type', {
+    enum: ['transactions', 'budgets', 'goals', 'analytics', 'all']
+  }).notNull(),
+  format: text('format', {
+    enum: ['csv', 'json']
+  }).notNull().default('csv'),
+  // Schedule
+  frequency: text('frequency', {
+    enum: ['daily', 'weekly', 'monthly']
+  }).notNull(),
+  dayOfWeek: integer('day_of_week'), // 0-6 for weekly (0 = Sunday)
+  dayOfMonth: integer('day_of_month'), // 1-31 for monthly
+  timeOfDay: text('time_of_day').default('09:00'), // HH:MM format
+  timezone: text('timezone').default('Europe/London'),
+  // Filter options
+  includeAllTime: integer('include_all_time', { mode: 'boolean' }).default(false),
+  lookbackDays: integer('lookback_days').default(30), // Days to include in report
+  // Delivery
+  deliveryEmail: text('delivery_email').notNull(),
+  // Status
+  isEnabled: integer('is_enabled', { mode: 'boolean' }).default(true),
+  lastRunAt: integer('last_run_at', { mode: 'timestamp' }),
+  lastRunStatus: text('last_run_status', {
+    enum: ['success', 'failed', 'pending']
+  }),
+  lastError: text('last_error'),
+  nextRunAt: integer('next_run_at', { mode: 'timestamp' }),
+  runCount: integer('run_count').default(0),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  tenantIdx: index('idx_scheduled_reports_tenant').on(table.tenantId),
+  userIdx: index('idx_scheduled_reports_user').on(table.userId),
+  enabledIdx: index('idx_scheduled_reports_enabled').on(table.isEnabled),
+  nextRunIdx: index('idx_scheduled_reports_next_run').on(table.nextRunAt),
+}));
+
+// Scheduled Report Runs - History of report generations
+export const scheduledReportRuns = sqliteTable('scheduled_report_runs', {
+  id: text('id').primaryKey(),
+  reportId: text('report_id')
+    .notNull()
+    .references(() => scheduledReports.id),
+  tenantId: text('tenant_id')
+    .notNull()
+    .references(() => tenants.id),
+  // Run details
+  status: text('status', {
+    enum: ['pending', 'generating', 'sending', 'completed', 'failed']
+  }).notNull().default('pending'),
+  // Report period
+  periodStart: integer('period_start', { mode: 'timestamp' }).notNull(),
+  periodEnd: integer('period_end', { mode: 'timestamp' }).notNull(),
+  // Results
+  recordCount: integer('record_count').default(0),
+  fileSizeBytes: integer('file_size_bytes'),
+  // Error handling
+  errorMessage: text('error_message'),
+  retryCount: integer('retry_count').default(0),
+  // Timing
+  startedAt: integer('started_at', { mode: 'timestamp' }),
+  completedAt: integer('completed_at', { mode: 'timestamp' }),
+  processingTimeMs: integer('processing_time_ms'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  reportIdx: index('idx_scheduled_report_runs_report').on(table.reportId),
+  tenantIdx: index('idx_scheduled_report_runs_tenant').on(table.tenantId),
+  statusIdx: index('idx_scheduled_report_runs_status').on(table.status),
+  createdIdx: index('idx_scheduled_report_runs_created').on(table.createdAt),
+}));
+
