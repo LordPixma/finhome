@@ -1081,5 +1081,153 @@ export const loanAffordabilityAssessments = sqliteTable('loan_affordability_asse
   tenantTypeIdx: index('idx_loan_affordability_tenant_type').on(table.tenantId, table.loanType),
   statusIdx: index('idx_loan_affordability_status').on(table.status),
   dateIdx: index('idx_loan_affordability_date').on(table.calculatedAt),
-}))
+}));
+
+// ============================================
+// NOTIFICATIONS SYSTEM TABLES
+// ============================================
+
+// User Notification Preferences
+export const notificationPreferences = sqliteTable('notification_preferences', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id')
+    .notNull()
+    .references(() => tenants.id),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id),
+  // Email preferences
+  emailEnabled: integer('email_enabled', { mode: 'boolean' }).default(true),
+  emailBudgetAlerts: integer('email_budget_alerts', { mode: 'boolean' }).default(true),
+  emailBillReminders: integer('email_bill_reminders', { mode: 'boolean' }).default(true),
+  emailGoalMilestones: integer('email_goal_milestones', { mode: 'boolean' }).default(true),
+  emailUnusualSpending: integer('email_unusual_spending', { mode: 'boolean' }).default(true),
+  emailWeeklySummary: integer('email_weekly_summary', { mode: 'boolean' }).default(true),
+  emailMonthlyReport: integer('email_monthly_report', { mode: 'boolean' }).default(false),
+  // Push/In-app preferences
+  pushEnabled: integer('push_enabled', { mode: 'boolean' }).default(true),
+  pushBudgetAlerts: integer('push_budget_alerts', { mode: 'boolean' }).default(true),
+  pushBillReminders: integer('push_bill_reminders', { mode: 'boolean' }).default(true),
+  pushGoalMilestones: integer('push_goal_milestones', { mode: 'boolean' }).default(true),
+  pushUnusualSpending: integer('push_unusual_spending', { mode: 'boolean' }).default(true),
+  pushLowBalance: integer('push_low_balance', { mode: 'boolean' }).default(true),
+  pushLargeTransactions: integer('push_large_transactions', { mode: 'boolean' }).default(true),
+  // Alert thresholds
+  budgetAlertThreshold: integer('budget_alert_threshold').default(80),
+  lowBalanceThreshold: real('low_balance_threshold').default(100),
+  largeTransactionThreshold: real('large_transaction_threshold').default(500),
+  unusualSpendingSensitivity: text('unusual_spending_sensitivity', {
+    enum: ['low', 'medium', 'high']
+  }).default('medium'),
+  // Quiet hours
+  quietHoursEnabled: integer('quiet_hours_enabled', { mode: 'boolean' }).default(false),
+  quietHoursStart: text('quiet_hours_start').default('22:00'),
+  quietHoursEnd: text('quiet_hours_end').default('08:00'),
+  // Frequency settings
+  digestFrequency: text('digest_frequency', {
+    enum: ['realtime', 'daily', 'weekly']
+  }).default('realtime'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  tenantIdx: index('idx_notification_preferences_tenant').on(table.tenantId),
+  userIdx: index('idx_notification_preferences_user').on(table.userId),
+  uniqueTenantUser: uniqueIndex('uniq_notification_preferences_tenant_user').on(table.tenantId, table.userId),
+}));
+
+// Notifications Table
+export const notifications = sqliteTable('notifications', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id')
+    .notNull()
+    .references(() => tenants.id),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id),
+  // Notification details
+  type: text('type', {
+    enum: ['budget_alert', 'bill_reminder', 'goal_milestone', 'unusual_spending', 'low_balance', 'large_transaction', 'system', 'insight']
+  }).notNull(),
+  category: text('category', {
+    enum: ['alert', 'reminder', 'milestone', 'insight', 'system']
+  }).notNull(),
+  priority: text('priority', {
+    enum: ['low', 'medium', 'high', 'urgent']
+  }).notNull().default('medium'),
+  // Content
+  title: text('title').notNull(),
+  message: text('message').notNull(),
+  actionUrl: text('action_url'),
+  actionLabel: text('action_label'),
+  // Icon and styling
+  icon: text('icon'),
+  color: text('color'),
+  // Related entities
+  relatedEntityType: text('related_entity_type', {
+    enum: ['budget', 'bill', 'goal', 'transaction', 'account', 'category']
+  }),
+  relatedEntityId: text('related_entity_id'),
+  // Metadata
+  metadata: text('metadata'),
+  // Status
+  isRead: integer('is_read', { mode: 'boolean' }).default(false),
+  readAt: integer('read_at', { mode: 'timestamp' }),
+  isDismissed: integer('is_dismissed', { mode: 'boolean' }).default(false),
+  dismissedAt: integer('dismissed_at', { mode: 'timestamp' }),
+  isActioned: integer('is_actioned', { mode: 'boolean' }).default(false),
+  actionedAt: integer('actioned_at', { mode: 'timestamp' }),
+  // Delivery status
+  emailSent: integer('email_sent', { mode: 'boolean' }).default(false),
+  emailSentAt: integer('email_sent_at', { mode: 'timestamp' }),
+  pushSent: integer('push_sent', { mode: 'boolean' }).default(false),
+  pushSentAt: integer('push_sent_at', { mode: 'timestamp' }),
+  // Expiry
+  expiresAt: integer('expires_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  tenantIdx: index('idx_notifications_tenant').on(table.tenantId),
+  userIdx: index('idx_notifications_user').on(table.userId),
+  tenantUserIdx: index('idx_notifications_tenant_user').on(table.tenantId, table.userId),
+  typeIdx: index('idx_notifications_type').on(table.type),
+  readIdx: index('idx_notifications_read').on(table.isRead),
+  createdIdx: index('idx_notifications_created').on(table.createdAt),
+  tenantUserUnreadIdx: index('idx_notifications_tenant_user_unread').on(table.tenantId, table.userId, table.isRead),
+}));
+
+// Alert Rules Table - Custom user-defined alert rules
+export const alertRules = sqliteTable('alert_rules', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id')
+    .notNull()
+    .references(() => tenants.id),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id),
+  // Rule details
+  name: text('name').notNull(),
+  description: text('description'),
+  isEnabled: integer('is_enabled', { mode: 'boolean' }).default(true),
+  // Rule type and conditions
+  ruleType: text('rule_type', {
+    enum: ['spending', 'balance', 'transaction', 'budget', 'category']
+  }).notNull(),
+  conditions: text('conditions').notNull(), // JSON
+  // Actions
+  actions: text('actions').notNull(), // JSON array
+  // Related entities
+  categoryId: text('category_id').references(() => categories.id),
+  accountId: text('account_id').references(() => accounts.id),
+  budgetId: text('budget_id').references(() => budgets.id),
+  // Cooldown
+  cooldownMinutes: integer('cooldown_minutes').default(60),
+  lastTriggeredAt: integer('last_triggered_at', { mode: 'timestamp' }),
+  triggerCount: integer('trigger_count').default(0),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  tenantIdx: index('idx_alert_rules_tenant').on(table.tenantId),
+  userIdx: index('idx_alert_rules_user').on(table.userId),
+  enabledIdx: index('idx_alert_rules_enabled').on(table.isEnabled),
+  typeIdx: index('idx_alert_rules_type').on(table.ruleType),
+}));
 

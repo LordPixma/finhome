@@ -21,6 +21,7 @@ import {
   Bars3Icon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
+import { NotificationBell } from '@/components/notifications';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -61,14 +62,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             </button>
             <TextLogo size="sm" variant="dark" />
           </div>
-          <button
-            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-            className="flex items-center space-x-2 p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <div className="w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center font-semibold text-sm">
-              {user?.name?.[0]?.toUpperCase() || 'U'}
-            </div>
-          </button>
+          <div className="flex items-center space-x-2">
+            <NotificationBell />
+            <button
+              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+              className="flex items-center space-x-2 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <div className="w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center font-semibold text-sm">
+                {user?.name?.[0]?.toUpperCase() || 'U'}
+              </div>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -76,8 +80,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col lg:z-50">
         <div className="flex flex-col flex-grow bg-white shadow-sidebar overflow-y-auto">
           {/* Logo Section */}
-          <div className="flex items-center flex-shrink-0 px-6 py-6 border-b border-gray-200">
+          <div className="flex items-center justify-between flex-shrink-0 px-6 py-6 border-b border-gray-200">
             <TextLogo size="lg" variant="dark" />
+            <NotificationBell />
           </div>
 
           {/* Navigation */}

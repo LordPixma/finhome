@@ -577,6 +577,53 @@ export const api = {
     getSummary: () => apiClient('/api/ai-advisor/summary'),
   },
 
+  // Notifications
+  notifications: {
+    getAll: (options?: { limit?: number; offset?: number; unreadOnly?: boolean; type?: string; category?: string }) => {
+      const params = new URLSearchParams();
+      if (options?.limit) params.append('limit', options.limit.toString());
+      if (options?.offset) params.append('offset', options.offset.toString());
+      if (options?.unreadOnly) params.append('unreadOnly', 'true');
+      if (options?.type) params.append('type', options.type);
+      if (options?.category) params.append('category', options.category);
+      const query = params.toString();
+      return apiClient(`/api/notifications${query ? '?' + query : ''}`);
+    },
+    getUnreadCount: () => apiClient('/api/notifications/unread-count'),
+    markAsRead: (id: string) => apiClient(`/api/notifications/${id}/read`, { method: 'PUT' }),
+    markAllAsRead: () => apiClient('/api/notifications/read-all', { method: 'PUT' }),
+    dismiss: (id: string) => apiClient(`/api/notifications/${id}`, { method: 'DELETE' }),
+    getPreferences: () => apiClient('/api/notifications/preferences'),
+    updatePreferences: (data: {
+      emailEnabled?: boolean;
+      emailBudgetAlerts?: boolean;
+      emailBillReminders?: boolean;
+      emailGoalMilestones?: boolean;
+      emailUnusualSpending?: boolean;
+      emailWeeklySummary?: boolean;
+      emailMonthlyReport?: boolean;
+      pushEnabled?: boolean;
+      pushBudgetAlerts?: boolean;
+      pushBillReminders?: boolean;
+      pushGoalMilestones?: boolean;
+      pushUnusualSpending?: boolean;
+      pushLowBalance?: boolean;
+      pushLargeTransactions?: boolean;
+      budgetAlertThreshold?: number;
+      lowBalanceThreshold?: number;
+      largeTransactionThreshold?: number;
+      unusualSpendingSensitivity?: 'low' | 'medium' | 'high';
+      quietHoursEnabled?: boolean;
+      quietHoursStart?: string;
+      quietHoursEnd?: string;
+      digestFrequency?: 'realtime' | 'daily' | 'weekly';
+    }) => apiClient('/api/notifications/preferences', {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    }),
+    checkAlerts: () => apiClient('/api/notifications/check-alerts', { method: 'POST' }),
+  },
+
   // User MFA
   mfa: {
     getStatus: () => apiClient('/api/mfa/status'),

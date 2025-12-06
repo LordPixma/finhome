@@ -33,6 +33,7 @@ import logsRouter from './routes/logs';
 import financialHealthRouter from './routes/financial-health';
 import creditRiskRouter from './routes/credit-risk';
 import aiAdvisorRouter from './routes/ai-advisor';
+import notificationsRouter from './routes/notifications';
 import { getDb, billReminders, users, userSettings, accounts as accountsTable, importLogs as importLogsTable } from './db';
 import { createEmailService } from './services/email';
 import { parsePDF } from './utils/fileParser';
@@ -78,6 +79,7 @@ app.route('/api/logs', logsRouter);
 app.route('/api/financial-health', financialHealthRouter);
 app.route('/api/credit-risk', creditRiskRouter);
 app.route('/api/ai-advisor', aiAdvisorRouter);
+app.route('/api/notifications', notificationsRouter);
 
 // Diagnostic: identify deployed script & version
 app.get('/api/_whoami', c => {
