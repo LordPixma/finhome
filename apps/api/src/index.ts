@@ -36,6 +36,7 @@ import aiAdvisorRouter from './routes/ai-advisor';
 import notificationsRouter from './routes/notifications';
 import exportRouter from './routes/export';
 import scheduledReportsRouter from './routes/scheduledReports';
+import subscriptionsRouter from './routes/subscriptions';
 import { getDb, billReminders, users, userSettings, accounts as accountsTable, importLogs as importLogsTable } from './db';
 import { createEmailService } from './services/email';
 import { parsePDF } from './utils/fileParser';
@@ -84,6 +85,7 @@ app.route('/api/ai-advisor', aiAdvisorRouter);
 app.route('/api/notifications', notificationsRouter);
 app.route('/api/export', exportRouter);
 app.route('/api/scheduled-reports', scheduledReportsRouter);
+app.route('/api/subscriptions', subscriptionsRouter);
 
 // Diagnostic: identify deployed script & version
 app.get('/api/_whoami', c => {

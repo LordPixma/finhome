@@ -9,6 +9,7 @@ import { api } from '@/lib/api';
 import TenantDeletionModal from '@/components/TenantDeletionModal';
 import { MFASettings } from '@/components/MFASettings';
 import { CurrencySelector } from '@/components/CurrencySelector';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import type { Currency } from '@/lib/currencies';
 
 interface UserSettings {
@@ -313,17 +314,17 @@ export default function SettingsPage() {
   const activeMemberCount = members.length;
   const canInviteMore = activeMemberCount < 3;
 
-  const TabButton: React.FC<{ 
-    tab: 'profile' | 'preferences' | 'security' | 'family'; 
-    label: string; 
+  const TabButton: React.FC<{
+    tab: 'profile' | 'preferences' | 'security' | 'family';
+    label: string;
     icon: string;
   }> = ({ tab, label, icon }) => (
     <button
       onClick={() => setActiveTab(tab)}
       className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-        activeTab === tab 
-          ? 'bg-blue-600 text-white' 
-          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+        activeTab === tab
+          ? 'bg-blue-600 text-white'
+          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
       }`}
     >
       <span>{icon}</span>
@@ -336,24 +337,24 @@ export default function SettingsPage() {
       <DashboardLayout>
         <div className="space-y-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-            <p className="text-gray-600 mt-1">Manage your account preferences and family members</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Settings</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">Manage your account preferences and family members</p>
           </div>
 
           {successMessage && (
-            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+            <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 px-4 py-3 rounded-lg">
               {successMessage}
             </div>
           )}
 
           {errorMessage && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg">
               {errorMessage}
             </div>
           )}
 
           {/* Tab Navigation */}
-          <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+          <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
             <TabButton tab="profile" label="Profile" icon="👤" />
             <TabButton tab="preferences" label="Preferences" icon="⚙️" />
             <TabButton tab="security" label="Security" icon="🔒" />
@@ -362,8 +363,8 @@ export default function SettingsPage() {
 
           {/* Profile Tab */}
           {activeTab === 'profile' && (
-            <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6 flex items-center gap-2">
                 <span className="text-2xl">👤</span> Profile Information
               </h2>
 
@@ -377,16 +378,16 @@ export default function SettingsPage() {
                   <div className="flex items-center space-x-4">
                     <div className="relative">
                       {profile.profilePictureUrl ? (
-                        <Image 
-                          src={profile.profilePictureUrl} 
-                          alt="Profile" 
+                        <Image
+                          src={profile.profilePictureUrl}
+                          alt="Profile"
                           width={80}
                           height={80}
-                          className="w-20 h-20 rounded-full object-cover border-4 border-gray-200"
+                          className="w-20 h-20 rounded-full object-cover border-4 border-gray-200 dark:border-gray-600"
                         />
                       ) : (
-                        <div className="w-20 h-20 rounded-full bg-gray-200 border-4 border-gray-200 flex items-center justify-center">
-                          <span className="text-gray-400 text-2xl">👤</span>
+                        <div className="w-20 h-20 rounded-full bg-gray-200 dark:bg-gray-700 border-4 border-gray-200 dark:border-gray-600 flex items-center justify-center">
+                          <span className="text-gray-400 dark:text-gray-500 text-2xl">👤</span>
                         </div>
                       )}
                     </div>
@@ -410,7 +411,7 @@ export default function SettingsPage() {
                           {isUploadingPicture ? 'Uploading...' : 'Change Photo'}
                         </Button>
                       </label>
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                         JPEG, PNG, or WebP. Max size 5MB.
                       </p>
                     </div>
@@ -447,7 +448,7 @@ export default function SettingsPage() {
 
                   {/* Bio */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Bio
                     </label>
                     <textarea
@@ -455,17 +456,17 @@ export default function SettingsPage() {
                       onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
                       rows={3}
                       maxLength={500}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Tell us about yourself..."
                     />
-                    <p className="text-sm text-gray-500 mt-1">
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                       {(profile.bio || '').length}/500 characters
                     </p>
                   </div>
 
                   {/* Address */}
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Address</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Address</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="md:col-span-2">
                         <Input
@@ -525,7 +526,7 @@ export default function SettingsPage() {
                 </form>
               ) : (
                 <div className="text-center py-8">
-                  <p className="text-gray-500">Failed to load profile information</p>
+                  <p className="text-gray-500 dark:text-gray-400">Failed to load profile information</p>
                 </div>
               )}
             </div>
@@ -533,10 +534,23 @@ export default function SettingsPage() {
 
           {/* Preferences Tab */}
           {activeTab === 'preferences' && (
-            <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <span className="text-2xl">⚙️</span> Preferences
-              </h2>
+            <div className="space-y-6">
+              {/* Theme Settings */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+                  <span className="text-2xl">🎨</span> Appearance
+                </h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Choose how FinHome looks to you. Select a theme preference below.
+                </p>
+                <ThemeToggle variant="radio" />
+              </div>
+
+              {/* Other Preferences */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+                  <span className="text-2xl">⚙️</span> Regional Settings
+                </h2>
 
               {isLoadingSettings ? (
                 <div className="flex items-center justify-center h-32">
@@ -597,8 +611,9 @@ export default function SettingsPage() {
                   </div>
                 </form>
               ) : (
-                <div className="text-center py-8 text-gray-500">Failed to load settings</div>
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">Failed to load settings</div>
               )}
+              </div>
             </div>
           )}
 
@@ -606,23 +621,23 @@ export default function SettingsPage() {
           {activeTab === 'security' && (
             <div className="space-y-6">
               {/* MFA Settings Section */}
-              <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-                <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6 flex items-center gap-2">
                   <span className="text-2xl">🔒</span> Two-Factor Authentication
                 </h2>
                 <MFASettings />
               </div>
 
               {/* Password Change Section */}
-              <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-                <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6 flex items-center gap-2">
                   <span className="text-2xl">🔑</span> Password
                 </h2>
 
               <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Change Password</h3>
-                  <p className="text-sm text-gray-600 mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Change Password</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                     Choose a strong password with at least 8 characters, including uppercase, lowercase, and numbers.
                   </p>
                 </div>
@@ -666,23 +681,23 @@ export default function SettingsPage() {
               </div>
 
               {/* Danger Zone */}
-              <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-                <div className="bg-red-50 border border-red-200 rounded-xl p-6">
-                  <h3 className="text-lg font-bold text-red-900 mb-4 flex items-center gap-2">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6">
+                  <h3 className="text-lg font-bold text-red-900 dark:text-red-300 mb-4 flex items-center gap-2">
                     <span className="text-2xl">⚠️</span> Danger Zone
                   </h3>
-                  
+
                   <div className="space-y-4">
                     <div>
-                      <h4 className="font-semibold text-red-900 mb-2">Delete Tenant</h4>
-                      <p className="text-sm text-red-700 mb-4">
-                        Permanently delete your tenant "{tenantInfo?.name || 'Unknown'}" and all associated data. 
+                      <h4 className="font-semibold text-red-900 dark:text-red-300 mb-2">Delete Tenant</h4>
+                      <p className="text-sm text-red-700 dark:text-red-400 mb-4">
+                        Permanently delete your tenant "{tenantInfo?.name || 'Unknown'}" and all associated data.
                         This action cannot be undone and will remove all transactions, accounts, budgets, and family members.
                       </p>
-                      
-                      <div className="bg-red-100 border border-red-300 rounded-lg p-4 mb-4">
-                        <h5 className="font-semibold text-red-900 mb-2">What will be deleted:</h5>
-                        <ul className="text-sm text-red-800 space-y-1">
+
+                      <div className="bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded-lg p-4 mb-4">
+                        <h5 className="font-semibold text-red-900 dark:text-red-300 mb-2">What will be deleted:</h5>
+                        <ul className="text-sm text-red-800 dark:text-red-400 space-y-1">
                           <li>• All financial transactions and account data</li>
                           <li>• All budgets, goals, and bill reminders</li>
                           <li>• All categories and recurring transactions</li>
@@ -707,9 +722,9 @@ export default function SettingsPage() {
 
           {/* Family Members Tab */}
           {activeTab === 'family' && (
-            <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                   <span className="text-2xl">👨‍👩‍👧‍👦</span> Family Members
                 </h2>
                 <Button
@@ -722,7 +737,7 @@ export default function SettingsPage() {
               </div>
 
               {!canInviteMore && (
-                <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-lg mb-4">
+                <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 text-yellow-700 dark:text-yellow-300 px-4 py-3 rounded-lg mb-4">
                   Maximum of 3 family members allowed. Remove a member to invite someone new.
                 </div>
               )}
@@ -736,30 +751,30 @@ export default function SettingsPage() {
                   {members.map((member) => (
                     <div
                       key={member.id}
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border"
+                      className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600"
                     >
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                          <span className="text-blue-600 font-semibold">
+                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center">
+                          <span className="text-blue-600 dark:text-blue-400 font-semibold">
                             {member.userName?.charAt(0).toUpperCase() || '?'}
                           </span>
                         </div>
                         <div>
-                          <h3 className="font-medium text-gray-900">{member.userName || 'Unknown User'}</h3>
-                          <p className="text-sm text-gray-500">{member.userEmail || 'No email'}</p>
+                          <h3 className="font-medium text-gray-900 dark:text-gray-100">{member.userName || 'Unknown User'}</h3>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">{member.userEmail || 'No email'}</p>
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                             member.role === 'owner'
-                              ? 'bg-purple-100 text-purple-800'
+                              ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-300'
                               : member.role === 'admin'
-                                ? 'bg-blue-100 text-blue-800'
-                                : 'bg-green-100 text-green-800'
+                                ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300'
+                                : 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300'
                           }`}>
                             {member.role}
                           </span>
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <span className="text-sm text-gray-500">
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
                           Joined {new Date(member.joinedAt || member.invitedAt).toLocaleDateString()}
                         </span>
                         {member.role !== 'owner' && (
@@ -775,7 +790,7 @@ export default function SettingsPage() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                   No family members yet. Invite someone to get started!
                 </div>
               )}
@@ -785,8 +800,8 @@ export default function SettingsPage() {
           {/* Invite Modal */}
           {showInviteModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-              <div className="bg-white rounded-lg max-w-md w-full p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Invite Family Member</h3>
+              <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6 border border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Invite Family Member</h3>
                 <form onSubmit={handleInviteMember}>
                   <div className="space-y-4">
                     <Input

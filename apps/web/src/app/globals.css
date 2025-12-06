@@ -42,57 +42,57 @@
 
 @layer base {
   * {
-    @apply border-gray-200;
+    @apply border-gray-200 dark:border-gray-700;
   }
-  
+
   html {
     @apply font-inter antialiased;
     font-feature-settings: "cv11", "ss01";
     font-variation-settings: "opsz" 32;
   }
-  
+
   body {
-    @apply bg-gray-50 text-gray-900;
+    @apply bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
-  
+
   /* Typography Base Styles */
   h1 {
-    @apply text-3xl font-bold text-gray-900;
+    @apply text-3xl font-bold text-gray-900 dark:text-gray-100;
   }
-  
+
   h2 {
-    @apply text-2xl font-semibold text-gray-900;
+    @apply text-2xl font-semibold text-gray-900 dark:text-gray-100;
   }
-  
+
   h3 {
-    @apply text-xl font-semibold text-gray-900 uppercase tracking-wide;
+    @apply text-xl font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wide;
   }
-  
+
   /* Focus styles for accessibility */
   button:focus-visible,
   input:focus-visible,
   select:focus-visible,
   textarea:focus-visible,
   a:focus-visible {
-    @apply outline-none ring-2 ring-primary-200 ring-offset-2;
+    @apply outline-none ring-2 ring-primary-200 dark:ring-primary-800 ring-offset-2 dark:ring-offset-gray-900;
   }
-  
+
   /* Custom scrollbar */
   ::-webkit-scrollbar {
     @apply w-2;
   }
-  
+
   ::-webkit-scrollbar-track {
-    @apply bg-gray-100;
+    @apply bg-gray-100 dark:bg-gray-800;
   }
-  
+
   ::-webkit-scrollbar-thumb {
-    @apply bg-gray-300 rounded-full;
+    @apply bg-gray-300 dark:bg-gray-600 rounded-full;
   }
-  
+
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-gray-400;
+    @apply bg-gray-400 dark:bg-gray-500;
   }
 }
 
@@ -102,50 +102,50 @@
     @apply bg-primary-500 hover:bg-primary-600 active:bg-primary-700 text-white;
     @apply px-6 py-3 rounded-lg font-semibold text-base;
     @apply transition-all duration-200 ease-out;
-    @apply focus:ring-2 focus:ring-primary-200 focus:ring-offset-2;
-    @apply disabled:bg-primary-300 disabled:cursor-not-allowed;
+    @apply focus:ring-2 focus:ring-primary-200 dark:focus:ring-primary-800 focus:ring-offset-2 dark:focus:ring-offset-gray-900;
+    @apply disabled:bg-primary-300 dark:disabled:bg-primary-800 disabled:cursor-not-allowed;
     @apply shadow-sm hover:shadow-md;
     @apply h-11; /* 44px - touch friendly */
   }
-  
+
   .btn-secondary {
-    @apply bg-gray-100 hover:bg-gray-200 text-gray-700;
+    @apply bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200;
     @apply px-6 py-3 rounded-lg font-semibold text-base;
     @apply transition-all duration-200 ease-out;
-    @apply focus:ring-2 focus:ring-gray-200 focus:ring-offset-2;
+    @apply focus:ring-2 focus:ring-gray-200 dark:focus:ring-gray-600 focus:ring-offset-2 dark:focus:ring-offset-gray-900;
     @apply h-11;
   }
-  
+
   .btn-text {
-    @apply text-primary-500 hover:text-primary-700 hover:underline;
+    @apply text-primary-500 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:underline;
     @apply font-medium transition-colors duration-150;
   }
-  
+
   /* Card Components */
   .card {
-    @apply bg-white rounded-xl shadow-card border border-gray-100;
+    @apply bg-white dark:bg-gray-800 rounded-xl shadow-card dark:shadow-none border border-gray-100 dark:border-gray-700;
   }
-  
+
   .card-hover {
-    @apply card hover:shadow-card-hover hover:-translate-y-0.5;
+    @apply card hover:shadow-card-hover dark:hover:shadow-none hover:-translate-y-0.5;
     @apply transition-all duration-200 ease-out cursor-pointer;
   }
-  
+
   .card-gradient-primary {
     @apply bg-gradient-to-br from-primary-500 to-primary-600 text-white;
-    @apply shadow-card;
+    @apply shadow-card dark:shadow-none;
   }
-  
+
   /* Input Components */
   .input-field {
-    @apply w-full h-11 px-4 border border-gray-300 rounded-lg;
-    @apply focus:border-primary-500 focus:ring-2 focus:ring-primary-200;
-    @apply bg-white text-gray-900 placeholder-gray-500;
+    @apply w-full h-11 px-4 border border-gray-300 dark:border-gray-600 rounded-lg;
+    @apply focus:border-primary-500 focus:ring-2 focus:ring-primary-200 dark:focus:ring-primary-800;
+    @apply bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400;
     @apply transition-all duration-200;
   }
-  
+
   .input-error {
-    @apply border-error-500 focus:border-error-500 focus:ring-error-200;
+    @apply border-error-500 focus:border-error-500 focus:ring-error-200 dark:focus:ring-error-800;
   }
   
   /* Stat Card Variants */
@@ -171,43 +171,48 @@
   /* Navigation Components */
   .nav-item {
     @apply flex items-center px-4 py-3 mx-3 rounded-lg;
-    @apply text-gray-700 hover:bg-gray-100 hover:text-gray-900;
+    @apply text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100;
     @apply transition-all duration-150 ease-out;
   }
-  
+
   .nav-item-active {
     @apply flex items-center px-4 py-3 mx-3 rounded-lg;
-    @apply bg-primary-100 text-primary-800 font-medium;
+    @apply bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300 font-medium;
     @apply transition-all duration-150 ease-out;
   }
-  
+
   /* Currency Display */
   .currency {
     @apply tabular-nums font-semibold;
   }
-  
+
   .currency-positive {
-    @apply currency text-success-600;
+    @apply currency text-success-600 dark:text-success-400;
   }
-  
+
   .currency-negative {
-    @apply currency text-error-600;
+    @apply currency text-error-600 dark:text-error-400;
   }
-  
+
   /* Loading States */
   .skeleton {
-    @apply animate-pulse bg-gray-200 rounded;
+    @apply animate-pulse bg-gray-200 dark:bg-gray-700 rounded;
   }
-  
+
   .shimmer {
     @apply relative overflow-hidden;
   }
-  
+
   .shimmer::after {
     @apply absolute inset-0;
     content: '';
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
     animation: shimmer 1.5s infinite;
+  }
+
+  /* Dark mode shimmer */
+  .dark .shimmer::after {
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
   }
 }
 

@@ -747,6 +747,12 @@ export const api = {
     delete: (id: string) => apiClient(`/api/scheduled-reports/${id}`, { method: 'DELETE' }),
   },
 
+  // Subscriptions (auto-detected)
+  subscriptions: {
+    getAll: () => apiClient('/api/subscriptions'),
+    getSummary: () => apiClient('/api/subscriptions/summary'),
+  },
+
   // User MFA
   mfa: {
     getStatus: () => apiClient('/api/mfa/status'),
