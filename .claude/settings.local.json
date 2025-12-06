@@ -20,7 +20,10 @@
       "Bash(npx husky init)",
       "Bash(chmod:*)",
       "Bash(npm run build:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(npx wrangler deploy:*)",
+      "Bash(npx vercel --prod)",
+      "Bash(npx vercel --prod --yes)"
     ],
     "deny": [],
     "ask": []
