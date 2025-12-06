@@ -26,26 +26,26 @@ const InsightCard: React.FC<{ insight: SpendingInsight }> = ({ insight }) => {
 
   const getColors = (type: string) => {
     switch (type) {
-      case 'warning': 
+      case 'warning':
         return {
-          bg: 'bg-amber-50',
-          border: 'border-amber-200',
-          text: 'text-amber-800',
-          accent: 'text-amber-600'
+          bg: 'bg-amber-50 dark:bg-amber-900/20',
+          border: 'border-amber-200 dark:border-amber-800',
+          text: 'text-amber-800 dark:text-amber-200',
+          accent: 'text-amber-600 dark:text-amber-400'
         };
       case 'positive':
         return {
-          bg: 'bg-green-50',
-          border: 'border-green-200',
-          text: 'text-green-800',
-          accent: 'text-green-600'
+          bg: 'bg-green-50 dark:bg-green-900/20',
+          border: 'border-green-200 dark:border-green-800',
+          text: 'text-green-800 dark:text-green-200',
+          accent: 'text-green-600 dark:text-green-400'
         };
       default:
         return {
-          bg: 'bg-blue-50',
-          border: 'border-blue-200',
-          text: 'text-blue-800',
-          accent: 'text-blue-600'
+          bg: 'bg-blue-50 dark:bg-blue-900/20',
+          border: 'border-blue-200 dark:border-blue-800',
+          text: 'text-blue-800 dark:text-blue-200',
+          accent: 'text-blue-600 dark:text-blue-400'
         };
     }
   };
@@ -68,7 +68,7 @@ const InsightCard: React.FC<{ insight: SpendingInsight }> = ({ insight }) => {
           </p>
           <div className="flex justify-between items-center">
             {insight.category && (
-              <span className={`text-xs px-2 py-1 rounded-full bg-white ${colors.accent}`}>
+              <span className={`text-xs px-2 py-1 rounded-full bg-white dark:bg-gray-800 ${colors.accent}`}>
                 {insight.category}
               </span>
             )}
@@ -88,13 +88,13 @@ export const InsightsWidget: React.FC<InsightsWidgetProps> = ({
 }) => {
   if (!insights || insights.length === 0) {
     return (
-      <div className={`bg-white rounded-xl shadow-lg border border-gray-200 p-6 ${className}`}>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+      <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg dark:shadow-none border border-gray-200 dark:border-gray-700 p-6 ${className}`}>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
           💡 Financial Insights
         </h3>
         <div className="text-center py-8">
           <div className="text-4xl mb-2">🔍</div>
-          <p className="text-gray-600">
+          <p className="text-gray-600 dark:text-gray-400">
             Add more transactions to get personalized insights
           </p>
         </div>
@@ -109,12 +109,12 @@ export const InsightsWidget: React.FC<InsightsWidgetProps> = ({
   });
 
   return (
-    <div className={`bg-white rounded-xl shadow-lg border border-gray-200 p-6 ${className}`}>
+    <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg dark:shadow-none border border-gray-200 dark:border-gray-700 p-6 ${className}`}>
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-gray-900">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
           💡 Financial Insights
         </h3>
-        <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+        <span className="text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
           {insights.length} insight{insights.length !== 1 ? 's' : ''}
         </span>
       </div>
@@ -126,18 +126,18 @@ export const InsightsWidget: React.FC<InsightsWidgetProps> = ({
       </div>
 
       {/* Action suggestions */}
-      <div className="mt-6 pt-4 border-t border-gray-200">
-        <h4 className="text-sm font-medium text-gray-700 mb-2">
+      <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           💪 Quick Actions
         </h4>
         <div className="flex flex-wrap gap-2">
-          <button className="text-xs px-3 py-1 bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200 transition-colors">
+          <button className="text-xs px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors">
             Review Budget
           </button>
-          <button className="text-xs px-3 py-1 bg-green-100 text-green-700 rounded-full hover:bg-green-200 transition-colors">
+          <button className="text-xs px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors">
             Set Savings Goal
           </button>
-          <button className="text-xs px-3 py-1 bg-purple-100 text-purple-700 rounded-full hover:bg-purple-200 transition-colors">
+          <button className="text-xs px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors">
             Analyze Categories
           </button>
         </div>

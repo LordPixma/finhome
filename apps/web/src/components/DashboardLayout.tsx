@@ -60,7 +60,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const isActive = (href: string) => pathname === href;
 
   return (
-    <div className="min-h-screen bg-surface-100 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Professional Header for Mobile */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-800 shadow-header dark:shadow-none dark:border-b dark:border-gray-700">
         <div className="flex items-center justify-between px-4 py-4 h-18">
@@ -121,7 +121,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
           {/* Professional User Section */}
           <div className="flex-shrink-0 p-4 border-t border-gray-200 dark:border-gray-700">
-            <div className="bg-surface-200 dark:bg-gray-700/50 rounded-xl p-4">
+            <div className="bg-gray-100 dark:bg-gray-700/50 rounded-xl p-4">
               <div className="flex items-center mb-4">
                 <div className="w-10 h-10 rounded-full bg-primary-500 text-white flex items-center justify-center font-semibold">
                   {user?.name?.[0]?.toUpperCase() || 'U'}
@@ -181,7 +181,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
               {/* User section */}
               <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-                <div className="bg-surface-200 dark:bg-gray-700/50 rounded-xl p-4">
+                <div className="bg-gray-100 dark:bg-gray-700/50 rounded-xl p-4">
                   <div className="flex items-center mb-4">
                     <div className="w-10 h-10 rounded-full bg-primary-500 text-white flex items-center justify-center font-semibold">
                       {user?.name?.[0]?.toUpperCase() || 'U'}

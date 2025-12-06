@@ -49,20 +49,20 @@ export function GoalProgressTracker({ goal, showDetails = true, size = 'md' }: G
   const milestones = [25, 50, 75, 100];
 
   return (
-    <div className={`bg-white rounded-xl shadow-lg border border-gray-200 ${config.padding} transition-all hover:shadow-xl`}>
+    <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg dark:shadow-none border border-gray-200 dark:border-gray-700 ${config.padding} transition-all hover:shadow-xl dark:hover:shadow-none`}>
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <div
-            className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center shadow-md"
+            className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center shadow-md dark:shadow-none"
             style={{ backgroundColor: `${goal.color}20` }}
           >
             <span className={config.icon}>{goal.icon}</span>
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900">{goal.name}</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100">{goal.name}</h3>
             {daysRemaining !== null && (
-              <p className={`${config.text} text-gray-500`}>
+              <p className={`${config.text} text-gray-500 dark:text-gray-400`}>
                 {daysRemaining > 0 ? (
                   <>
                     {daysRemaining} day{daysRemaining !== 1 ? 's' : ''} remaining
@@ -70,14 +70,14 @@ export function GoalProgressTracker({ goal, showDetails = true, size = 'md' }: G
                 ) : daysRemaining === 0 ? (
                   'Due today'
                 ) : (
-                  <span className="text-red-600">{Math.abs(daysRemaining)} days overdue</span>
+                  <span className="text-red-600 dark:text-red-400">{Math.abs(daysRemaining)} days overdue</span>
                 )}
               </p>
             )}
           </div>
         </div>
         {isCompleted && (
-          <div className="flex-shrink-0 bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold animate-bounce">
+          <div className="flex-shrink-0 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-3 py-1 rounded-full text-xs font-semibold animate-bounce">
             Completed! 🎉
           </div>
         )}
@@ -95,19 +95,19 @@ export function GoalProgressTracker({ goal, showDetails = true, size = 'md' }: G
               }`}
             >
               <span className={`${config.text} font-semibold ${
-                progressPercent >= milestone ? 'text-green-600' : 'text-gray-400'
+                progressPercent >= milestone ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'
               }`}>
                 {milestone}%
               </span>
               {progressPercent >= milestone && (
-                <div className="mt-1 text-green-600">✓</div>
+                <div className="mt-1 text-green-600 dark:text-green-400">✓</div>
               )}
             </div>
           ))}
         </div>
 
         {/* Progress bar background */}
-        <div className={`w-full bg-gray-200 rounded-full overflow-hidden ${config.height} mt-6`}>
+        <div className={`w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden ${config.height} mt-6`}>
           {/* Animated progress fill */}
           <div
             className={`${config.height} rounded-full transition-all duration-1000 ease-out relative overflow-hidden`}
@@ -130,18 +130,18 @@ export function GoalProgressTracker({ goal, showDetails = true, size = 'md' }: G
 
       {/* Stats */}
       {showDetails && (
-        <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-100">
+        <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-100 dark:border-gray-700">
           <div>
-            <p className={`${config.text} text-gray-500 mb-1`}>Current</p>
-            <p className="font-semibold text-gray-900">{formatCurrency(goal.currentAmount)}</p>
+            <p className={`${config.text} text-gray-500 dark:text-gray-400 mb-1`}>Current</p>
+            <p className="font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(goal.currentAmount)}</p>
           </div>
           <div>
-            <p className={`${config.text} text-gray-500 mb-1`}>Target</p>
-            <p className="font-semibold text-gray-900">{formatCurrency(goal.targetAmount)}</p>
+            <p className={`${config.text} text-gray-500 dark:text-gray-400 mb-1`}>Target</p>
+            <p className="font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(goal.targetAmount)}</p>
           </div>
           <div>
-            <p className={`${config.text} text-gray-500 mb-1`}>Remaining</p>
-            <p className={`font-semibold ${remaining > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+            <p className={`${config.text} text-gray-500 dark:text-gray-400 mb-1`}>Remaining</p>
+            <p className={`font-semibold ${remaining > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}`}>
               {remaining > 0 ? formatCurrency(remaining) : 'Goal Met!'}
             </p>
           </div>
@@ -160,7 +160,7 @@ export function GoalProgressTracker({ goal, showDetails = true, size = 'md' }: G
           {progressPercent.toFixed(1)}% Complete
         </div>
         {!isCompleted && progressPercent > 0 && (
-          <p className={`${config.text} text-gray-500`}>
+          <p className={`${config.text} text-gray-500 dark:text-gray-400`}>
             {progressPercent >= 75 ? "Almost there! 💪" : progressPercent >= 50 ? "Halfway there! 🎯" : progressPercent >= 25 ? "Great start! 🚀" : "Keep going! 💫"}
           </p>
         )}
