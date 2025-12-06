@@ -694,3 +694,392 @@ export const importLogs = sqliteTable('import_logs', {
   tenantDateIdx: index('idx_import_logs_tenant_date').on(table.tenantId, table.createdAt),
 }));
 
+// ============================================
+// FINANCIAL HEALTH SYSTEM TABLES
+// ============================================
+
+// Financial Health Scores Table - Stores historical health score calculations
+export const financialHealthScores = sqliteTable('financial_health_scores', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id')
+    .notNull()
+    .references(() => tenants.id),
+  // Overall score (0-100)
+  overallScore: integer('overall_score').notNull(),
+  // Individual component scores (0-100 each)
+  savingsScore: integer('savings_score').notNull(),
+  debtScore: integer('debt_score').notNull(),
+  emergencyFundScore: integer('emergency_fund_score').notNull(),
+  budgetScore: integer('budget_score').notNull(),
+  cashFlowScore: integer('cash_flow_score').notNull(),
+  // Score breakdown metadata (JSON)
+  scoreBreakdown: text('score_breakdown'), // JSON with detailed breakdown
+  // Metrics used for calculation
+  monthlyIncome: real('monthly_income'),
+  monthlyExpenses: real('monthly_expenses'),
+  totalSavings: real('total_savings'),
+  totalDebt: real('total_debt'),
+  emergencyFundBalance: real('emergency_fund_balance'),
+  // Score category: 'excellent' | 'good' | 'fair' | 'needs_improvement' | 'critical'
+  scoreCategory: text('score_category', {
+    enum: ['excellent', 'good', 'fair', 'needs_improvement', 'critical']
+  }).notNull(),
+  // Insights and recommendations (JSON array)
+  insights: text('insights'),
+  recommendations: text('recommendations'),
+  // Calculation timestamp
+  calculatedAt: integer('calculated_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  tenantIdx: index('idx_financial_health_scores_tenant').on(table.tenantId),
+  tenantDateIdx: index('idx_financial_health_scores_tenant_date').on(table.tenantId, table.calculatedAt),
+  scoreCategoryIdx: index('idx_financial_health_scores_category').on(table.scoreCategory),
+  overallScoreIdx: index('idx_financial_health_scores_overall').on(table.overallScore),
+}));
+
+// User Financial Profiles Table - Stores user financial profile data for personalized analysis
+export const userFinancialProfiles = sqliteTable('user_financial_profiles', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id')
+    .notNull()
+    .unique()
+    .references(() => tenants.id),
+  // Income information
+  monthlyIncome: real('monthly_income'),
+  incomeSource: text('income_source', {
+    enum: ['employed', 'self_employed', 'retired', 'student', 'other']
+  }),
+  employmentStatus: text('employment_status', {
+    enum: ['full_time', 'part_time', 'contract', 'freelance', 'unemployed', 'retired']
+  }),
+  // Household information
+  householdSize: integer('household_size').default(1),
+  dependents: integer('dependents').default(0),
+  housingStatus: text('housing_status', {
+    enum: ['own_outright', 'mortgage', 'rent', 'living_with_family', 'other']
+  }),
+  monthlyRentMortgage: real('monthly_rent_mortgage'),
+  // Debt information
+  totalDebtBalance: real('total_debt_balance').default(0),
+  monthlyDebtPayments: real('monthly_debt_payments').default(0),
+  // Emergency fund
+  emergencyFundTarget: real('emergency_fund_target'), // Target in months of expenses
+  emergencyFundAccountId: text('emergency_fund_account_id').references(() => accounts.id),
+  // Risk profile
+  riskTolerance: text('risk_tolerance', {
+    enum: ['conservative', 'moderate', 'aggressive']
+  }).default('moderate'),
+  // Financial goals (JSON array)
+  financialGoals: text('financial_goals'), // JSON array of goal types
+  // Retirement
+  retirementAge: integer('retirement_age'),
+  hasRetirementAccount: integer('has_retirement_account', { mode: 'boolean' }).default(false),
+  // Insurance
+  hasLifeInsurance: integer('has_life_insurance', { mode: 'boolean' }).default(false),
+  hasHealthInsurance: integer('has_health_insurance', { mode: 'boolean' }).default(false),
+  hasIncomeProtection: integer('has_income_protection', { mode: 'boolean' }).default(false),
+  // Profile completion
+  profileCompleteness: integer('profile_completeness').default(0), // 0-100
+  lastUpdatedAt: integer('last_updated_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  tenantIdx: index('idx_user_financial_profiles_tenant').on(table.tenantId),
+  completenessIdx: index('idx_user_financial_profiles_completeness').on(table.profileCompleteness),
+}));
+
+// Financial Health History Table - Track score changes over time
+export const financialHealthHistory = sqliteTable('financial_health_history', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id')
+    .notNull()
+    .references(() => tenants.id),
+  scoreId: text('score_id')
+    .notNull()
+    .references(() => financialHealthScores.id),
+  previousScore: integer('previous_score'),
+  newScore: integer('new_score').notNull(),
+  scoreDelta: integer('score_delta').notNull(), // Change from previous
+  changeReason: text('change_reason'), // AI-generated explanation of change
+  period: text('period').notNull(), // 'YYYY-MM' format for monthly tracking
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  tenantIdx: index('idx_financial_health_history_tenant').on(table.tenantId),
+  tenantPeriodIdx: index('idx_financial_health_history_tenant_period').on(table.tenantId, table.period),
+  scoreIdIdx: index('idx_financial_health_history_score').on(table.scoreId),
+}));
+
+// Debt Tracking Table - Track individual debts for debt-to-income calculations
+export const debtAccounts = sqliteTable('debt_accounts', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id')
+    .notNull()
+    .references(() => tenants.id),
+  name: text('name').notNull(),
+  type: text('type', {
+    enum: ['mortgage', 'car_loan', 'student_loan', 'credit_card', 'personal_loan', 'overdraft', 'other']
+  }).notNull(),
+  // Linked account (optional)
+  linkedAccountId: text('linked_account_id').references(() => accounts.id),
+  // Debt details
+  originalBalance: real('original_balance').notNull(),
+  currentBalance: real('current_balance').notNull(),
+  interestRate: real('interest_rate'), // APR as decimal (e.g., 0.199 for 19.9%)
+  minimumPayment: real('minimum_payment'),
+  monthlyPayment: real('monthly_payment'),
+  // Loan term
+  startDate: integer('start_date', { mode: 'timestamp' }),
+  endDate: integer('end_date', { mode: 'timestamp' }),
+  // Status
+  status: text('status', {
+    enum: ['active', 'paid_off', 'defaulted', 'refinanced']
+  }).notNull().default('active'),
+  // Creditor info
+  creditorName: text('creditor_name'),
+  // Priority for payoff strategies
+  payoffPriority: integer('payoff_priority').default(0),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  tenantIdx: index('idx_debt_accounts_tenant').on(table.tenantId),
+  tenantTypeIdx: index('idx_debt_accounts_tenant_type').on(table.tenantId, table.type),
+  tenantStatusIdx: index('idx_debt_accounts_tenant_status').on(table.tenantId, table.status),
+  linkedAccountIdx: index('idx_debt_accounts_linked').on(table.linkedAccountId),
+}));
+
+// AI Financial Insights Table - Store AI-generated insights for caching and history
+export const aiFinancialInsights = sqliteTable('ai_financial_insights', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id')
+    .notNull()
+    .references(() => tenants.id),
+  insightType: text('insight_type', {
+    enum: ['spending_pattern', 'savings_opportunity', 'debt_advice', 'budget_recommendation', 'anomaly_detection', 'goal_progress', 'general_advice']
+  }).notNull(),
+  title: text('title').notNull(),
+  content: text('content').notNull(),
+  // Severity/Priority
+  priority: text('priority', {
+    enum: ['low', 'medium', 'high', 'urgent']
+  }).notNull().default('medium'),
+  // Impact
+  potentialImpact: real('potential_impact'), // Estimated £ impact
+  // Action items (JSON array)
+  actionItems: text('action_items'),
+  // Related entities
+  relatedCategoryId: text('related_category_id').references(() => categories.id),
+  relatedAccountId: text('related_account_id').references(() => accounts.id),
+  relatedGoalId: text('related_goal_id').references(() => goals.id),
+  // User interaction
+  isRead: integer('is_read', { mode: 'boolean' }).default(false),
+  isDismissed: integer('is_dismissed', { mode: 'boolean' }).default(false),
+  isActedUpon: integer('is_acted_upon', { mode: 'boolean' }).default(false),
+  // Validity period
+  validUntil: integer('valid_until', { mode: 'timestamp' }),
+  generatedAt: integer('generated_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  tenantIdx: index('idx_ai_financial_insights_tenant').on(table.tenantId),
+  tenantTypeIdx: index('idx_ai_financial_insights_tenant_type').on(table.tenantId, table.insightType),
+  tenantPriorityIdx: index('idx_ai_financial_insights_priority').on(table.tenantId, table.priority),
+  readIdx: index('idx_ai_financial_insights_read').on(table.isRead),
+  validUntilIdx: index('idx_ai_financial_insights_valid').on(table.validUntil),
+}));
+
+// ============================================
+// CREDIT RISK ASSESSMENT TABLES
+// ============================================
+
+// Internal Credit Risk Scores - Mimics credit bureau scoring (0-999 like Experian)
+export const creditRiskScores = sqliteTable('credit_risk_scores', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id')
+    .notNull()
+    .references(() => tenants.id),
+  // Overall risk score (0-999 scale)
+  overallScore: integer('overall_score').notNull(),
+  // Score band: 'excellent' | 'good' | 'fair' | 'poor' | 'very_poor'
+  scoreBand: text('score_band', {
+    enum: ['excellent', 'good', 'fair', 'poor', 'very_poor']
+  }).notNull(),
+  // Individual risk factor scores (0-100 each)
+  paymentHistoryScore: integer('payment_history_score').notNull(),
+  creditUtilizationScore: integer('credit_utilization_score').notNull(),
+  creditAgeScore: integer('credit_age_score').notNull(),
+  creditMixScore: integer('credit_mix_score').notNull(),
+  recentInquiriesScore: integer('recent_inquiries_score').notNull(),
+  // Key metrics used for calculation
+  totalCreditLimit: real('total_credit_limit'),
+  totalCreditUsed: real('total_credit_used'),
+  utilizationPercentage: real('utilization_percentage'),
+  oldestAccountAge: integer('oldest_account_age'), // in months
+  averageAccountAge: integer('average_account_age'), // in months
+  numberOfAccounts: integer('number_of_accounts'),
+  missedPayments: integer('missed_payments').default(0),
+  // Score breakdown (JSON)
+  scoreBreakdown: text('score_breakdown'),
+  // Risk factors identified (JSON array)
+  riskFactors: text('risk_factors'),
+  // Positive factors identified (JSON array)
+  positiveFactors: text('positive_factors'),
+  // Improvement tips (JSON array)
+  improvementTips: text('improvement_tips'),
+  // Calculation timestamp
+  calculatedAt: integer('calculated_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  tenantIdx: index('idx_credit_risk_scores_tenant').on(table.tenantId),
+  tenantDateIdx: index('idx_credit_risk_scores_tenant_date').on(table.tenantId, table.calculatedAt),
+  scoreBandIdx: index('idx_credit_risk_scores_band').on(table.scoreBand),
+  overallScoreIdx: index('idx_credit_risk_scores_overall').on(table.overallScore),
+}));
+
+// Credit Risk History - Track score changes over time
+export const creditRiskHistory = sqliteTable('credit_risk_history', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id')
+    .notNull()
+    .references(() => tenants.id),
+  scoreId: text('score_id')
+    .notNull()
+    .references(() => creditRiskScores.id),
+  previousScore: integer('previous_score'),
+  newScore: integer('new_score').notNull(),
+  scoreDelta: integer('score_delta').notNull(),
+  changeReason: text('change_reason'),
+  period: text('period').notNull(), // 'YYYY-MM' format
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  tenantIdx: index('idx_credit_risk_history_tenant').on(table.tenantId),
+  tenantPeriodIdx: index('idx_credit_risk_history_tenant_period').on(table.tenantId, table.period),
+  scoreIdIdx: index('idx_credit_risk_history_score').on(table.scoreId),
+}));
+
+// Credit Bureau Connections - For future Experian/Equifax/TransUnion integration
+export const creditBureauConnections = sqliteTable('credit_bureau_connections', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id')
+    .notNull()
+    .references(() => tenants.id),
+  bureau: text('bureau', {
+    enum: ['experian', 'equifax', 'transunion']
+  }).notNull(),
+  // Connection status
+  status: text('status', {
+    enum: ['pending', 'active', 'disconnected', 'expired', 'error']
+  }).notNull().default('pending'),
+  // OAuth/API credentials (encrypted in production)
+  accessToken: text('access_token'),
+  refreshToken: text('refresh_token'),
+  tokenExpiresAt: integer('token_expires_at', { mode: 'timestamp' }),
+  // User identifiers at bureau
+  bureauUserId: text('bureau_user_id'),
+  // Last sync info
+  lastSyncAt: integer('last_sync_at', { mode: 'timestamp' }),
+  lastSyncStatus: text('last_sync_status'),
+  lastError: text('last_error'),
+  // Consent and compliance
+  consentGivenAt: integer('consent_given_at', { mode: 'timestamp' }),
+  consentExpiresAt: integer('consent_expires_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  tenantIdx: index('idx_credit_bureau_connections_tenant').on(table.tenantId),
+  tenantBureauIdx: uniqueIndex('uniq_credit_bureau_connections_tenant_bureau').on(table.tenantId, table.bureau),
+  statusIdx: index('idx_credit_bureau_connections_status').on(table.status),
+}));
+
+// Credit Reports - Store fetched credit reports from bureaus
+export const creditReports = sqliteTable('credit_reports', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id')
+    .notNull()
+    .references(() => tenants.id),
+  connectionId: text('connection_id')
+    .references(() => creditBureauConnections.id),
+  bureau: text('bureau', {
+    enum: ['experian', 'equifax', 'transunion', 'internal']
+  }).notNull(),
+  // Official credit score from bureau
+  creditScore: integer('credit_score'),
+  scoreBand: text('score_band'),
+  scoreDate: integer('score_date', { mode: 'timestamp' }),
+  // Report data (JSON - structured credit report data)
+  reportData: text('report_data'),
+  // Key summary metrics
+  totalAccounts: integer('total_accounts'),
+  openAccounts: integer('open_accounts'),
+  closedAccounts: integer('closed_accounts'),
+  delinquentAccounts: integer('delinquent_accounts'),
+  totalBalances: real('total_balances'),
+  totalCreditLimit: real('total_credit_limit'),
+  // Inquiries
+  hardInquiries: integer('hard_inquiries'),
+  softInquiries: integer('soft_inquiries'),
+  // Public records
+  bankruptcies: integer('bankruptcies').default(0),
+  judgments: integer('judgments').default(0),
+  liens: integer('liens').default(0),
+  // Report validity
+  reportDate: integer('report_date', { mode: 'timestamp' }).notNull(),
+  expiresAt: integer('expires_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  tenantIdx: index('idx_credit_reports_tenant').on(table.tenantId),
+  tenantBureauIdx: index('idx_credit_reports_tenant_bureau').on(table.tenantId, table.bureau),
+  connectionIdx: index('idx_credit_reports_connection').on(table.connectionId),
+  reportDateIdx: index('idx_credit_reports_date').on(table.reportDate),
+}));
+
+// Loan Affordability Assessments - AI-driven loan eligibility analysis
+export const loanAffordabilityAssessments = sqliteTable('loan_affordability_assessments', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id')
+    .notNull()
+    .references(() => tenants.id),
+  // Assessment type
+  loanType: text('loan_type', {
+    enum: ['mortgage', 'personal', 'auto', 'credit_card', 'student', 'business', 'other']
+  }).notNull(),
+  // Requested loan details
+  requestedAmount: real('requested_amount').notNull(),
+  requestedTerm: integer('requested_term'), // in months
+  estimatedInterestRate: real('estimated_interest_rate'),
+  // Affordability results
+  maxAffordableAmount: real('max_affordable_amount'),
+  recommendedAmount: real('recommended_amount'),
+  monthlyPaymentEstimate: real('monthly_payment_estimate'),
+  totalInterestEstimate: real('total_interest_estimate'),
+  // Affordability score (0-100)
+  affordabilityScore: integer('affordability_score').notNull(),
+  affordabilityBand: text('affordability_band', {
+    enum: ['very_affordable', 'affordable', 'stretching', 'risky', 'unaffordable']
+  }).notNull(),
+  // Key metrics used
+  monthlyIncome: real('monthly_income'),
+  monthlyExpenses: real('monthly_expenses'),
+  existingDebtPayments: real('existing_debt_payments'),
+  disposableIncome: real('disposable_income'),
+  debtToIncomeRatio: real('debt_to_income_ratio'),
+  debtToIncomeAfterLoan: real('debt_to_income_after_loan'),
+  // Stress test results (JSON)
+  stressTestResults: text('stress_test_results'),
+  // Risk factors (JSON array)
+  riskFactors: text('risk_factors'),
+  // Recommendations (JSON array)
+  recommendations: text('recommendations'),
+  // AI analysis summary
+  aiSummary: text('ai_summary'),
+  // Assessment status
+  status: text('status', {
+    enum: ['draft', 'completed', 'expired']
+  }).notNull().default('draft'),
+  calculatedAt: integer('calculated_at', { mode: 'timestamp' }).notNull(),
+  expiresAt: integer('expires_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+  tenantIdx: index('idx_loan_affordability_tenant').on(table.tenantId),
+  tenantTypeIdx: index('idx_loan_affordability_tenant_type').on(table.tenantId, table.loanType),
+  statusIdx: index('idx_loan_affordability_status').on(table.status),
+  dateIdx: index('idx_loan_affordability_date').on(table.calculatedAt),
+}))
+

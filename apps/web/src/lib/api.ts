@@ -493,6 +493,69 @@ export const api = {
     toggleAlertRule: (id: string) => apiClient(`/api/admin/metrics/alert-rules/${id}/toggle`, { method: 'POST' }),
   },
 
+  // Financial Health
+  financialHealth: {
+    getSummary: () => apiClient('/api/financial-health/summary'),
+    getScore: () => apiClient('/api/financial-health/score'),
+    calculateScore: () => apiClient('/api/financial-health/score/calculate', { method: 'POST' }),
+    getScoreHistory: (months?: number) => {
+      const params = months ? `?months=${months}` : '';
+      return apiClient(`/api/financial-health/score/history${params}`);
+    },
+    getProfile: () => apiClient('/api/financial-health/profile'),
+    updateProfile: (data: any) => apiClient('/api/financial-health/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    }),
+    getInsights: () => apiClient('/api/financial-health/insights'),
+    updateInsightStatus: (id: string, status: { isRead?: boolean; isDismissed?: boolean; isActedUpon?: boolean }) =>
+      apiClient(`/api/financial-health/insights/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(status)
+      }),
+    getDebts: () => apiClient('/api/financial-health/debts'),
+    createDebt: (data: any) => apiClient('/api/financial-health/debts', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+    updateDebt: (id: string, data: any) => apiClient(`/api/financial-health/debts/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    }),
+  },
+
+  // Credit Risk Assessment
+  creditRisk: {
+    getSummary: () => apiClient('/api/credit-risk/summary'),
+    getScore: () => apiClient('/api/credit-risk/score'),
+    calculateScore: () => apiClient('/api/credit-risk/score/calculate', { method: 'POST' }),
+    getScoreHistory: (months?: number) => {
+      const params = months ? `?months=${months}` : '';
+      return apiClient(`/api/credit-risk/score/history${params}`);
+    },
+    // Loan Affordability
+    calculateAffordability: (data: {
+      loanType: 'mortgage' | 'personal' | 'auto' | 'credit_card' | 'student' | 'business' | 'other';
+      requestedAmount: number;
+      requestedTermMonths?: number;
+      estimatedInterestRate?: number;
+    }) => apiClient('/api/credit-risk/affordability', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+    getAffordabilityAssessments: (limit?: number) => {
+      const params = limit ? `?limit=${limit}` : '';
+      return apiClient(`/api/credit-risk/affordability${params}`);
+    },
+    getAffordabilityAssessment: (id: string) => apiClient(`/api/credit-risk/affordability/${id}`),
+    // Credit Bureau (future)
+    getBureauConnections: () => apiClient('/api/credit-risk/bureaus'),
+    getCreditReports: (limit?: number) => {
+      const params = limit ? `?limit=${limit}` : '';
+      return apiClient(`/api/credit-risk/reports${params}`);
+    },
+  },
+
   // User MFA
   mfa: {
     getStatus: () => apiClient('/api/mfa/status'),
