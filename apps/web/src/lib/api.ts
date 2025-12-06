@@ -556,6 +556,27 @@ export const api = {
     },
   },
 
+  // AI Financial Advisor
+  aiAdvisor: {
+    getSnapshot: () => apiClient('/api/ai-advisor/snapshot'),
+    getPredictions: (months?: number) => {
+      const params = months ? `?months=${months}` : '';
+      return apiClient(`/api/ai-advisor/predictions${params}`);
+    },
+    getGoalForecasts: () => apiClient('/api/ai-advisor/goals/forecast'),
+    getDebtStrategy: (extraPayment?: number) => {
+      const params = extraPayment ? `?extraPayment=${extraPayment}` : '';
+      return apiClient(`/api/ai-advisor/debt/strategy${params}`);
+    },
+    calculateDebtStrategy: (data: { extraMonthlyPayment?: number }) =>
+      apiClient('/api/ai-advisor/debt/strategy', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }),
+    getAdvice: () => apiClient('/api/ai-advisor/advice'),
+    getSummary: () => apiClient('/api/ai-advisor/summary'),
+  },
+
   // User MFA
   mfa: {
     getStatus: () => apiClient('/api/mfa/status'),
