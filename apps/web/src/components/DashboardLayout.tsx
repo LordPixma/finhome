@@ -23,6 +23,9 @@ import {
   XMarkIcon,
   QueueListIcon,
   SparklesIcon,
+  HeartIcon,
+  ShieldCheckIcon,
+  DocumentArrowDownIcon,
 } from '@heroicons/react/24/outline';
 import { NotificationBell } from '@/components/notifications';
 
@@ -47,7 +50,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Categories', href: '/dashboard/categories', icon: TagIcon },
     { name: 'Bill Reminders', href: '/dashboard/bill-reminders', icon: BellIcon },
     { name: 'Analytics', href: '/dashboard/analytics', icon: ChartPieIcon },
+    { name: 'Financial Health', href: '/dashboard/financial-health', icon: HeartIcon },
+    { name: 'Credit Score', href: '/dashboard/credit-score', icon: ShieldCheckIcon },
     { name: 'AI Advisor', href: '/dashboard/ai', icon: SparklesIcon },
+    { name: 'Export Data', href: '/dashboard/export', icon: DocumentArrowDownIcon },
     { name: 'Settings', href: '/dashboard/settings', icon: Cog6ToothIcon },
   ];
 
