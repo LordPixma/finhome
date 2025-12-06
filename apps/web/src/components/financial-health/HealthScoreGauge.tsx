@@ -69,13 +69,18 @@ export function HealthScoreGauge({
   const circumference = radius * Math.PI;
   const progress = (animatedScore / 100) * circumference;
 
+  // Calculate extra height for the label badge below the gauge
+  const labelHeight = showLabel ? 36 : 0;
+  const svgHeight = config.width / 2 + 20;
+  const totalHeight = svgHeight + labelHeight;
+
   return (
     <div className="flex flex-col items-center">
-      <div className="relative" style={{ width: config.width, height: config.width / 2 + 20 }}>
+      <div className="relative" style={{ width: config.width, height: totalHeight }}>
         <svg
           width={config.width}
-          height={config.width / 2 + 20}
-          viewBox={`0 0 ${config.width} ${config.width / 2 + 20}`}
+          height={svgHeight}
+          viewBox={`0 0 ${config.width} ${svgHeight}`}
         >
           {/* Background arc */}
           <path
@@ -121,24 +126,35 @@ export function HealthScoreGauge({
           })}
         </svg>
 
-        {/* Center score display */}
+        {/* Center score display - positioned inside the arc */}
         <div
-          className="absolute flex flex-col items-center justify-center"
+          className="absolute flex items-end justify-center"
           style={{
             left: '50%',
-            top: '50%',
-            transform: 'translate(-50%, -20%)'
+            top: 0,
+            height: svgHeight,
+            transform: 'translateX(-50%)',
+            paddingBottom: '8px'
           }}
         >
           <span
             className="font-bold"
-            style={{ fontSize: config.fontSize, color: colors.primary }}
+            style={{ fontSize: config.fontSize, color: colors.primary, lineHeight: 1 }}
           >
             {animatedScore}
           </span>
-          {showLabel && (
+        </div>
+
+        {/* Label badge - positioned below the gauge */}
+        {showLabel && (
+          <div
+            className="absolute flex justify-center w-full"
+            style={{
+              top: svgHeight + 4
+            }}
+          >
             <span
-              className="font-semibold mt-1 px-3 py-1 rounded-full"
+              className="font-semibold px-3 py-1 rounded-full whitespace-nowrap"
               style={{
                 fontSize: config.labelSize,
                 backgroundColor: colors.secondary,
@@ -147,8 +163,8 @@ export function HealthScoreGauge({
             >
               {colors.text}
             </span>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
