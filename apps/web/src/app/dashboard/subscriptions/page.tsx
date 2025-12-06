@@ -85,11 +85,12 @@ export default function SubscriptionsPage() {
     return true;
   }) || [];
 
-  const formatCurrency = (amount: number, currency: string = 'GBP') => {
+  const formatCurrency = (amount: number | undefined | null, currency: string = 'GBP') => {
+    const safeAmount = typeof amount === 'number' && !isNaN(amount) ? amount : 0;
     return new Intl.NumberFormat('en-GB', {
       style: 'currency',
       currency,
-    }).format(amount);
+    }).format(safeAmount);
   };
 
   const formatDate = (dateString: string) => {
